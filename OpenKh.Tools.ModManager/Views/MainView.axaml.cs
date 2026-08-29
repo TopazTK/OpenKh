@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using Avalonia.Threading;
 
 namespace OpenKh.Tools.ModManager.Views;
 
@@ -141,84 +142,42 @@ public partial class MainView : Window
         var _fetchContext = DataContext as MainViewModel;
         var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", _fetchContext.CurrentConfig.TargetGame.ToString().ToLower());
 
+        var _fetchInstallResult = 0x00;
         if (_fetchResult != null && !string.IsNullOrEmpty(_fetchResult))
         {
+            var _progressDialog = new ModProgressDialog();
+            _progressDialog.ShowDialog(this);
+
+            var _progressHandler = new TransferProgressHandler((progress) =>
+            {
+                Dispatcher.UIThread.Post(() => 
+                {
+                    _progressDialog.InstallProgress.Maximum = progress.TotalObjects;
+                    _progressDialog.InstallProgress.Value = progress.ReceivedObjects;
+                });
+
+                if (GitService.CancelToken.IsCancellationRequested)
+                    return false;
+
+                return true;
+            });
+
             if (File.Exists(_fetchResult))
             {
 
             }
 
             else
+                _fetchInstallResult = await GitService.InstallGit(_fetchModsPath, _fetchResult, _progressHandler);
+
+            _progressDialog.Close(true);
+
+            if (_fetchInstallResult == 0x01)
             {
-                var _fetchPlatform = _fetchResult.Contains('@') ? _fetchResult.Split('@').Last() : null;
-                _fetchResult = _fetchPlatform != null ? _fetchResult.Replace("@" + _fetchPlatform, "") : _fetchResult;
-
-                var _fetchBranch = _fetchResult.Contains(':') ? _fetchResult.Split(':').Last() : null;
-                _fetchResult = _fetchBranch != null ? _fetchResult.Replace(":" + _fetchBranch, "") : _fetchResult;
-
-                var _fetchAuthor = _fetchResult.Split('/').First();
-                var _fetchName = _fetchResult.Split('/').Last();
-
-                var _fetchCurrentModDir = Path.Combine(_fetchModsPath, _fetchName);
-                var _fetchCurrentGitPath = Path.Combine(_fetchCurrentModDir, ".git");
-
-                var _fetchBaseUri = new Uri("https://" + (_fetchPlatform != null ? _fetchPlatform : "github.com"));
-                var _fetchRelativeUri = new Uri(_fetchBaseUri, $"{_fetchResult}");
-
-                var _cloneOptions = new CloneOptions
-                {
-                    Checkout = true,
-                    BranchName = _fetchBranch,
-                };
-
-                _cloneOptions.FetchOptions.Depth = 1;
-                _cloneOptions.FetchOptions.Prune = true;
-
-                if (!Directory.Exists(_fetchCurrentModDir))
-                    Directory.CreateDirectory(_fetchCurrentModDir);
-
-                var _fetchRemotes = Repository.ListRemoteReferences(_fetchRelativeUri.ToString());
-
-                if (_fetchPlatform == null)
-                {
-                    using var _makeClient = new HttpClient();
-                    using var _fetchResponse = await _makeClient.GetAsync($"https://raw.githubusercontent.com/{_fetchResult}/" + (_fetchBranch != null ? _fetchBranch : _fetchRemotes.First().TargetIdentifier) + "/mod.yml", HttpCompletionOption.ResponseHeadersRead);
-
-                    if (_fetchResponse.StatusCode != HttpStatusCode.OK)
-                        return; // TODO: Error box -- Mod Invalid.
-
-                    Repository.Clone(_fetchRelativeUri.ToString(), _fetchCurrentModDir, _cloneOptions);
-
-                    var _fetchGitDir = new DirectoryInfo(_fetchCurrentGitPath);
-
-                    foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                        _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
-                }
-
-                else
-                {
-                    Repository.Clone(_fetchRelativeUri.ToString(), _fetchCurrentModDir, _cloneOptions);
-
-                    var _fetchGit = new Repository(_fetchCurrentModDir);
-
-                    var _fetchCommit = _fetchGit.Head.Tip;
-                    var _doesModFileExist = _fetchCommit["mod.yml"] != null;
-
-                    _fetchGit.Dispose();
-
-                    var _fetchGitDir = new DirectoryInfo(_fetchCurrentGitPath);
-
-                    foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                        _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
-
-                    if (!_doesModFileExist)
-                    {
-                        Directory.Delete(_fetchCurrentModDir, true);
-                        return; // TODO: Error box -- Mod Invalid.
-                    }
-                }
+                var _errorDialog = new InvalidYamlError();
+                await _errorDialog.ShowDialog(this);
             }
-        
+
             _fetchContext.InitializeView();
 
             // If there is at least one mod, select the first mod.
