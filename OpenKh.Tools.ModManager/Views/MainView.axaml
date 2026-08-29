@@ -30,7 +30,7 @@
                 <MenuItem Header="Info"/>
             </Menu>
             
-            <ComboBox Margin="0,0,10,0" Width="200" HorizontalAlignment="Right" SelectedIndex="{ReflectionBinding CurrentConfig.TargetGame}">
+            <ComboBox Margin="0,0,10,0" Width="200" HorizontalAlignment="Right" SelectedIndex="{ReflectionBinding CurrentConfig.TargetGame}" SelectionChanged="OnTargetGameChanged">
                 <ComboBoxItem Content="Kingdom Hearts"/>
                 <ComboBoxItem Content="Kingdom Hearts II"/>
                 <ComboBoxItem Content="Re:Chain of Memories"/>
@@ -68,13 +68,13 @@
                             <PathIcon Data="{StaticResource icon_remove_mod}" Height="24" Width="24"/>
                         </Button>
                         <Separator Margin="5" Width="1" Height="NaN" VerticalAlignment="Stretch" />
-                        <Button Background="Transparent">
+                        <Button Background="Transparent" Click="OnUtmostClicked">
                             <PathIcon Data="{StaticResource icon_pri_utmost}" Height="24" Width="24"/>
                         </Button>
-                        <Button Background="Transparent">
+                        <Button Background="Transparent" Click="OnUpPriorityClicked">
                             <PathIcon Data="{StaticResource icon_pri_up}" Height="24" Width="24"/>
                         </Button>
-                        <Button Background="Transparent">
+                        <Button Background="Transparent" Click="OnDownPriorityClicked">
                             <PathIcon Data="{StaticResource icon_pri_down}" Height="24" Width="24"/>
                         </Button>
                     </StackPanel>

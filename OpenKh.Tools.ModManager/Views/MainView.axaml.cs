@@ -22,8 +22,10 @@ public partial class MainView : Window
         // Yea so Avalonian lists do not automatically highlight shit if they ain't empty so we gotta do it here.
         // If this ever breaks that means something is wrong.
 
-        if (ModList.MainList.Items.Count > 0)
-            (DataContext as MainViewModel).CurrentMod = ModList.MainList.Items[0] as ModModel;
+        var _fetchContext = DataContext as MainViewModel;
+
+        if (_fetchContext.InstalledMods != null && _fetchContext.InstalledMods.Count > 0)
+            _fetchContext.CurrentMod = _fetchContext.InstalledMods[0];
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)
@@ -35,6 +37,51 @@ public partial class MainView : Window
         // Overwrite the config file.
         File.WriteAllText("config.yml", _fetchSerialize);
 
-        base.OnClosing(e); 
+        base.OnClosing(e);
+    }
+
+    private void OnTargetGameChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        var _fetchContext = DataContext as MainViewModel;
+
+        _fetchContext.InitializeView();
+
+        if (_fetchContext.InstalledMods.Count > 0)
+            _fetchContext.CurrentMod = _fetchContext.InstalledMods[0];
+    }
+
+    private void OnUtmostClicked(object? sender, RoutedEventArgs e)
+    {
+        var _fetchContext = DataContext as MainViewModel;
+        var _fetchModList = _fetchContext.InstalledMods;
+
+        _fetchModList.Move(ModList.MainList.SelectedIndex, 0);
+        _fetchContext.CurrentMod = _fetchModList[0];
+    }
+
+    private void OnUpPriorityClicked(object? sender, RoutedEventArgs e)
+    {
+        var _fetchContext = DataContext as MainViewModel;
+        var _fetchModList = _fetchContext.InstalledMods;
+        var _fetchCurrentIndex = ModList.MainList.SelectedIndex;
+
+        if (_fetchCurrentIndex == 0)
+            return;
+
+        _fetchModList.Move(_fetchCurrentIndex, _fetchCurrentIndex - 1);
+        _fetchContext.CurrentMod = _fetchModList[_fetchCurrentIndex - 1];
+    }
+
+    private void OnDownPriorityClicked(object? sender, RoutedEventArgs e)
+    {
+        var _fetchContext = DataContext as MainViewModel;
+        var _fetchModList = _fetchContext.InstalledMods;
+        var _fetchCurrentIndex = ModList.MainList.SelectedIndex;
+
+        if (_fetchCurrentIndex == ModList.MainList.ItemCount - 1)
+            return;
+
+        _fetchModList.Move(_fetchCurrentIndex, _fetchCurrentIndex + 1);
+        _fetchContext.CurrentMod = _fetchModList[_fetchCurrentIndex + 1];
     }
 }
