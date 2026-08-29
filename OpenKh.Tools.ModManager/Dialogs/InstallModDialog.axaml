@@ -6,7 +6,7 @@
         MaxWidth="375" MaxHeight="150"
         MinWidth="375" MinHeight="150"
         x:Class="OpenKh.Tools.ModManager.Dialogs.InstallModDialog"
-        Title="Remove Selected Mod?">
+        Title="Install a Mod...">
     <StackPanel Margin="20" Spacing="15">
         <TextBlock Text="Enter the name of the repository to install." TextWrapping="Wrap" />
         <TextBox Name="RepositoryName" PlaceholderText="Ex. OpenKH/ExampleMod@github.com"/>
