@@ -7,4 +7,7 @@ public partial class MainViewModel : ViewModelBase
 {
     [ObservableProperty]
     private ModModel? _currentMod = null;
+
+    [ObservableProperty]
+    private bool _configurationValid = true;
 }
