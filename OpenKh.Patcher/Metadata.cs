@@ -73,10 +73,10 @@ namespace OpenKh.Patcher
         public void Write(Stream stream)
         {
             using (var writer = new StreamWriter(stream))
-                YamlSerializer.Serialize(writer, this);
+                YamlSerializer.Serialize(writer, this, new YamlSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, DefaultIgnoreCondition = YamlIgnoreCondition.WhenWritingDefault });
         }
         public override string ToString() =>
-        YamlSerializer.Serialize(this);
+        YamlSerializer.Serialize(this, new YamlSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, DefaultIgnoreCondition = YamlIgnoreCondition.WhenWritingDefault });
     }
 
     public class AssetFile

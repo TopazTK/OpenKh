@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using LibGit2Sharp;
 using LibGit2Sharp.Handlers;
 using OpenKh.Tools.ModManager.Dialogs;
@@ -9,10 +10,11 @@ using OpenKh.Tools.ModManager.ViewModels;
 using SharpYaml;
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using Avalonia.Threading;
+using static OpenKh.Kh2.Ard.AreaDataScript;
 
 namespace OpenKh.Tools.ModManager.Views;
 
@@ -148,7 +150,7 @@ public partial class MainView : Window
             var _progressDialog = new ModProgressDialog();
             _progressDialog.ShowDialog(this);
 
-            var _progressHandler = new TransferProgressHandler((progress) =>
+            var _gitProcessHandler = new TransferProgressHandler((progress) =>
             {
                 Dispatcher.UIThread.Post(() => 
                 {
@@ -162,13 +164,25 @@ public partial class MainView : Window
                 return true;
             });
 
-            if (File.Exists(_fetchResult))
+            bool _localProcessHandler(int processed, int total)
             {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _progressDialog.InstallProgress.Maximum = total;
+                    _progressDialog.InstallProgress.Value = processed;
+                });
 
-            }
+                if (GitService.CancelToken.IsCancellationRequested)
+                    return false;
+
+                return true;
+            };
+
+            if (File.Exists(_fetchResult))
+                _fetchInstallResult = await GitService.InstallLocal(_fetchModsPath, _fetchResult, _localProcessHandler);
 
             else
-                _fetchInstallResult = await GitService.InstallGit(_fetchModsPath, _fetchResult, _progressHandler);
+                _fetchInstallResult = await GitService.InstallGit(_fetchModsPath, _fetchResult, _gitProcessHandler);
 
             _progressDialog.Close(true);
 
