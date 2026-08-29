@@ -1,6 +1,9 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
+using OpenKh.Patcher;
 using OpenKh.Tools.ModManager.Models;
 using OpenKh.Tools.ModManager.Services;
 using OpenKh.Tools.ModManager.Views;
@@ -8,10 +11,9 @@ using SharpYaml;
 using SharpYaml.Serialization;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
-using OpenKh.Patcher;
 using System.Linq;
-using Avalonia.Media.Imaging;
 
 namespace OpenKh.Tools.ModManager.ViewModels;
 
@@ -21,7 +23,7 @@ public partial class MainViewModel : ViewModelBase
     private ModModel? _currentMod = null;
 
     [ObservableProperty]
-    private List<ModModel>? _installedMods = null;
+    private ObservableCollection<ModModel>? _installedMods = null;
 
     [ObservableProperty]
     private bool _configurationValid = true;
@@ -29,8 +31,12 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private Configuration? _currentConfig = null;
 
-    public MainViewModel()
+    public void InitializeView()
     {
+        CurrentMod = null;
+        InstalledMods = null;
+        ConfigurationValid = true;
+
         // === Configuration Parsing and Verification === //
 
         // If the config is null, parse it.
@@ -59,7 +65,7 @@ public partial class MainViewModel : ViewModelBase
                 ConfigurationValid = false;
         }
 
-        InstalledMods = new List<ModModel>();
+        var _fetchMods = new ObservableCollection<ModModel>();
         var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", CurrentConfig.TargetGame.ToString().ToLower());
 
         foreach (var _fetchDirectory in Directory.EnumerateDirectories(_fetchModsPath))
@@ -70,22 +76,48 @@ public partial class MainViewModel : ViewModelBase
             if (!File.Exists(_fetchPathYaml))
                 continue;
 
-            using (var _fileStream = new FileStream(_fetchPathYaml, FileMode.Open))
+            var _metadata = Metadata.Read(_fetchPathYaml);
+
+            if (_metadata.IsValid)
             {
-                var _metadata = Metadata.Read(_fileStream);
                 var _modModel = new ModModel
                 {
                     ModTitle = _metadata.Title,
                     ModAuthor = _metadata.OriginalAuthor,
                     ModDescription = _metadata.Description,
                     ModPath = _fetchDirectory,
-                    ModFilesList = string.Join("\n", _metadata.Assets.Select(x => x.Name)),
+                    ModFilesList = _metadata.Assets.Select(x => x.Name).ToArray(),
                     ModIcon = new Bitmap(_fetchPathIcon),
-                    ModActive = true
+                    ModActive = true,
+                    ModValid = true
                 };
 
-                InstalledMods.Add(_modModel);
+                _fetchMods.Add(_modModel);
+            }
+
+            else
+            {
+                var uri = new Uri("avares://OpenKh.Tools.ModManager/Assets/invalid_mod.png");
+
+                var _modModel = new ModModel
+                {
+                    ModTitle = _metadata.Title,
+                    ModAuthor = "This mod is invalid!",
+                    ModDescription = "This mod contains errors within its YAML file. Please check the formatting!",
+                    ModIcon = new Bitmap(AssetLoader.Open(uri)),
+                    ModPath = _fetchDirectory,
+                    ModValid = false
+                };
+
+                _fetchMods.Add(_modModel);
             }
         }
+
+        InstalledMods = _fetchMods;
+    }
+
+    public MainViewModel()
+    {
+        InitializeView();
     }
 }
