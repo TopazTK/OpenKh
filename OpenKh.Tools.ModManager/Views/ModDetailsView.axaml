@@ -14,8 +14,8 @@
             <Separator Margin="5"/>
             <TextBlock FontSize="12" FontStyle="Italic" Text="{ReflectionBinding ModDescription}" TextWrapping="Wrap"/>
             <StackPanel Spacing="5" Orientation="Horizontal" IsVisible="{ReflectionBinding ModValid}">
-                <HyperlinkButton FontSize="12" NavigateUri="{ReflectionBinding ModSource}" Content="Mod Source Code..."/>
-                <HyperlinkButton FontSize="12" NavigateUri="{ReflectionBinding ModIssues}" Content="Report Bugs..."/>
+                <HyperlinkButton FontSize="12" NavigateUri="{ReflectionBinding ModSource}" IsVisible="{ReflectionBinding ModSource, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Content="Mod Source Code..."/>
+                <HyperlinkButton FontSize="12" NavigateUri="{ReflectionBinding ModIssues}" IsVisible="{ReflectionBinding ModIssues, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Content="Report Bugs..."/>
             </StackPanel>
             <Separator Margin="5" IsVisible="{ReflectionBinding ModValid}"/>
             <Expander Header="Mod Contents" HorizontalAlignment="Stretch" IsVisible="{ReflectionBinding ModValid}">  

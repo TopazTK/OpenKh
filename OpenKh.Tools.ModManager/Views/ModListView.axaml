@@ -29,7 +29,8 @@
                         </Border>
                         <StackPanel VerticalAlignment="Center">
                             <Label Content="{ReflectionBinding ModTitle}" FontWeight="Bold"/>
-                            <Label Content="{ReflectionBinding ModAuthor}"/>
+                            <Label Content="{ReflectionBinding ModAuthor}" IsVisible="{ReflectionBinding ModAuthor, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                            <Label Content="{ReflectionBinding ModPlatform}" FontSize="12" IsVisible="{ReflectionBinding ModPlatform, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                         </StackPanel>
                     </StackPanel>
                 </Grid>
