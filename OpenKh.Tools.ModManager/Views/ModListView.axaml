@@ -8,12 +8,14 @@
              xmlns:view="clr-namespace:OpenKh.Tools.ModManager.Views"
              x:Class="OpenKh.Tools.ModManager.Views.ModListView">
 
-        <ListBox Name="ModList" Background="Transparent" SelectedItem="{ReflectionBinding CurrentMod}">
+        <ListBox Name="MainList" Background="Transparent" ItemsSource="{ReflectionBinding InstalledMods}" SelectedItem="{ReflectionBinding CurrentMod}">
         <ListBox.ItemTemplate>
             <DataTemplate DataType="{x:Type model:ModModel}">
                 <StackPanel Orientation="Horizontal">
                     <CheckBox IsChecked="{ReflectionBinding ModActive}"/>
-                    <Image Width="64" Height="64" Source="{ReflectionBinding ModIcon}"/>
+                    <Border Margin="5" VerticalAlignment="Center" CornerRadius="5" ClipToBounds="true">
+                        <Image Width="64" Height="64" Source="{ReflectionBinding ModIcon}"/>
+                    </Border>
                     <StackPanel VerticalAlignment="Center">
                         <Label Content="{ReflectionBinding ModTitle}" FontWeight="Bold"/>
                         <Label Content="{ReflectionBinding ModAuthor}"/>

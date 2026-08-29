@@ -1,3 +1,4 @@
+using Avalonia.Media.Imaging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,8 +13,8 @@ namespace OpenKh.Tools.ModManager.Models
         public string? ModAuthor { get; set; }
         public string? ModDescription { get; set; }
         public string? ModFilesList { get; set; }
-        public string? ModIconSource { get; set; }
-        public string? ModYamlPath { get; set; }
+        public Bitmap? ModIcon { get; set; }
+        public string? ModPath { get; set; }
         public bool? ModActive { get; set; }
 
         public Uri? ModSource { get; set; }

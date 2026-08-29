@@ -8,7 +8,7 @@
         mc:Ignorable="d" d:DesignWidth="750" d:DesignHeight="850"
         Width="750" Height="850"
         MinWidth="750" MinHeight="850"
-        x:Class="OpenKh.Tools.ModManager.Views.MainWindow"
+        x:Class="OpenKh.Tools.ModManager.Views.MainView"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="OpenKh.Tools.ModManager">
@@ -30,7 +30,7 @@
                 <MenuItem Header="Info"/>
             </Menu>
             
-            <ComboBox Margin="0,0,10,0" Width="200" HorizontalAlignment="Right">
+            <ComboBox Margin="0,0,10,0" Width="200" HorizontalAlignment="Right" SelectedIndex="{ReflectionBinding CurrentConfig.TargetGame}">
                 <ComboBoxItem Content="Kingdom Hearts"/>
                 <ComboBoxItem Content="Kingdom Hearts II"/>
                 <ComboBoxItem Content="Re:Chain of Memories"/>
@@ -57,7 +57,7 @@
                     </Grid.RowDefinitions>
 
                     <GroupBox Margin="5" Grid.Row="0" Header="Installed Mods">
-                        <view:ModListView/>
+                        <view:ModListView Name="ModList"/>
                     </GroupBox>
 
                     <StackPanel Grid.Row="1" Spacing="5" VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal">
@@ -81,11 +81,11 @@
                 </Grid>
 
                 <GroupBox Margin="5" Grid.Column="1" Header="Mod Properties">
-                    <view:ModDetailsView DataContext="{ReflectionBinding CurrentMod}" IsVisible="{ReflectionBinding SelectedItem, ElementName=ModList, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <view:ModDetailsView Name="ModDetails" DataContext="{ReflectionBinding CurrentMod}" IsVisible="{Binding Converter={x:Static ObjectConverters.IsNotNull}}"/>
                 </GroupBox>
             </Grid>
 
-            <view:ModStatusView Grid.Row="1"/>
+            <view:ModStatusView Name="ModStatus" Grid.Row="1"/>
 
         </Grid>
     </DockPanel>
