@@ -31,7 +31,7 @@ namespace OpenKh.Tools.ModManager.Services
         DREAM_DROP_DISTANCE
     };
     
-    public class Configuration
+    public class Config
     {
         public static Dictionary<Game, string> GameExecutable = new Dictionary<Game, string>()
         {
