@@ -1,19 +1,15 @@
-using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using OpenKh.Patcher;
 using OpenKh.Tools.ModManager.Models;
 using OpenKh.Tools.ModManager.Services;
-using OpenKh.Tools.ModManager.Views;
 using SharpYaml;
-using SharpYaml.Serialization;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using LibGit2Sharp;
 
 namespace OpenKh.Tools.ModManager.ViewModels;
 
@@ -29,7 +25,7 @@ public partial class MainViewModel : ViewModelBase
     private bool _configurationValid = true;
 
     [ObservableProperty]
-    private Configuration? _currentConfig = null;
+    private Config? _currentConfig = null;
 
     public void InitializeView()
     {
@@ -45,7 +41,7 @@ public partial class MainViewModel : ViewModelBase
         if (CurrentConfig == null)
         {
             var _fetchConfigFile = File.ReadAllText("config.yml");
-            CurrentConfig = YamlSerializer.Deserialize<Configuration>(_fetchConfigFile);
+            CurrentConfig = YamlSerializer.Deserialize<Config>(_fetchConfigFile);
         }
 
         // Handle these if the platform is NOT set to PCSX2.
@@ -53,7 +49,7 @@ public partial class MainViewModel : ViewModelBase
         if (CurrentConfig.TargetPlatform != Platform.PCSX2)
         {
             // Construct the paths for the game executable and Panacea.
-            var _gameExecutablePath = Path.Combine(CurrentConfig.GamePath, Configuration.GameExecutable[CurrentConfig.TargetGame]);
+            var _gameExecutablePath = Path.Combine(CurrentConfig.GamePath, Config.GameExecutable[CurrentConfig.TargetGame]);
             var _panaceaPath = Path.Combine(CurrentConfig.GamePath, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
 
             // Verify the game executable and directory exists as configured. If the build type is PANACEA, also verify Panacea's existence.
@@ -80,6 +76,8 @@ public partial class MainViewModel : ViewModelBase
             var _fetchPathYaml = Path.Combine(_fetchDirectory, "mod.yml");
             var _fetchPathIcon = Path.Combine(_fetchDirectory, "icon.png");
 
+            var _fetchPathGit = Path.Combine(_fetchDirectory, ".git");
+
             // YAML don't do it? Don't do it!
             if (!File.Exists(_fetchPathYaml))
                 continue;
@@ -98,10 +96,38 @@ public partial class MainViewModel : ViewModelBase
                     ModDescription = _metadata.Description,
                     ModPath = _fetchDirectory,
                     ModFilesList = _metadata.Assets.Select(x => x.Name).ToArray(),
-                    ModIcon = new Bitmap(_fetchPathIcon),
+                    ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
                     ModActive = true,
                     ModValid = true
                 };
+
+                // We have found a Git Repository, let's see what's up.
+
+                if (Directory.Exists(_fetchPathGit))
+                {
+                    if (Repository.IsValid(_fetchPathGit))
+                    {                            
+                        var _fetchGit = new Repository(_fetchPathGit);
+                        _fetchGit.Config.Set("core.filemode", false, ConfigurationLevel.Local);
+
+                        if (!_fetchGit.Info.IsHeadDetached)
+                        {
+                            var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+
+                            _modModel.ModSource = new Uri(_fetchRemote.Url);
+                            _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+
+                            _modModel.ModPlatform = _modModel.ModSource.Host;
+
+                            Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
+
+                            var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
+                            _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
+                        }
+
+                        _fetchGit.Dispose();
+                    }
+                }
 
                 _fetchMods.Add(_modModel);
             }
