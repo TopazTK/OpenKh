@@ -27,6 +27,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private Config? _currentConfig = null;
 
+    [ObservableProperty]
+    private double _installProgress = 0;
+
     public void InitializeView()
     {
         CurrentMod = null;
@@ -108,7 +111,6 @@ public partial class MainViewModel : ViewModelBase
                     if (Repository.IsValid(_fetchPathGit))
                     {                            
                         var _fetchGit = new Repository(_fetchPathGit);
-                        _fetchGit.Config.Set("core.filemode", false, ConfigurationLevel.Local);
 
                         if (!_fetchGit.Info.IsHeadDetached)
                         {
@@ -126,6 +128,11 @@ public partial class MainViewModel : ViewModelBase
                         }
 
                         _fetchGit.Dispose();
+
+                        var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
+
+                        foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
+                            _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
                     }
                 }
 
