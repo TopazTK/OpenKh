@@ -54,7 +54,7 @@ namespace OpenKh.Tools.ModManager.Services
 
             IEnumerable<Reference>? _fetchRemotes = null;
 
-            try { Repository.ListRemoteReferences(_fetchRelativeUri.ToString()); }
+            try { _fetchRemotes = Repository.ListRemoteReferences(_fetchRelativeUri.ToString()); }
             catch (LibGit2SharpException)
             {
                 Directory.Delete(_fetchCurrentModDir, true);
