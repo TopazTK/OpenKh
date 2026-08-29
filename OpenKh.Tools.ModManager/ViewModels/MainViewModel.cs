@@ -65,18 +65,29 @@ public partial class MainViewModel : ViewModelBase
                 ConfigurationValid = false;
         }
 
+        // === Mod Parsing and Verification === //
+
+        // Construct the mod folder path for the specified game.
+
         var _fetchMods = new ObservableCollection<ModModel>();
         var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", CurrentConfig.TargetGame.ToString().ToLower());
 
+        // For each directory that exists in the mod folder:
+
         foreach (var _fetchDirectory in Directory.EnumerateDirectories(_fetchModsPath))
         {
+            // Construct the paths to YAML and PNG files.
             var _fetchPathYaml = Path.Combine(_fetchDirectory, "mod.yml");
             var _fetchPathIcon = Path.Combine(_fetchDirectory, "icon.png");
 
+            // YAML don't do it? Don't do it!
             if (!File.Exists(_fetchPathYaml))
                 continue;
 
+            // Fetch and read the YAML to parse the metadata.
             var _metadata = Metadata.Read(_fetchPathYaml);
+
+            // If the metadata is valid, parse the mod and push it to the ViewModel.
 
             if (_metadata.IsValid)
             {
@@ -94,6 +105,8 @@ public partial class MainViewModel : ViewModelBase
 
                 _fetchMods.Add(_modModel);
             }
+
+            // Otherwise, make it known that the mod sucks ASS and is no good for us, but still push it to the ViewModel so we know about it :D
 
             else
             {
@@ -113,6 +126,7 @@ public partial class MainViewModel : ViewModelBase
             }
         }
 
+        // Sync the list.
         InstalledMods = _fetchMods;
     }
 
