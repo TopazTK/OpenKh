@@ -1,0 +1,28 @@
+<ContentPage xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="500"
+             xmlns:vm="using:OpenKh.Tools.ModManager.ViewModels"
+             xmlns:model="using:OpenKh.Tools.ModManager.Models"
+             xmlns:view="clr-namespace:OpenKh.Tools.ModManager.Views"
+             x:Class="OpenKh.Tools.ModManager.Views.ModDetailsView">
+
+        <StackPanel Margin="5" Spacing="3">
+            <TextBlock FontSize="14" FontWeight="Bold" Text="{ReflectionBinding ModTitle}"/>
+            <TextBlock FontSize="13" Text="{ReflectionBinding ModAuthor}"/>
+            <Separator Margin="5"/>
+            <TextBlock FontSize="12" FontStyle="Italic" Text="{ReflectionBinding ModDescription}" TextWrapping="Wrap"/>
+            <StackPanel Spacing="5" Orientation="Horizontal">
+                <HyperlinkButton FontSize="12" NavigateUri="{ReflectionBinding ModSource}" Content="Mod Source Code..."/>
+                <HyperlinkButton FontSize="12" NavigateUri="{ReflectionBinding ModIssues}" Content="Report Bugs..."/>
+            </StackPanel>
+            <Separator Margin="5"/>
+            <Expander Header="Mod Contents" HorizontalAlignment="Stretch">  
+                <ScrollViewer Margin="-15" MaxHeight="470">
+                        <TextBlock Margin="5" Text="{ReflectionBinding ModFilesList}" TextWrapping="Wrap"/>
+                </ScrollViewer>
+            </Expander>
+        </StackPanel>
+
+</ContentPage>
