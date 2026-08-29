@@ -11,6 +11,7 @@ namespace OpenKh.Tools.ModManager.Models
     {
         public string? ModTitle { get; set; }
         public string? ModAuthor { get; set; }
+        public string? ModPlatform { get; set; }
         public string? ModDescription { get; set; }
         public string[]? ModFilesList { get; set; }
         public Bitmap? ModIcon { get; set; }
@@ -19,6 +20,7 @@ namespace OpenKh.Tools.ModManager.Models
         public bool ModValid { get; set; }
         public Uri? ModSource { get; set; }
         public Uri? ModIssues { get; set; }
+        public int ModBehindBy { get; set; }
 
     }
 }

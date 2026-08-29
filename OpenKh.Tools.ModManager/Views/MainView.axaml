@@ -61,10 +61,10 @@
                     </GroupBox>
 
                     <StackPanel Grid.Row="1" Spacing="5" VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal">
-                        <Button Background="Transparent">
+                        <Button Background="Transparent" Click="OnInstallClicked">
                             <PathIcon Data="{StaticResource icon_add_mod}" Height="24" Width="24"/>
                         </Button>
-                        <Button Background="Transparent">
+                        <Button Background="Transparent" Click="OnRemoveClicked">
                             <PathIcon Data="{StaticResource icon_remove_mod}" Height="24" Width="24"/>
                         </Button>
                         <Separator Margin="5" Width="1" Height="NaN" VerticalAlignment="Stretch" />

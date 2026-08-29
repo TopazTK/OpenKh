@@ -1,0 +1,18 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="375" d:DesignHeight="150"
+        MaxWidth="375" MaxHeight="150"
+        MinWidth="375" MinHeight="150"
+        x:Class="OpenKh.Tools.ModManager.Dialogs.InstallModDialog"
+        Title="Remove Selected Mod?">
+    <StackPanel Margin="20" Spacing="15">
+        <TextBlock Text="Enter the name of the repository to install." TextWrapping="Wrap" />
+        <TextBox Name="RepositoryName" PlaceholderText="Ex. OpenKH/ExampleMod@github.com"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+            <Button Content="Select and Install an Archive or Script" Click="MiscAcceptDialog" HorizontalContentAlignment="Center"/>
+            <Button Content="Install" Click="AcceptDialog" HorizontalContentAlignment="Center" HotKey="Enter"/>
+        </StackPanel>
+    </StackPanel>
+</Window>
