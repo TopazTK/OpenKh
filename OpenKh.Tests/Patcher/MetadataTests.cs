@@ -10,7 +10,7 @@ namespace OpenKh.Tests.Patcher
         [Fact]
         public void ReadModMetadataTest()
         {
-            var metadata = File.OpenRead("Patcher/res/sample-simple-mod.yml").Using(Metadata.Read);
+            var metadata = Metadata.Read("Patcher/res/sample-simple-mod.yml");
 
             Assert.Equal("My awesome untitled mod", metadata.Title);
             Assert.Equal(1, metadata.Specifications);
@@ -26,7 +26,7 @@ namespace OpenKh.Tests.Patcher
         [Fact]
         public void ReadModMetadataTestCollectionOptional()
         {
-            var metadata = File.OpenRead("Patcher/res/sample-simple-collection-mod.yml").Using(Metadata.Read);
+            var metadata = Metadata.Read("Patcher/res/sample-simple-collection-mod.yml");
 
             Assert.Equal("My awesome untitled mod - part 2", metadata.Title);
             Assert.Equal(1, metadata.Specifications);

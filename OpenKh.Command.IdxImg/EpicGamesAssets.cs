@@ -141,7 +141,7 @@ namespace OpenKh.Command.IdxImg
                     foreach (var mod_name in enabled.AsEnumerable().Reverse())
                     {
                         var mod_folder = Path.Combine(ModsFolder, mod_name);
-                        var metadata = File.OpenRead(Path.Combine(mod_folder, "mod.yml")).Using(Metadata.Read);
+                        var metadata = Metadata.Read(Path.Combine(mod_folder, "mod.yml"));
                         Console.WriteLine($"Patching {mod_name}");
                         patcher.Patch(DataFolder, OutputFolder, metadata, mod_folder, platform: 2, packageMap: map, LaunchGame: GameId);
                     }

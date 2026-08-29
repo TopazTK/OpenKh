@@ -66,7 +66,7 @@ namespace OpenKh.Patcher
 
         public void Patch(string originalAssets, string outputDir, string modFilePath)
         {
-            var metadata = File.OpenRead(modFilePath).Using(Metadata.Read);
+            var metadata = Metadata.Read(modFilePath);
             var modBasePath = Path.GetDirectoryName(modFilePath);
             Patch(originalAssets, outputDir, metadata, modBasePath);
         }
