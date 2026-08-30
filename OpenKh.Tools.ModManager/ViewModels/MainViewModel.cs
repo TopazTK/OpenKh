@@ -8,12 +8,14 @@ using OpenKh.Tools.ModManager.Models;
 using OpenKh.Tools.ModManager.Services;
 using SharpYaml;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Xe.BinaryMapper;
 
 namespace OpenKh.Tools.ModManager.ViewModels;
 
@@ -43,6 +45,9 @@ public partial class MainViewModel : ViewModelBase
 
         foreach (var _fetchMod in _fetchModList)
         {
+            if (!_fetchMod.ModValid)
+                continue;
+
             var _fetchRelativePath = Path.GetRelativePath(System.AppDomain.CurrentDomain.BaseDirectory, _fetchMod.ModPath);
 
             var _fetchBytes = Encoding.ASCII.GetBytes(_fetchRelativePath);
@@ -57,7 +62,7 @@ public partial class MainViewModel : ViewModelBase
         File.WriteAllText(Path.Combine(_fetchModsPath, "mod_memory.yml"), _fetchSerial);
     }
 
-    public void InitializeView()
+    public void InitializeView(bool selectLast = false)
     {
         CurrentMod = null;
         InstalledMods = null;
@@ -179,6 +184,7 @@ public partial class MainViewModel : ViewModelBase
                     ModDescription = "This mod contains errors within its YAML file. Please check the formatting!",
                     ModIcon = new Bitmap(AssetLoader.Open(uri)),
                     ModPath = _fetchDirectory,
+                    ModActive = false,
                     ModValid = false
                 };
 
@@ -186,8 +192,47 @@ public partial class MainViewModel : ViewModelBase
             }
         }
 
-        // Sync the list.
-        InstalledMods = _fetchMods;
+        var _fetchModMemoryPath = Path.Combine(_fetchModsPath, "mod_memory.yml");
+
+        if (File.Exists(_fetchModMemoryPath))
+        {
+            var _fetchRawYaml = File.ReadAllText(_fetchModMemoryPath);
+            var _fetchModMemory = YamlSerializer.Deserialize<ObservableCollection<MemoryModel>>(_fetchRawYaml);
+
+            var _fetchTempList = new ModModel[_fetchMods.Count];
+
+            foreach (var _fetchMemory in _fetchModMemory)
+            {
+                var _fetchMod = _fetchMods.First(x =>
+                {
+                    var _fetchRelativePath = Path.GetRelativePath(System.AppDomain.CurrentDomain.BaseDirectory, x.ModPath);
+                    var _fetchBytes = Encoding.ASCII.GetBytes(_fetchRelativePath);
+                    var _fetchHash = MD5.HashData(_fetchBytes);
+
+                    return Convert.ToHexString(_fetchHash) == _fetchMemory.ModHash;
+                });
+
+                if (_fetchMod == null || !_fetchMod.ModValid)
+                    continue;
+
+                _fetchMod.ModActive = _fetchMemory.ModActive;
+                _fetchTempList[_fetchMemory.ModIndex] = _fetchMod;
+
+                _fetchMods.Remove(_fetchMod);
+            }
+
+            InstalledMods = new ObservableCollection<ModModel>(_fetchTempList.Where(x => x != null));
+
+            foreach (var _fetchMod in _fetchMods.Where(x => x.ModValid))
+                InstalledMods.Add(_fetchMod);
+
+            foreach (var _fetchMod in _fetchMods.Where(x => !x.ModValid))
+                InstalledMods.Add(_fetchMod);
+        }
+
+        else
+            InstalledMods = _fetchMods;
+        
         InstalledMods.CollectionChanged += OnModPropertyChanged;
 
         // If there is at least one mod, select the first mod.
