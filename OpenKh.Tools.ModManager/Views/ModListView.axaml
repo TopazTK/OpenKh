@@ -33,6 +33,7 @@
                             <Label Content="{ReflectionBinding ModPlatform}" FontSize="12" IsVisible="{ReflectionBinding ModPlatform, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                         </StackPanel>
                     </StackPanel>
+                    <Separator VerticalAlignment="Bottom" Height="3"  Margin="-12"/>
                 </Grid>
             </DataTemplate>
         </ListBox.ItemTemplate>
