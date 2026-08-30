@@ -1,6 +1,7 @@
 using OpenKh.Command.Bdxio.Models;
 using OpenKh.Command.Bdxio.Utils;
 using OpenKh.Kh2;
+using OpenKh.Kh2.Bdx.Utils;
 using OpenKh.Tools.Kh2ObjectEditor.Services;
 using OpenKh.Tools.Kh2ObjectEditor.Utils;
 using System;

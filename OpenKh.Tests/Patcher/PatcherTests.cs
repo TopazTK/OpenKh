@@ -1,8 +1,8 @@
 using OpenKh.Bbs;
-using OpenKh.Command.Bdxio.Utils;
 using OpenKh.Common;
 using OpenKh.Imaging;
 using OpenKh.Kh2;
+using OpenKh.Kh2.Bdx.Utils;
 using OpenKh.Kh2.Messages;
 using OpenKh.Patcher;
 using System;
