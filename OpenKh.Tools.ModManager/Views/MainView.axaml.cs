@@ -14,6 +14,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using static OpenKh.Kh2.Ard.AreaDataScript;
 
 namespace OpenKh.Tools.ModManager.Views;
@@ -32,6 +33,9 @@ public partial class MainView : Window
         // If this ever breaks that means something is wrong.
 
         var _fetchContext = DataContext as MainViewModel;
+
+        if (_fetchContext == null)
+            return;
 
         if (_fetchContext.InstalledMods != null && _fetchContext.InstalledMods.Count > 0)
             _fetchContext.CurrentMod = _fetchContext.InstalledMods[0];
@@ -110,29 +114,44 @@ public partial class MainView : Window
         _fetchContext.CurrentMod = _fetchModList[_fetchCurrentIndex + 1];
     }
 
+    // This executes when we click the remove mod button.
     private async void OnRemoveClicked(object? sender, RoutedEventArgs e)
     {
+        // Ask the user if they *really* want to remove said mod.
+
         var _removeDialog = new RemoveModDialog();
         bool? _fetchResult = await _removeDialog.ShowDialog<bool?>(this);
 
+        // If they indeed do:
+
         if (_fetchResult == true)
         {
+            // Fetch the context, the mod list, and the current mod.
             var _fetchContext = DataContext as MainViewModel;
             var _fetchModList = _fetchContext.InstalledMods;
             var _fetchCurrentMod = _fetchContext.CurrentMod;
 
+            // Fetch the path too we kinda need it.
             var _fetchModPath = _fetchCurrentMod.ModPath;
 
+            // Remove the mod from the list.
             _fetchModList.Remove(_fetchCurrentMod);
 
+            // If we still have mods, select one.
             if (_fetchModList.Count > 0)
-                _fetchCurrentMod = _fetchModList[0];
+                _fetchCurrentMod = _fetchModList.First();
 
+            // If we do not, nullify selection.
             else
                 _fetchCurrentMod = null;
 
-            if (Directory.Exists(_fetchModPath))
-                Directory.Delete(_fetchModPath, true);
+            // Remove the mod directory.
+            // This is a task for a reason. This isn't being awaited for a reason. Do not listen to IntelliSense on this one.
+            Task.Run(() =>
+            {
+                if (Directory.Exists(_fetchModPath))
+                    Directory.Delete(_fetchModPath, true);
+            });
         }
     }
 
@@ -158,7 +177,7 @@ public partial class MainView : Window
                     _progressDialog.InstallProgress.Value = progress.ReceivedObjects;
                 });
 
-                if (GitService.CancelToken.IsCancellationRequested)
+                if (InstallService.CancelToken.IsCancellationRequested)
                     return false;
 
                 return true;
@@ -172,17 +191,17 @@ public partial class MainView : Window
                     _progressDialog.InstallProgress.Value = processed;
                 });
 
-                if (GitService.CancelToken.IsCancellationRequested)
+                if (InstallService.CancelToken.IsCancellationRequested)
                     return false;
 
                 return true;
             };
 
             if (File.Exists(_fetchResult))
-                _fetchInstallResult = await GitService.InstallLocal(_fetchModsPath, _fetchResult, _localProcessHandler);
+                _fetchInstallResult = await InstallService.InstallLocal(_fetchModsPath, _fetchResult, _localProcessHandler);
 
             else
-                _fetchInstallResult = await GitService.InstallGit(_fetchModsPath, _fetchResult, _gitProcessHandler);
+                _fetchInstallResult = await InstallService.InstallGit(_fetchModsPath, _fetchResult, _gitProcessHandler);
 
             _progressDialog.Close(true);
 

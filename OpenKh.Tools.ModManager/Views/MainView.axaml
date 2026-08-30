@@ -64,17 +64,17 @@
                         <Button Background="Transparent" Click="OnInstallClicked">
                             <PathIcon Data="{StaticResource icon_add_mod}" Height="24" Width="24"/>
                         </Button>
-                        <Button Background="Transparent" Click="OnRemoveClicked">
+                        <Button Background="Transparent" Click="OnRemoveClicked" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <PathIcon Data="{StaticResource icon_remove_mod}" Height="24" Width="24"/>
                         </Button>
-                        <Separator Margin="5" Width="1" Height="NaN" VerticalAlignment="Stretch" />
-                        <Button Background="Transparent" Click="OnUtmostClicked">
+                        <Separator Margin="5" Width="1" Height="NaN" VerticalAlignment="Stretch" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                        <Button Background="Transparent" Click="OnUtmostClicked" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <PathIcon Data="{StaticResource icon_pri_utmost}" Height="24" Width="24"/>
                         </Button>
-                        <Button Background="Transparent" Click="OnUpPriorityClicked">
+                        <Button Background="Transparent" Click="OnUpPriorityClicked" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <PathIcon Data="{StaticResource icon_pri_up}" Height="24" Width="24"/>
                         </Button>
-                        <Button Background="Transparent" Click="OnDownPriorityClicked">
+                        <Button Background="Transparent" Click="OnDownPriorityClicked" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <PathIcon Data="{StaticResource icon_pri_down}" Height="24" Width="24"/>
                         </Button>
                     </StackPanel>

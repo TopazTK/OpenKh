@@ -8,7 +8,7 @@
         x:Class="OpenKh.Tools.ModManager.Dialogs.InvalidYamlError"
         Title="Not a Valid Mod!">
     <StackPanel Margin="20" Spacing="15">
-        <TextBlock Text="This is not a valid OpenKH (or compliant) Mod. Please make sure the mod exists and is valid." TextWrapping="Wrap" />
+        <TextBlock Text="This is not a valid (or compliant) OpenKH Mod. Please make sure the mod exists and is valid." TextWrapping="Wrap" />
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
             <Button Content="OK" Click="AcceptDialog" HorizontalContentAlignment="Center" Width="50" HotKey="Enter"/>
         </StackPanel>
