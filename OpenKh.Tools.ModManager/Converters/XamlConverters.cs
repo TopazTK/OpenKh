@@ -15,4 +15,15 @@ namespace OpenKh.Tools.ModManager.Converters
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is bool b && b ? IfTrue : IfFalse;
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
     }
+
+    public class NonNullPropertyConverter : IMultiValueConverter
+    {
+        public object Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (values == null || values.Count < 2)
+                return false;
+
+            return values[0] != null && values[1] is bool b && b;
+        }
+    }
 }
