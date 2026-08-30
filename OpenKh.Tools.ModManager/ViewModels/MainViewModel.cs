@@ -1,15 +1,19 @@
+using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
+using LibGit2Sharp;
 using OpenKh.Patcher;
 using OpenKh.Tools.ModManager.Models;
 using OpenKh.Tools.ModManager.Services;
 using SharpYaml;
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
-using LibGit2Sharp;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace OpenKh.Tools.ModManager.ViewModels;
 
@@ -29,6 +33,29 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private double _installProgress = 0;
+
+    protected void OnModPropertyChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        var _fetchModList = sender as ObservableCollection<ModModel>;
+        var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", CurrentConfig.TargetGame.ToString().ToLower());
+
+        var _fetchMemory = new ObservableCollection<MemoryModel>();
+
+        foreach (var _fetchMod in _fetchModList)
+        {
+            var _fetchRelativePath = Path.GetRelativePath(System.AppDomain.CurrentDomain.BaseDirectory, _fetchMod.ModPath);
+
+            var _fetchBytes = Encoding.ASCII.GetBytes(_fetchRelativePath);
+            var _fetchHash = MD5.HashData(_fetchBytes);
+
+            var _fetchHashStr = Convert.ToHexString(_fetchHash);
+
+            _fetchMemory.Add(new MemoryModel { ModHash = _fetchHashStr, ModActive = _fetchMod.ModActive, ModIndex = _fetchModList.IndexOf(_fetchMod) });
+        }
+
+        var _fetchSerial = YamlSerializer.Serialize(_fetchMemory);
+        File.WriteAllText(Path.Combine(_fetchModsPath, "mod_memory.yml"), _fetchSerial);
+    }
 
     public void InitializeView()
     {
@@ -161,6 +188,11 @@ public partial class MainViewModel : ViewModelBase
 
         // Sync the list.
         InstalledMods = _fetchMods;
+        InstalledMods.CollectionChanged += OnModPropertyChanged;
+
+        // If there is at least one mod, select the first mod.
+        if (InstalledMods.Count > 0)
+            CurrentMod = InstalledMods.First();
     }
 
     public MainViewModel()

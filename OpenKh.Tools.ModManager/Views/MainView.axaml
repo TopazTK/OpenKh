@@ -57,7 +57,7 @@
                     </Grid.RowDefinitions>
 
                     <GroupBox Margin="5" Grid.Row="0" Header="Installed Mods">
-                        <view:ModListView Name="ModList"/>
+                        <view:ModListView Name="ModList" ModActiveChanged="OnModActiveChanged"/>
                     </GroupBox>
 
                     <StackPanel Grid.Row="1" Spacing="5" VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal">

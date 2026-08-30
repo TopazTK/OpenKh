@@ -9,8 +9,9 @@
              x:Class="OpenKh.Tools.ModManager.Views.ModDetailsView">
 
         <StackPanel Margin="5" Spacing="3">
+           
             <TextBlock FontSize="14" FontWeight="Bold" Text="{ReflectionBinding ModTitle}"/>
-            <TextBlock FontSize="13" Text="{ReflectionBinding ModAuthor}"/>
+            <TextBlock FontSize="13" Text="{ReflectionBinding ModAuthor}" IsVisible="{ReflectionBinding ModAuthor, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             <Separator Margin="5"/>
             <TextBlock FontSize="12" FontStyle="Italic" Text="{ReflectionBinding ModDescription}" TextWrapping="Wrap"/>
             <StackPanel Spacing="5" Orientation="Horizontal" IsVisible="{ReflectionBinding ModValid}">

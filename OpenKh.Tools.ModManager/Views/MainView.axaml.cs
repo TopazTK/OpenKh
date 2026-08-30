@@ -5,17 +5,20 @@ using LibGit2Sharp;
 using LibGit2Sharp.Handlers;
 using OpenKh.Tools.ModManager.Dialogs;
 using OpenKh.Tools.ModManager.Models;
+using OpenKh.Tools.ModManager.Views;
 using OpenKh.Tools.ModManager.Services;
 using OpenKh.Tools.ModManager.ViewModels;
 using SharpYaml;
 using System;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using static OpenKh.Kh2.Ard.AreaDataScript;
+using System.Text;
+using System.Security.Cryptography;
 
 namespace OpenKh.Tools.ModManager.Views;
 
@@ -62,10 +65,6 @@ public partial class MainView : Window
 
         // Re-Initialize the view.
         _fetchContext.InitializeView();
-
-        // If there is at least one mod, select the first mod.
-        if (_fetchContext.InstalledMods.Count > 0)
-            _fetchContext.CurrentMod = _fetchContext.InstalledMods[0];
     }
 
     // This executes if the utmost button is clicked.
@@ -171,7 +170,7 @@ public partial class MainView : Window
 
             var _gitProcessHandler = new TransferProgressHandler((progress) =>
             {
-                Dispatcher.UIThread.Post(() => 
+                Dispatcher.UIThread.Post(() =>
                 {
                     _progressDialog.InstallProgress.Maximum = progress.TotalObjects;
                     _progressDialog.InstallProgress.Value = progress.ReceivedObjects;
@@ -195,7 +194,8 @@ public partial class MainView : Window
                     return false;
 
                 return true;
-            };
+            }
+            ;
 
             if (File.Exists(_fetchResult))
                 _fetchInstallResult = await InstallService.InstallLocal(_fetchModsPath, _fetchResult, _localProcessHandler);
@@ -211,11 +211,22 @@ public partial class MainView : Window
                 await _errorDialog.ShowDialog(this);
             }
 
-            _fetchContext.InitializeView();
-
-            // If there is at least one mod, select the first mod.
-            if (_fetchContext.InstalledMods.Count > 0)
-                _fetchContext.CurrentMod = _fetchContext.InstalledMods[0];
+            else if (_fetchInstallResult == 0x00)
+                _fetchContext.InitializeView();
         }
+    }
+
+    private void OnModActiveChanged(object? sender, ModListView.ModActiveChangedEventArgs e)
+    {
+        var _fetchContext = DataContext as MainViewModel;
+        var _fetchModList = _fetchContext.InstalledMods;
+
+        var _fetchTargetMod = e.TargetMod;
+        var _fetchTargetIndex = _fetchModList.IndexOf(_fetchTargetMod);
+
+        _fetchTargetMod.ModActive = e.IsChecked;
+        _fetchModList[_fetchTargetIndex] = _fetchTargetMod;
+
+        _fetchContext.CurrentMod = _fetchModList[_fetchTargetIndex];
     }
 }

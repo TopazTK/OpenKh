@@ -1,7 +1,9 @@
 using Avalonia.Media.Imaging;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -21,6 +23,5 @@ namespace OpenKh.Tools.ModManager.Models
         public Uri? ModSource { get; set; }
         public Uri? ModIssues { get; set; }
         public int ModBehindBy { get; set; }
-
     }
 }

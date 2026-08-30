@@ -18,12 +18,12 @@
         </ContentPage.Resources>
 
         <ListBox Name="MainList" Background="Transparent" ItemsSource="{ReflectionBinding InstalledMods}" SelectedItem="{ReflectionBinding CurrentMod}">    
-            <ListBox.ItemTemplate>
+            <ListBox.ItemTemplate >
             <DataTemplate DataType="{x:Type model:ModModel}">
                 <Grid>
                     <Rectangle Margin="-15" Fill="{ReflectionBinding ModValid, Converter={StaticResource StatusToBackground}}"/>
                     <StackPanel Orientation="Horizontal">
-                        <CheckBox IsChecked="{ReflectionBinding ModActive}" IsEnabled="{ReflectionBinding ModValid}"/>
+                        <CheckBox IsChecked="{ReflectionBinding ModActive}" IsEnabled="{ReflectionBinding ModValid}" IsCheckedChanged="OnModCheckChanged"/>
                         <Border Margin="5" VerticalAlignment="Center" CornerRadius="5" ClipToBounds="true">
                             <Image Width="80" Height="80" Source="{ReflectionBinding ModIcon}"/>
                         </Border>
