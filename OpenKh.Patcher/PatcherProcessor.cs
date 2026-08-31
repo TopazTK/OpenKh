@@ -14,6 +14,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using YamlDotNet.Serialization;
 using static OpenKh.Kh2.Dpd;
@@ -78,7 +80,7 @@ namespace OpenKh.Patcher
             Patch(originalAssets, outputDir, metadata, modBasePath);
         }
 
-        Dictionary<int, string> GameShorthand = new Dictionary<int, string>()
+        public static Dictionary<int, string> GameShorthand = new Dictionary<int, string>()
         {
             { 0, "kh1" },
             { 1, "kh2" },
@@ -97,6 +99,7 @@ namespace OpenKh.Patcher
             int targetGame = 0x01,
             IDictionary<string, string> packageMap = null,
             Dictionary<string, bool> collectionOptionalEnabledMods = null,
+            Func<int, int, bool> reportProgress = null,
             bool Tests = false)
         {
             var _fetchCollectionMods = new Dictionary<string, bool> { };
@@ -125,7 +128,10 @@ namespace OpenKh.Patcher
 
                 var _protectPackageMap = new object();
 
-                modMetadata.Assets.AsParallel().ForAll(_fetchAsset =>
+                var _currentAssetIndex = 0;
+                var _totalAssetCount = modMetadata.Assets.Count;
+
+                Parallel.ForEach(modMetadata.Assets.AsParallel(), (_fetchAsset, _parallelState) =>
                 {
                     if (_fetchAsset.Game != null && _fetchAsset.Game != _fetchGameId)
                         return;
@@ -267,6 +273,16 @@ namespace OpenKh.Patcher
                             using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
                                 PatchFile(_fetchContext, _fetchAsset, _fileStream);
                         }
+                    }
+
+                    _currentAssetIndex++;
+
+                    if (reportProgress != null)
+                    {
+                        var _fetchProgress = reportProgress(_currentAssetIndex, _totalAssetCount);
+
+                        if (!_fetchProgress)
+                            _parallelState.Stop();
                     }
                 });
             }

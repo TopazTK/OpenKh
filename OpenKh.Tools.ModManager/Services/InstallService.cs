@@ -26,6 +26,14 @@ namespace OpenKh.Tools.ModManager.Services
         public static CancellationTokenSource CancelTokenSource = new CancellationTokenSource();
         public static CancellationToken CancelToken = CancelTokenSource.Token;
 
+        private static void ResetToken()
+        {
+            CancelTokenSource.Dispose();
+
+            CancelTokenSource = new CancellationTokenSource();
+            CancelToken = CancelTokenSource.Token;
+        }
+
         /// <summary>
         /// Installs a mod from any Git repository.
         /// </summary>
@@ -35,6 +43,8 @@ namespace OpenKh.Tools.ModManager.Services
         /// <returns>Error code. 0x00 is success, 0x01 is invlaid mod, 0x03 is cancellation.</returns>
         public static async Task<byte> InstallGit(string modPath, string repoName, TransferProgressHandler? reportProgress = null)
         {
+            ResetToken();
+
             // Fetch the platfrom from the given string.
             var _fetchPlatform = repoName.Contains('@') ? repoName.Split('@').Last() : null;
             repoName = _fetchPlatform != null ? repoName.Replace("@" + _fetchPlatform, "") : repoName;
@@ -214,6 +224,8 @@ namespace OpenKh.Tools.ModManager.Services
         /// <returns>Error code. 0x00 is success, 0x01 is invlaid mod, 0x03 is cancellation.</returns>
         public static async Task<byte> InstallLocal(string modPath, string fileName, Func<int, int, bool>? reportProgress = null)
         {
+            ResetToken();
+
             // Get the extension to check and the mod path to process.
             var _fetchExtension = Path.GetExtension(fileName).ToLower();
             var _fetchCurrentModDir = Path.Combine(modPath, Path.GetFileNameWithoutExtension(fileName));
@@ -444,39 +456,93 @@ namespace OpenKh.Tools.ModManager.Services
             // All is good, return success.
             return 0x00;
         }
-        
-        public static async Task<byte> Build(IEnumerable<ModModel> modsList, Config currentConfig)
+
+        public static async Task<byte> Build(IEnumerable<ModModel> modsList, Config currentConfig, Func<string, int, int, bool>? reportModProgress = null, Func<int, int, bool>? reportAssetProgress = null)
         {
+            ResetToken();
+
             var _fetchPatcher = new PatcherProcessor();
             var _fetchPackageMap = new ConcurrentDictionary<string, string>();
 
             var _fetchGameName = currentConfig.TargetGame.ToString().ToLower();
-            var _fetchDataPath = !string.IsNullOrEmpty(currentConfig.DataPath) ? Path.Combine(currentConfig.DataPath, _fetchGameName) : null;
-            var _fetchBuildPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "build");
+            var _fetchGameId = PatcherProcessor.GameShorthand[(int)currentConfig.TargetGame];
 
-            await Task.Run(() =>
+            var _fetchDataPath = !string.IsNullOrEmpty(currentConfig.DataPath) ? Path.Combine(currentConfig.DataPath, _fetchGameId) : null;
+            var _fetchBuildPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "build", _fetchGameId);
+
+            if (!Directory.Exists(_fetchBuildPath))
+                Directory.CreateDirectory(_fetchBuildPath);
+
+            else
             {
-                foreach (var _fetchMod in modsList)
+                Directory.Delete(_fetchBuildPath, true);
+                Directory.CreateDirectory(_fetchBuildPath);
+            }
+
+            var _currentModIndex = 0;
+            var _currentModCount = modsList.Where(x => x.ModValid && x.ModActive).Count();
+
+            var _isBuilding = true;
+            string _currentMod = "";
+
+            if (reportModProgress != null)
+            {
+                Task.Run(async () =>
                 {
+                    while (!CancelToken.IsCancellationRequested)
+                    {
+                        var _fetchProgress = reportModProgress(_currentMod, _currentModIndex, _currentModCount);
+
+                        if (!_fetchProgress)
+                            break;
+
+                        await Task.Delay(TimeSpan.FromMilliseconds(10), CancelToken);
+                    }
+                });
+            }
+
+            await Task.Run(async () =>
+            {
+                for (int _modIdx = modsList.Count() - 1; _modIdx >= 0; _modIdx--)
+                {
+                    var _fetchMod = modsList.ElementAt(_modIdx);
+
+                    _currentModIndex++;
+
                     if (!_fetchMod.ModValid || !_fetchMod.ModActive)
                         continue;
+
+                    _currentMod = _fetchMod.ModTitle;
 
                     var _fetchYamlPath = Path.Combine(_fetchMod.ModPath, "mod.yml");
                     var _fetchMetadata = Metadata.Read(_fetchYamlPath);
 
-                    _fetchPatcher.Patch
-                    (
-                        _fetchDataPath,
-                        _fetchBuildPath,
-                        _fetchMetadata,
-                        _fetchMod.ModPath,
-                        currentConfig.GamePath,
-                        (int)currentConfig.TargetPlatform,
-                        (int)currentConfig.TargetGame,
-                        _fetchPackageMap
-                    );
+                    await Task.Run(() =>
+                    {
+                        _fetchPatcher.Patch
+                        (
+                            _fetchDataPath,
+                            _fetchBuildPath,
+                            _fetchMetadata,
+                            _fetchMod.ModPath,
+                            currentConfig.GamePath,
+                            (int)currentConfig.TargetPlatform,
+                            (int)currentConfig.TargetGame,
+                            _fetchPackageMap,
+                            reportProgress: reportAssetProgress
+                        );
+                    });
+
+                    if (CancelToken.IsCancellationRequested)
+                        break;
                 }
             });
+
+            if (CancelToken.IsCancellationRequested)
+            {
+                Directory.Delete(_fetchBuildPath, true);
+                return 0x03;
+            }
 
             using (var _writePackageMap = new StreamWriter(Path.Combine(_fetchBuildPath, "patch-package-map.txt")))
                 foreach (var _mapEntry in _fetchPackageMap)

@@ -15,6 +15,7 @@ using SharpYaml;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -317,7 +318,47 @@ public partial class MainView : Window
 
     private async void OnRunRequested(object? sender, RoutedEventArgs e)
     {
+        var _progressDialog = new BuildProgressDialog();
+        _progressDialog.ShowDialog(this);
+
+        int _assetProcessed = 0;
+        int _assetTotal = 0;
+
+        bool _assetProgressHandler(int processed, int total)
+        {
+            _assetProcessed = processed;
+            _assetTotal = total;
+
+            if (InstallService.CancelToken.IsCancellationRequested)
+                return false;
+
+            return true;
+        };
+
+        bool _buildProgressHandler(string currModName, int procMod, int totalMod)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                _progressDialog.ModProgress.Maximum = totalMod;
+                _progressDialog.ModProgress.Value = procMod;
+                _progressDialog.ModProgress.ProgressTextFormat = $"Currently Building: {currModName}";
+
+                _progressDialog.AssetProgress.Maximum = _assetTotal;
+                _progressDialog.AssetProgress.Value = _assetProcessed;
+            });
+
+            if (InstallService.CancelToken.IsCancellationRequested)
+                return false;
+
+            return true;
+        };
+
         var _fetchContext = DataContext as MainViewModel;
-        var _buildResult = await InstallService.Build(_fetchContext.InstalledMods, _fetchContext.CurrentConfig);
+        var _buildResult = await InstallService.Build(_fetchContext.InstalledMods, _fetchContext.CurrentConfig, _buildProgressHandler, _assetProgressHandler);
+        
+        _progressDialog.Close(true);
+
+        if (_buildResult == 0x00)
+            return;
     }
 }

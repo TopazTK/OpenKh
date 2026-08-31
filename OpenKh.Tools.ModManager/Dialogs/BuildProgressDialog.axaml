@@ -1,0 +1,20 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="375" d:DesignHeight="140"
+        MaxWidth="375" MaxHeight="140"
+        MinWidth="375" MinHeight="140"
+        x:Class="OpenKh.Tools.ModManager.Dialogs.BuildProgressDialog"
+        xmlns:model="using:OpenKh.Tools.ModManager.Models"
+        xmlns:view="clr-namespace:OpenKh.Tools.ModManager.Views"
+        Title="Installing Mod...">
+    <StackPanel Margin="20" Spacing="5">
+        <TextBlock Text="Building mods... Please be patient..." TextWrapping="Wrap" />
+        <ProgressBar Name="ModProgress" Height="20" Maximum="100" Value="0" ShowProgressText="True" FontSize="12" ProgressTextFormat=""/>
+        <ProgressBar Name="AssetProgress" Height="20" Maximum="100" Value="0" ShowProgressText="True" FontSize="12" ProgressTextFormat="Processing Files: {0} / {3}"/>
+        <StackPanel Orientation="Horizontal" Margin="0, 10, 0, 0" HorizontalAlignment="Right" Spacing="10">
+            <Button Content="Cancel" Click="OnCancelEvent" HorizontalContentAlignment="Right"/>
+        </StackPanel>
+    </StackPanel>
+</Window>
