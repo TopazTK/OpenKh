@@ -27,6 +27,20 @@ namespace OpenKh.Tools.ModManager.Views
             RaiseEvent(args);
         }
 
+        public static readonly RoutedEvent<RoutedEventArgs> BuildRunRequestedEvent = RoutedEvent.Register<ModDetailsView, RoutedEventArgs>(nameof(BuildRunRequested), RoutingStrategies.Direct);
+
+        public event EventHandler<RoutedEventArgs> BuildRunRequested
+        {
+            add => AddHandler(BuildRunRequestedEvent, value);
+            remove => RemoveHandler(BuildRunRequestedEvent, value);
+        }
+
+        protected virtual void OnBuildRunRequested()
+        {
+            RoutedEventArgs args = new RoutedEventArgs(BuildRunRequestedEvent);
+            RaiseEvent(args);
+        }
+
         #endregion
 
         public ModStatusView()
@@ -34,6 +48,7 @@ namespace OpenKh.Tools.ModManager.Views
             InitializeComponent();
         }
 
-        private void OnProcessClicked(object? sender, RoutedEventArgs e) => OnRunRequested();
+        private void OnProcessBuildRun(object? sender, RoutedEventArgs e) => OnBuildRunRequested();
+        private void OnProcessRun(object? sender, RoutedEventArgs e) => OnRunRequested();
     }
 }

@@ -37,7 +37,11 @@
                     <Separator/>
                     <MenuItem Header="Exit" InputGesture="F4" HotKey="F4"/>
                 </MenuItem>
-                <MenuItem Header="Build"/>
+                <MenuItem Header="Build">
+                    <MenuItem Header="Run..." Click="OnRunRequested" InputGesture="F5" HotKey="F5"/>
+                    <MenuItem Header="Build..." Click="OnBuildRequested" InputGesture="Ctrl+B" HotKey="Ctrl+B" IsEnabled="{ReflectionBinding HasModsInstalled}"/>
+                    <MenuItem Header="Build and Run..." Click="OnBuildRunRequested" InputGesture="Ctrl+F5" HotKey="Ctrl+F5" IsEnabled="{ReflectionBinding HasModsInstalled}"/>
+                </MenuItem>
                 <MenuItem Header="Settings"/>
                 <MenuItem Header="Info"/>
             </Menu>
@@ -115,7 +119,7 @@
                 </GroupBox>
             </Grid>
 
-            <view:ModStatusView Name="ModStatus" RunRequested="OnRunRequested" Grid.Row="1"/>
+            <view:ModStatusView Name="ModStatus" RunRequested="OnRunRequested" BuildRunRequested="OnBuildRunRequested" Grid.Row="1"/>
 
         </Grid>
     </DockPanel>

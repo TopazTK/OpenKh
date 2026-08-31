@@ -17,7 +17,7 @@
             <convert:BooleanValueMapper x:Key="StatusToText" IfTrue="Everything is configured and ready to run." IfFalse="Some settings are not right! Please run the Setup Wizard to remedy!"/>
         </ContentPage.Resources>
 
-        <ListBox Name="MainList" Background="Transparent" ItemsSource="{ReflectionBinding InstalledMods}" SelectedItem="{ReflectionBinding CurrentMod}">    
+        <ListBox Name="MainList"  Background="Transparent" ItemsSource="{ReflectionBinding InstalledMods}" SelectedItem="{ReflectionBinding CurrentMod, Mode=TwoWay}">    
             <ListBox.ItemTemplate >
             <DataTemplate DataType="{x:Type model:ModModel}">
                 <Grid>

@@ -23,6 +23,9 @@ namespace OpenKh.Tools.ModManager.ViewModels;
 public partial class MainViewModel : ViewModelBase
 {
     [ObservableProperty]
+    private bool _initialized = false;
+
+    [ObservableProperty]
     private ModModel? _currentMod = null;
 
     [ObservableProperty]
@@ -35,7 +38,7 @@ public partial class MainViewModel : ViewModelBase
     private Config? _currentConfig = null;
 
     [ObservableProperty]
-    private double _installProgress = 0;
+    private bool _hasModsInstalled = false;
 
     protected void OnModPropertyChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
@@ -65,8 +68,11 @@ public partial class MainViewModel : ViewModelBase
 
     public void InitializeView(bool selectLast = false)
     {
+        Initialized = false;
+
         CurrentMod = null;
         InstalledMods = null;
+        HasModsInstalled = false;
         ConfigurationValid = true;
 
         // === Configuration Parsing and Verification === //
@@ -246,7 +252,12 @@ public partial class MainViewModel : ViewModelBase
 
         // If there is at least one mod, select the first mod.
         if (InstalledMods.Count > 0)
+        {
+            HasModsInstalled = true;
             CurrentMod = InstalledMods.First();
+        }
+
+        Initialized = true;
     }
 
     public MainViewModel()

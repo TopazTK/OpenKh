@@ -16,6 +16,17 @@ namespace OpenKh.Tools.ModManager.Converters
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
     }
 
+    public class MultiBooleanCheckerConverter : IMultiValueConverter
+    {
+        public object Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (values == null || values.Count < 2)
+                return false;
+
+            return values.All(x => x is bool) && values.All(x => (bool)x);
+        }
+    }
+
     public class NonNullPropertyConverter : IMultiValueConverter
     {
         public object Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)

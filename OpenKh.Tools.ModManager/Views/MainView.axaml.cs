@@ -151,7 +151,10 @@ public partial class MainView : Window
 
             // If we do not, nullify selection.
             else
+            {
+                _fetchContext.HasModsInstalled = false;
                 _fetchContext.CurrentMod = null;
+            }
 
             // Remove the mod directory.
             // This is a task for a reason. This isn't being awaited for a reason. Do not listen to IntelliSense on this one.
@@ -175,6 +178,7 @@ public partial class MainView : Window
         var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", _fetchConfig.TargetGame.ToString().ToLower());
 
         var _fetchInstallResult = 0x00;
+
         if (_fetchResult != null && !string.IsNullOrEmpty(_fetchResult))
         {
             var _progressDialog = new ModProgressDialog();
@@ -281,6 +285,7 @@ public partial class MainView : Window
                     var _fetchModIndex = _fetchFirstInvalid != null ? _fetchModsList.IndexOf(_fetchFirstInvalid) : _fetchModsList.Count;
 
                     _fetchModsList.Insert(_fetchModIndex, _modModel);
+                    _fetchContext.HasModsInstalled = true;
                 }
 
                 else
@@ -320,15 +325,89 @@ public partial class MainView : Window
     {
         var _fetchContext = DataContext as MainViewModel;
         var _fetchModList = _fetchContext.InstalledMods;
+        var _fetchConfig = _fetchContext.CurrentConfig;
 
-        var _fetchTargetMod = e.TargetMod;
-        var _fetchTargetIndex = _fetchModList.IndexOf(_fetchTargetMod);
+        var _fetchMemoryPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mods", _fetchConfig.Frontend.TargetGame.ToString().ToLower(), "mod_memory.yml");
 
-        _fetchTargetMod.ModActive = e.IsChecked;
-        _fetchModList[_fetchTargetIndex] = _fetchTargetMod;
+        var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
+        var _fetchMemory = YamlSerializer.Deserialize<ObservableCollection<MemoryModel>>(_fetchMemoryRAW);
 
-        _fetchContext.CurrentMod = _fetchModList[_fetchTargetIndex];
+        var _fetchRelativePath = Path.GetRelativePath(AppDomain.CurrentDomain.BaseDirectory, e.TargetMod.ModPath);
+
+        var _fetchBytes = Encoding.ASCII.GetBytes(_fetchRelativePath);
+        var _fetchHash = MD5.HashData(_fetchBytes);
+        var _fetchHashStr = Convert.ToHexString(_fetchHash);
+
+        var _fetchMemoryItem = _fetchMemory.FirstOrDefault(x => x.ModHash == _fetchHashStr);
+        var _fetchMemoryIndex = _fetchMemory.IndexOf(_fetchMemoryItem);
+
+        _fetchMemory[_fetchMemoryIndex].ModActive = e.IsChecked;
+
+        var _fetchSerial = YamlSerializer.Serialize(_fetchMemory);
+        File.WriteAllText(_fetchMemoryPath, _fetchSerial);
     }
+
+    private async void OnRunRequested(object? sender, RoutedEventArgs e)
+    {
+        var _fetchContext = DataContext as MainViewModel;
+
+        var _fetchConfig = _fetchContext.CurrentConfig;
+        var _fetchFrontConfig = _fetchConfig.Frontend;
+
+        var _fetchAPIFilePath = Path.Combine(_fetchFrontConfig.GamePath, "steam_appid.txt");
+
+        var _fetchReMIXFilePath = Path.Combine(_fetchFrontConfig.GamePath, "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe");
+        var _fetchLaunchFilePath = Path.Combine(_fetchFrontConfig.GamePath, Config.GameExecutable[_fetchFrontConfig.TargetGame]);
+
+        var _fetchAPIExists = _fetchFrontConfig.TargetPlatform == Platform.STEAM ? File.Exists(_fetchAPIFilePath) : false;
+
+        Uri _fetchTargetUri = null;
+        FileInfo _fetchTargetFile = null;
+
+        if (!OperatingSystem.IsWindows() || !_fetchAPIExists)
+        {
+            switch (_fetchFrontConfig.TargetPlatform)
+            {
+                case Platform.STEAM:
+                    _fetchTargetUri = new Uri($"steam://rungameid/2552430" + (_fetchAPIExists ? $"//{PatcherProcessor.GameShorthand[(int)_fetchFrontConfig.TargetGame]}" : ""));
+                    break;
+                case Platform.EPIC_GAMES_STORE:
+                    _fetchTargetUri = new Uri("com.epicgames.launcher://apps/4158b699dd70447a981fee752d970a3e%3A5aac304f0e8948268ddfd404334dbdc7%3A68c214c58f694ae88c2dab6f209b43e4?action=launch");
+                    break;
+            }
+        }
+
+        var _fetchTopLevel = TopLevel.GetTopLevel(this);
+
+        if (_fetchTopLevel?.Launcher != null && _fetchTargetUri != null)
+        {
+            if (_fetchAPIExists)
+            {
+                var _fetchReMIXBackup = Path.ChangeExtension(_fetchReMIXFilePath, ".bak");
+
+                if (!File.Exists(_fetchReMIXBackup))
+                {
+                    File.Move(_fetchReMIXFilePath, _fetchReMIXBackup);
+                    File.Copy("resources/OpenKh.Command.Launcher.exe", _fetchReMIXFilePath, true);
+                }
+            }
+
+            await _fetchTopLevel.Launcher.LaunchUriAsync(_fetchTargetUri);
+        }
+
+        else
+        {
+            var _fetchProcessInfo = new ProcessStartInfo
+            {
+                FileName = _fetchLaunchFilePath,
+                WorkingDirectory = _fetchFrontConfig.GamePath,
+                UseShellExecute = true
+            };
+
+            Process.Start(_fetchProcessInfo);
+        }
+    }
+
 
     private async void OnBuildRequested(object? sender, RoutedEventArgs e)
     {
@@ -391,7 +470,7 @@ public partial class MainView : Window
         }
     }
 
-    private async void OnRunRequested(object? sender, RoutedEventArgs e)
+    private async void OnBuildRunRequested(object? sender, RoutedEventArgs e)
     {
         var _progressDialog = new BuildProgressDialog();
         _progressDialog.ShowDialog(this);

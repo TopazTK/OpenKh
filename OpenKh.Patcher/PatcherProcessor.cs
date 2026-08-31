@@ -360,7 +360,7 @@ namespace OpenKh.Patcher
             string _fetchSource;
 
             if (assetFile.Source[0].Type == "internal")
-                _fetchSource = Path.Combine(assetFile.Source[0].Name);
+                _fetchSource = Path.Combine(context.OriginalAssetPath, assetFile.Source[0].Name);
 
             else
             {
