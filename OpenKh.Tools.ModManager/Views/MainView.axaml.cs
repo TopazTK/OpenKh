@@ -170,8 +170,9 @@ public partial class MainView : Window
 
         var _fetchContext = DataContext as MainViewModel;
         var _fetchModsList = _fetchContext.InstalledMods;
+        var _fetchConfig = _fetchContext.CurrentConfig.Frontend;
 
-        var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", _fetchContext.CurrentConfig.TargetGame.ToString().ToLower());
+        var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", _fetchConfig.TargetGame.ToString().ToLower());
 
         var _fetchInstallResult = 0x00;
         if (_fetchResult != null && !string.IsNullOrEmpty(_fetchResult))
@@ -329,6 +330,67 @@ public partial class MainView : Window
         _fetchContext.CurrentMod = _fetchModList[_fetchTargetIndex];
     }
 
+    private async void OnBuildRequested(object? sender, RoutedEventArgs e)
+    {
+        var _progressDialog = new BuildProgressDialog();
+        _progressDialog.ShowDialog(this);
+
+        int _assetProcessed = 0;
+        int _assetTotal = 0;
+        string _currentModName = "N/A";
+
+        var _fetchContext = DataContext as MainViewModel;
+
+        var _fetchConfig = _fetchContext.CurrentConfig;
+        var _fetchFrontConfig = _fetchConfig.Frontend;
+
+        var _buildResult = 
+            await InstallService.Build
+            (
+                _fetchContext.InstalledMods, 
+                _fetchConfig,
+
+                (string currModName, int procMod, int totalMod) =>
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        _currentModName = currModName;
+
+                        _progressDialog.ModProgress.Maximum = totalMod;
+                        _progressDialog.ModProgress.Value = procMod;
+                        _progressDialog.ModProgress.ProgressTextFormat = $"Currently Building: {currModName}";
+
+                        _progressDialog.AssetProgress.Maximum = _assetTotal;
+                        _progressDialog.AssetProgress.Value = _assetProcessed;
+                    });
+
+                    if (InstallService.CancelToken.IsCancellationRequested)
+                        return false;
+
+                    return true;
+                }, 
+
+                (int processed, int total) => 
+                {
+                    _assetProcessed = processed;
+                    _assetTotal = total;
+
+                    if (InstallService.CancelToken.IsCancellationRequested)
+                        return false;
+
+                    return true;
+                });
+
+        _progressDialog.Close(true);
+
+        if (_buildResult == 1)
+        {
+            var _errorDialog = new BuildModError();
+            _errorDialog.MainText.Text = string.Format(_errorDialog.MainText.Text, _currentModName);
+            await _errorDialog.ShowDialog(this);
+        }
+    }
+
     private async void OnRunRequested(object? sender, RoutedEventArgs e)
     {
         var _progressDialog = new BuildProgressDialog();
@@ -336,83 +398,116 @@ public partial class MainView : Window
 
         int _assetProcessed = 0;
         int _assetTotal = 0;
-
-        bool _assetProgressHandler(int processed, int total)
-        {
-            _assetProcessed = processed;
-            _assetTotal = total;
-
-            if (InstallService.CancelToken.IsCancellationRequested)
-                return false;
-
-            return true;
-        };
-
-        bool _buildProgressHandler(string currModName, int procMod, int totalMod)
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                _progressDialog.ModProgress.Maximum = totalMod;
-                _progressDialog.ModProgress.Value = procMod;
-                _progressDialog.ModProgress.ProgressTextFormat = $"Currently Building: {currModName}";
-
-                _progressDialog.AssetProgress.Maximum = _assetTotal;
-                _progressDialog.AssetProgress.Value = _assetProcessed;
-            });
-
-            if (InstallService.CancelToken.IsCancellationRequested)
-                return false;
-
-            return true;
-        };
+        string _currentModName = "N/A";
 
         var _fetchContext = DataContext as MainViewModel;
-        var _fetchConfig = _fetchContext.CurrentConfig;
 
-        var _buildResult = await InstallService.Build(_fetchContext.InstalledMods, _fetchConfig, _buildProgressHandler, _assetProgressHandler);
-        
+        var _fetchConfig = _fetchContext.CurrentConfig;
+        var _fetchFrontConfig = _fetchConfig.Frontend;
+
+        var _buildResult =
+            await InstallService.Build
+            (
+                _fetchContext.InstalledMods,
+                _fetchConfig,
+
+                (string currModName, int procMod, int totalMod) =>
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        _currentModName = currModName;
+
+                        _progressDialog.ModProgress.Maximum = totalMod;
+                        _progressDialog.ModProgress.Value = procMod;
+                        _progressDialog.ModProgress.ProgressTextFormat = $"Currently Building: {currModName}";
+
+                        _progressDialog.AssetProgress.Maximum = _assetTotal;
+                        _progressDialog.AssetProgress.Value = _assetProcessed;
+                    });
+
+                    if (InstallService.CancelToken.IsCancellationRequested)
+                        return false;
+
+                    return true;
+                },
+
+                (int processed, int total) =>
+                {
+                    _assetProcessed = processed;
+                    _assetTotal = total;
+
+                    if (InstallService.CancelToken.IsCancellationRequested)
+                        return false;
+
+                    return true;
+                });
+
         _progressDialog.Close(true);
 
-        if (_buildResult == 0x00)
+        switch (_buildResult)
         {
-            var _fetchAPIFilePath = Path.Combine(_fetchConfig.GamePath, "steam_appid.txt");
-            var _fetchLaunchFilePath = Path.Combine(_fetchConfig.GamePath, Config.GameExecutable[_fetchConfig.TargetGame]);
-
-            var _fetchAPIExists = _fetchConfig.TargetPlatform == Platform.STEAM ? File.Exists(_fetchAPIFilePath) : false;
-            var _fetchLinuxDirect = (_fetchAPIExists && OperatingSystem.IsLinux()) ? "bash -c 'exec \"${@/KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe/" + Config.GameExecutable[_fetchConfig.TargetGame] + "}\"' -- %command%" : "";
-                 
-            Uri _fetchTargetUri = null;
-            FileInfo _fetchTargetFile = null;
-
-            if (!OperatingSystem.IsWindows() || !_fetchAPIExists)
+            case 0:
             {
-                switch (_fetchConfig.TargetPlatform)
+                var _fetchAPIFilePath = Path.Combine(_fetchFrontConfig.GamePath, "steam_appid.txt");
+
+                var _fetchReMIXFilePath = Path.Combine(_fetchFrontConfig.GamePath, "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe");
+                var _fetchLaunchFilePath = Path.Combine(_fetchFrontConfig.GamePath, Config.GameExecutable[_fetchFrontConfig.TargetGame]);
+
+                var _fetchAPIExists = _fetchFrontConfig.TargetPlatform == Platform.STEAM ? File.Exists(_fetchAPIFilePath) : false;
+
+                Uri _fetchTargetUri = null;
+                FileInfo _fetchTargetFile = null;
+
+                if (!OperatingSystem.IsWindows() || !_fetchAPIExists)
                 {
-                    case Platform.STEAM:
-                        _fetchTargetUri = new Uri($"steam://rungameid/2552430//{_fetchLinuxDirect}");
-                        break;
-                    case Platform.EPIC_GAMES_STORE:
-                        _fetchTargetUri = new Uri("com.epicgames.launcher://apps/4158b699dd70447a981fee752d970a3e%3A5aac304f0e8948268ddfd404334dbdc7%3A68c214c58f694ae88c2dab6f209b43e4?action=launch");
-                        break;
+                    switch (_fetchFrontConfig.TargetPlatform)
+                    {
+                        case Platform.STEAM:
+                            _fetchTargetUri = new Uri($"steam://rungameid/2552430" + (_fetchAPIExists ? $"//{PatcherProcessor.GameShorthand[(int)_fetchFrontConfig.TargetGame]}" : ""));
+                            break;
+                        case Platform.EPIC_GAMES_STORE:
+                            _fetchTargetUri = new Uri("com.epicgames.launcher://apps/4158b699dd70447a981fee752d970a3e%3A5aac304f0e8948268ddfd404334dbdc7%3A68c214c58f694ae88c2dab6f209b43e4?action=launch");
+                            break;
+                    }
                 }
-            }
 
-            var _fetchTopLevel = TopLevel.GetTopLevel(this);
+                var _fetchTopLevel = TopLevel.GetTopLevel(this);
 
-            if (_fetchTopLevel?.Launcher != null && _fetchTargetUri != null )
-                await _fetchTopLevel.Launcher.LaunchUriAsync(_fetchTargetUri);
-
-            else
-            {
-                var _fetchProcessInfo = new ProcessStartInfo
+                if (_fetchTopLevel?.Launcher != null && _fetchTargetUri != null)
                 {
-                    FileName = _fetchLaunchFilePath,
-                    WorkingDirectory = _fetchConfig.GamePath,
-                    UseShellExecute = true
-                };
+                    if (_fetchAPIExists)
+                    {
+                        var _fetchReMIXBackup = Path.ChangeExtension(_fetchReMIXFilePath, ".bak");
 
-                Process.Start(_fetchProcessInfo);
-            }
+                        if (!File.Exists(_fetchReMIXBackup))
+                        {
+                            File.Move(_fetchReMIXFilePath, _fetchReMIXBackup);
+                            File.Copy("resources/OpenKh.Command.Launcher.exe", _fetchReMIXFilePath, true);
+                        }
+                    }
+
+                    await _fetchTopLevel.Launcher.LaunchUriAsync(_fetchTargetUri);
+                }
+
+                else
+                {
+                    var _fetchProcessInfo = new ProcessStartInfo
+                    {
+                        FileName = _fetchLaunchFilePath,
+                        WorkingDirectory = _fetchFrontConfig.GamePath,
+                        UseShellExecute = true
+                    };
+
+                    Process.Start(_fetchProcessInfo);
+                }
+            } break;
+
+            case 1:
+            {
+                var _errorDialog = new BuildModError();
+                _errorDialog.MainText.Text = string.Format(_errorDialog.MainText.Text, _currentModName);
+                await _errorDialog.ShowDialog(this);
+            } break;
         }
     }
 }

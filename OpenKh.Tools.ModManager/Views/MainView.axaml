@@ -8,7 +8,6 @@
         xmlns:convert="using:OpenKh.Tools.ModManager.Converters"
         mc:Ignorable="d" d:DesignWidth="750" d:DesignHeight="850"
         Width="750" Height="850"
-        MinWidth="750" MinHeight="850"
         x:Class="OpenKh.Tools.ModManager.Views.MainView"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
@@ -43,7 +42,7 @@
                 <MenuItem Header="Info"/>
             </Menu>
             
-            <ComboBox Margin="0,0,10,0" Width="200" HorizontalAlignment="Right" SelectedIndex="{ReflectionBinding CurrentConfig.TargetGame}" SelectionChanged="OnTargetGameChanged">
+            <ComboBox Margin="0,0,10,0" Width="200" HorizontalAlignment="Right" SelectedIndex="{ReflectionBinding CurrentConfig.Frontend.TargetGame}" SelectionChanged="OnTargetGameChanged">
                 <ComboBoxItem Content="Kingdom Hearts"/>
                 <ComboBoxItem Content="Kingdom Hearts II"/>
                 <ComboBoxItem Content="Re:Chain of Memories"/>
