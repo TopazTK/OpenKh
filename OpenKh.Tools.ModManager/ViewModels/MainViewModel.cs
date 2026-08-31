@@ -15,6 +15,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using Xe.BinaryMapper;
 
 namespace OpenKh.Tools.ModManager.ViewModels;
@@ -138,35 +139,43 @@ public partial class MainViewModel : ViewModelBase
 
                 // We have found a Git Repository, let's see what's up.
 
-                if (Directory.Exists(_fetchPathGit))
+                Task.Run(() =>
                 {
-                    if (Repository.IsValid(_fetchPathGit))
-                    {                            
-                        var _fetchGit = new Repository(_fetchPathGit);
-
-                        if (!_fetchGit.Info.IsHeadDetached)
+                    if (Directory.Exists(_fetchPathGit))
+                    {
+                        if (Repository.IsValid(_fetchPathGit))
                         {
-                            var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+                            var _fetchGit = new Repository(_fetchPathGit);
 
-                            _modModel.ModSource = new Uri(_fetchRemote.Url);
-                            _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+                            if (!_fetchGit.Info.IsHeadDetached)
+                            {
+                                var _fetchRemote = _fetchGit.Network.Remotes["origin"];
 
-                            _modModel.ModPlatform = _modModel.ModSource.Host;
+                                _modModel.ModSource = new Uri(_fetchRemote.Url);
+                                _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
 
-                            Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
+                                _modModel.ModPlatform = _modModel.ModSource.Host;
 
-                            var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
-                            _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
+                                Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
+
+                                try
+                                {
+                                    var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
+                                    _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
+                                }
+
+                                catch (LibGit2Sharp.LibGit2SharpException) { }
+                            }
+
+                            _fetchGit.Dispose();
+
+                            var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
+
+                            foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
+                                _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
                         }
-
-                        _fetchGit.Dispose();
-
-                        var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
-
-                        foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                            _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
                     }
-                }
+                });
 
                 _fetchMods.Add(_modModel);
             }
