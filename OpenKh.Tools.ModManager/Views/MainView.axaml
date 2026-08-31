@@ -27,7 +27,17 @@
     <DockPanel>
         <Grid DockPanel.Dock="Top" Margin="5">
             <Menu>
-                <MenuItem Header="Mods"/>
+                <MenuItem Header="Mods">
+                    <MenuItem Header="Install a New Mod..." Click="OnInstallClicked" InputGesture="Insert" HotKey="Insert"/>
+                    <Separator/>
+                    <MenuItem Header="Open Folder..." Click="OnOpenFolderClicked" InputGesture="Alt+O" HotKey="Alt+O" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Remove..." Click="OnRemoveClicked" InputGesture="Delete" HotKey="Delete" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Move Up" Click="OnUpPriorityClicked" InputGesture="PageUp" HotKey="PageUp" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Move Down" Click="OnDownPriorityClicked" InputGesture="PageDown" HotKey="PageDown" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Move Highest" Click="OnUtmostClicked" InputGesture="Home" HotKey="PageUp" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <Separator/>
+                    <MenuItem Header="Exit" InputGesture="F4" HotKey="F4"/>
+                </MenuItem>
                 <MenuItem Header="Build"/>
                 <MenuItem Header="Settings"/>
                 <MenuItem Header="Info"/>

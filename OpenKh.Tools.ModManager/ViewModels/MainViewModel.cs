@@ -164,7 +164,7 @@ public partial class MainViewModel : ViewModelBase
                                     _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
                                 }
 
-                                catch (LibGit2Sharp.LibGit2SharpException) { }
+                                catch (LibGit2SharpException) { }
                             }
 
                             _fetchGit.Dispose();
