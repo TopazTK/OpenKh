@@ -130,6 +130,8 @@ namespace OpenKh.Command.IdxImg
 
                 protected int OnExecute(CommandLineApplication app)
                 {
+                    List<string> _gameMap = new List<string>() { "kh1", "kh2", "Recom", "bbs", "kh3d" };
+
                     var enabled = File.ReadAllLines(ModsFile);
 
                     if (Directory.Exists(OutputFolder))
@@ -143,7 +145,7 @@ namespace OpenKh.Command.IdxImg
                         var mod_folder = Path.Combine(ModsFolder, mod_name);
                         var metadata = Metadata.Read(Path.Combine(mod_folder, "mod.yml"));
                         Console.WriteLine($"Patching {mod_name}");
-                        patcher.Patch(DataFolder, OutputFolder, metadata, mod_folder, platform: 2, packageMap: map, LaunchGame: GameId);
+                        patcher.Patch(DataFolder, OutputFolder, metadata, mod_folder, targetPlatform: 1, packageMap: map, targetGame: _gameMap.IndexOf(GameId));
                     }
 
                     using (var packageMapWriter = new StreamWriter(Path.Combine(OutputFolder, "patch-package-map.txt")))
