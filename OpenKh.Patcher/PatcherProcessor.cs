@@ -141,7 +141,7 @@ namespace OpenKh.Patcher
 
                     var _fetchFileNames = new List<string>() { _fetchAsset.Name };
                     var _fetchMultiNames = _fetchAsset.Multi != null ? _fetchAsset.Multi.Select(x => x.Name)
-                                                                                        .Where(x => !string.IsNullOrEmpty(x)) : null;
+                                                                                        .Where(x => !string.IsNullOrEmpty(x))  : null;
 
                     if (_fetchMultiNames != null)
                         _fetchFileNames.AddRange(_fetchMultiNames);
@@ -171,8 +171,8 @@ namespace OpenKh.Patcher
 
                         var _fetchPackageMap = "";
 
-                        var _isFileRemastered = _fetchName.StartsWith("remastered");
-                        var _isFileRAW = _fetchName.StartsWith("raw");
+                        var _isFileRemastered = _fetchName.Contains("remastered");
+                        var _isFileRAW = _fetchName.Contains("raw");
 
                         var _isFilePC = _isFileRemastered || _isFileRAW;
                         var _isFileSpecial = _fetchFileParent == "scripts" || _fetchFileParent == "dll";
@@ -357,24 +357,22 @@ namespace OpenKh.Patcher
             if (assetFile.Source == null || assetFile.Source.Count == 0)
                 throw new Exception($"File '{assetFile.Name}' does not contain any source");
 
-            string srcFile;
+            string _fetchSource;
 
             if (assetFile.Source[0].Type == "internal")
-            {
-                srcFile = context.GetOriginalAssetPath(assetFile.Source[0].Name);
-            }
+                _fetchSource = Path.Combine(assetFile.Source[0].Name);
+
             else
             {
-                srcFile = context.GetSourceModAssetPath(assetFile.Source[0].Name);
-                if (!File.Exists(srcFile))
-                    throw new FileNotFoundException($"The mod does not contain the file {assetFile.Source[0].Name}", srcFile);
+                _fetchSource = Path.Combine(context.SourceModAssetPath, assetFile.Source[0].Name);
+
+                if (!File.Exists(_fetchSource))
+                    throw new FileNotFoundException($"The mod does not contain the file {assetFile.Source[0].Name}", _fetchSource);
             }
-            using var srcStream = File.OpenRead(srcFile);
-            srcStream.CopyTo(stream);
+
+            using (var _fetchStream = File.OpenRead(_fetchSource))
+                _fetchStream.CopyTo(stream);
         }
-
-
-
 
         //Binarc Update: Specify by Name OR Index. Some files in BARS may have the same name but different indexes, and you want to patch a later index only.
         private static void PatchBinarc(Context context, AssetFile assetFile, Stream stream)
