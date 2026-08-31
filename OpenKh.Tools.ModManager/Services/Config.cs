@@ -30,7 +30,34 @@ namespace OpenKh.Tools.ModManager.Services
         BIRTH_BY_SLEEP,
         DREAM_DROP_DISTANCE
     };
-    
+
+    // Frontend Configuration
+    public class Frontend
+    {
+        public Platform TargetPlatform { get; set; }
+        public Game TargetGame { get; set; }
+        public BuildType ModBuildType { get; set; }
+        public bool UpdateMods { get; set; }
+        public string? DataPath { get; set; }
+        public string? GamePath { get; set; }
+    }
+
+    public class Panacea
+    {
+        // Panacea Configuration
+        public bool IsConsole { get; set; }
+        public bool IsDebug { get; set; }
+        public bool IsSoundDebug { get; set; }
+        public bool IsCacheActive { get; set; }
+    }
+
+    public class Emulator
+    {
+        // PCSX2 Configuration
+        public string[]? EmuPath { get; set; }
+        public string[]? RomPath { get; set; }
+    }
+
     public class Config
     {
         public static Dictionary<Game, string> GameExecutable = new Dictionary<Game, string>()
@@ -42,22 +69,8 @@ namespace OpenKh.Tools.ModManager.Services
             { Game.DREAM_DROP_DISTANCE, "KINGDOM HEARTS Dream Drop Distance.exe" },
         };
 
-        // Frontend Configuration
-        public Platform TargetPlatform { get; set; }
-        public Game TargetGame { get; set; }
-        public BuildType ModBuildType { get; set; }
-        public bool UpdateMods { get; set; }
-        public string? DataPath { get; set; }
-        public string? GamePath { get; set; }
-
-        // Panacea Configuration
-        public bool IsConsole { get; set; }
-        public bool IsDebug { get; set; }
-        public bool IsSoundDebug { get; set; }
-        public bool IsCacheActive { get; set; }
-
-        // PCSX2 Configuration
-        public string? EmuPath { get; set; }
-        public string[]? RomPath { get; set; }
+        public Frontend Frontend { get; set; }
+        public Panacea Panacea { get; set; }
+        public Emulator Emulator { get; set; }
     }
 }

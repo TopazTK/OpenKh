@@ -40,7 +40,7 @@ public partial class MainViewModel : ViewModelBase
     protected void OnModPropertyChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         var _fetchModList = sender as ObservableCollection<ModModel>;
-        var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", CurrentConfig.TargetGame.ToString().ToLower());
+        var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", _currentConfig.Frontend.TargetGame.ToString().ToLower());
 
         var _fetchMemory = new ObservableCollection<MemoryModel>();
 
@@ -82,15 +82,15 @@ public partial class MainViewModel : ViewModelBase
 
         // Handle these if the platform is NOT set to PCSX2.
 
-        if (CurrentConfig.TargetPlatform != Platform.PCSX2)
+        if (CurrentConfig.Frontend.TargetPlatform != Platform.PCSX2)
         {
             // Construct the paths for the game executable and Panacea.
-            var _gameExecutablePath = Path.Combine(CurrentConfig.GamePath, Config.GameExecutable[CurrentConfig.TargetGame]);
-            var _panaceaPath = Path.Combine(CurrentConfig.GamePath, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+            var _gameExecutablePath = Path.Combine(CurrentConfig.Frontend.GamePath, Config.GameExecutable[CurrentConfig.Frontend.TargetGame]);
+            var _panaceaPath = Path.Combine(CurrentConfig.Frontend.GamePath, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
 
             // Verify the game executable and directory exists as configured. If the build type is PANACEA, also verify Panacea's existence.
-            var _isGameConfigValid = Directory.Exists(CurrentConfig.GamePath) && File.Exists(_gameExecutablePath);
-            var _isPanaceaConfigValid = (CurrentConfig.ModBuildType == BuildType.PANACEA && File.Exists(_panaceaPath)) || CurrentConfig.ModBuildType == BuildType.PATCH;
+            var _isGameConfigValid = Directory.Exists(CurrentConfig.Frontend.GamePath) && File.Exists(_gameExecutablePath);
+            var _isPanaceaConfigValid = (CurrentConfig.Frontend.ModBuildType == BuildType.PANACEA && File.Exists(_panaceaPath)) || CurrentConfig.Frontend.ModBuildType == BuildType.PATCH;
 
             // If either are not valid, mark the config as faulty.
             if (!_isGameConfigValid || !_isPanaceaConfigValid)
@@ -102,7 +102,7 @@ public partial class MainViewModel : ViewModelBase
         // Construct the mod folder path for the specified game.
 
         var _fetchMods = new ObservableCollection<ModModel>();
-        var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", CurrentConfig.TargetGame.ToString().ToLower());
+        var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", CurrentConfig.Frontend.TargetGame.ToString().ToLower());
 
         // For each directory that exists in the mod folder:
 

@@ -464,11 +464,11 @@ namespace OpenKh.Tools.ModManager.Services
             var _fetchPatcher = new PatcherProcessor();
             var _fetchPackageMap = new ConcurrentDictionary<string, string>();
 
-            var _fetchGameName = currentConfig.TargetGame.ToString().ToLower();
-            var _fetchGameId = PatcherProcessor.GameShorthand[(int)currentConfig.TargetGame];
+            var _fetchGameName = currentConfig.Frontend.TargetGame.ToString().ToLower();
+            var _fetchGameId = PatcherProcessor.GameShorthand[(int)currentConfig.Frontend.TargetGame];
 
-            var _fetchDataPath = !string.IsNullOrEmpty(currentConfig.DataPath) ? Path.Combine(currentConfig.DataPath, _fetchGameId) : null;
-            var _fetchBuildPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "build", _fetchGameId);
+            var _fetchDataPath = !string.IsNullOrEmpty(currentConfig.Frontend.DataPath) ? Path.Combine(currentConfig.Frontend.DataPath, _fetchGameId) : null;
+            var _fetchBuildPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "build", _fetchGameId);
 
             if (!Directory.Exists(_fetchBuildPath))
                 Directory.CreateDirectory(_fetchBuildPath);
@@ -525,9 +525,9 @@ namespace OpenKh.Tools.ModManager.Services
                             _fetchBuildPath,
                             _fetchMetadata,
                             _fetchMod.ModPath,
-                            currentConfig.GamePath,
-                            (int)currentConfig.TargetPlatform,
-                            (int)currentConfig.TargetGame,
+                            currentConfig.Frontend.GamePath,
+                            (int)currentConfig.Frontend.TargetPlatform,
+                            (int)currentConfig.Frontend.TargetGame,
                             _fetchPackageMap,
                             reportProgress: reportAssetProgress
                         );
