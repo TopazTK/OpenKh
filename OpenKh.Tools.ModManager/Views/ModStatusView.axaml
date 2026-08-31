@@ -22,6 +22,7 @@
                 <Button Background="Transparent" HorizontalAlignment="Right" IsVisible="{ReflectionBinding !ConfigurationValid}">
                     <PathIcon Data="{StaticResource icon_run_setup}" Height="24" Width="24"/>
                 </Button>   
+                <Button Background="Transparent" FontWeight="Bold" Content="Build and Run" HorizontalAlignment="Right" Click="OnProcessClicked" IsVisible="{ReflectionBinding ConfigurationValid}"/>
             </Grid>
         </Border>
 </ContentPage>

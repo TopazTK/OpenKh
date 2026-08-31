@@ -9,20 +9,20 @@ using SharpYaml.Serialization;
 
 namespace OpenKh.Tools.ModManager.Services
 {
-    public enum Platform
+    public enum Platform : int
     {
         PCSX2,
         STEAM,
         EPIC_GAMES_STORE
     };
 
-    public enum BuildType
+    public enum BuildType : int
     {
         PATCH,
         PANACEA
     };
 
-    public enum Game
+    public enum Game : int
     {
         KINGDOM_HEARTS,
         KINGDOM_HEARTS_II,

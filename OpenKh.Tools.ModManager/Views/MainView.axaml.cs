@@ -13,6 +13,7 @@ using OpenKh.Tools.ModManager.ViewModels;
 using OpenKh.Tools.ModManager.Views;
 using SharpYaml;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.IO.Compression;
@@ -312,5 +313,11 @@ public partial class MainView : Window
         _fetchModList[_fetchTargetIndex] = _fetchTargetMod;
 
         _fetchContext.CurrentMod = _fetchModList[_fetchTargetIndex];
+    }
+
+    private async void OnRunRequested(object? sender, RoutedEventArgs e)
+    {
+        var _fetchContext = DataContext as MainViewModel;
+        var _buildResult = await InstallService.Build(_fetchContext.InstalledMods, _fetchContext.CurrentConfig);
     }
 }

@@ -1,6 +1,8 @@
 using OpenKh.Bbs;
 
 using OpenKh.Common;
+using OpenKh.Common.Archives;
+using OpenKh.Egs;
 using OpenKh.Imaging;
 using OpenKh.Kh2;
 using OpenKh.Kh2.Bdx.Models;
@@ -11,7 +13,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Xml.Linq;
 using YamlDotNet.Serialization;
+using static OpenKh.Kh2.Dpd;
+using static OpenKh.Patcher.PatcherProcessor;
 
 namespace OpenKh.Patcher
 {
@@ -72,288 +78,203 @@ namespace OpenKh.Patcher
             Patch(originalAssets, outputDir, metadata, modBasePath);
         }
 
-        List<string> GamesList = new List<string>()
+        Dictionary<int, string> GameShorthand = new Dictionary<int, string>()
         {
-            "kh2",
-            "kh1",
-            "bbs",
-            "Recom",
+            { 0, "kh1" },
+            { 1, "kh2" },
+            { 2, "Recom" },
+            { 3, "bbs" },
+            { 4, "ddd" }
         };
 
-        /// <param name="platform">(GameEdition) 0=OpenKH, 1=PCSX2-EX, 2=PC</param>
-        /// <param name="fastMode">If true, always the first package file (kh1_first, bbs_first, kh2_first or such) is selected.</param>
-        /// <param name="Tests">If true, always invoke context.CopyOriginalFile</param>
-        /// <param name="LaunchGame">(GameId) "kh1", "kh2", "bbs", "Recom", "kh3d"</param>
-        /// <param name="Language">en, jp</param>
         public void Patch(
-            string originalAssets,
-            string outputDir,
-            Metadata metadata,
-            string modBasePath,
-            int platform = 1,
-            bool fastMode = false,
+            string extractDataPath,
+            string buildOutputPath,
+            Metadata modMetadata,
+            string modFilesPath,
+            string gameFilesPath = null,
+            int targetPlatform = 0x00,            
+            int targetGame = 0x01,
             IDictionary<string, string> packageMap = null,
-            string LaunchGame = null,
-            string Language = "en",
-            bool Tests = false,
-            Dictionary<string, bool> collectionOptionalEnabledMods = null
-        )
+            Dictionary<string, bool> collectionOptionalEnabledMods = null,
+            bool Tests = false)
         {
-            if (collectionOptionalEnabledMods == null)
-                collectionOptionalEnabledMods = new Dictionary<string, bool> { };
-            var context = new Context(metadata, originalAssets, modBasePath, outputDir);
+            var _fetchCollectionMods = new Dictionary<string, bool> { };
+            var _isExtraction = extractDataPath != null;
+
+            var _fetchGameId = GameShorthand[targetGame];
+
+            if (collectionOptionalEnabledMods != null)
+                _fetchCollectionMods = collectionOptionalEnabledMods;
+
             try
             {
+                var _fetchContext = new Context(modMetadata, extractDataPath, modFilesPath, buildOutputPath);
 
-                if (metadata.Assets == null)
+                if (!_isExtraction && targetPlatform == 0x00)
+                    throw new InvalidDataException("PS2 Building requires extraction!");
+
+                if (modMetadata.Assets == null)
                     throw new Exception("No assets found.");
-                if (metadata.Game != null && GamesList.Contains(metadata.Game.ToLower()) && metadata.Game.ToLower() != LaunchGame.ToLower())
-                    return;
-                if (metadata.IsCollection && !metadata.CollectionGames.Contains(LaunchGame))
+
+                if (modMetadata.Game != null && modMetadata.Game.ToLower() != _fetchGameId)
                     return;
 
-                var exclusiveLock = new object();
-                metadata.Assets.AsParallel().ForAll(assetFile =>
+                if (modMetadata.IsCollection && !modMetadata.CollectionGames.Contains(_fetchGameId))
+                    return;
+
+                var _protectPackageMap = new object();
+
+                modMetadata.Assets.AsParallel().ForAll(_fetchAsset =>
                 {
-                    if (assetFile.Game != null && assetFile.Game != LaunchGame)
+                    if (_fetchAsset.Game != null && _fetchAsset.Game != _fetchGameId)
                         return;
-                    if (assetFile.CollectionOptional == true)
-                        if (!collectionOptionalEnabledMods.ContainsKey(assetFile.Name))
-                            return;
-                        else if (!collectionOptionalEnabledMods[assetFile.Name])
-                            return;
-                    var names = new List<string>();
-                    names.Add(assetFile.Name);
-                    if (assetFile.Multi != null)
-                        names.AddRange(assetFile.Multi.Select(x => x.Name).Where(x => !string.IsNullOrEmpty(x)));
 
-                    foreach (var name in names)
+                    if (_fetchAsset.CollectionOptional == true && (!_fetchCollectionMods.ContainsKey(_fetchAsset.Name) || !_fetchCollectionMods[_fetchAsset.Name]))
+                        return;
+
+                    var _fetchFileNames = new List<string>() { _fetchAsset.Name };
+                    var _fetchMultiNames = _fetchAsset.Multi != null ? _fetchAsset.Multi.Select(x => x.Name)
+                                                                                        .Where(x => !string.IsNullOrEmpty(x)) : null;
+
+                    if (_fetchMultiNames != null)
+                        _fetchFileNames.AddRange(_fetchMultiNames);
+
+                    foreach (var _fetchName in _fetchFileNames)
                     {
-                        if (assetFile.Platform == null)
-                            assetFile.Platform = "both";
+                        var _fetchAssetPath = _isExtraction ? Path.Combine(extractDataPath, _fetchName) : null;
 
-                        if (assetFile.Required && !File.Exists(context.GetOriginalAssetPath(name)))
-                            continue;
+                        var _fetchPackage = _fetchAsset.Package != null ? _fetchAsset.Package : $"{_fetchGameId}_first";
 
-                        string _packageFile = null;
-                        switch (LaunchGame)
+                        _fetchAsset.Platform = _fetchAsset.Platform != null ? _fetchAsset.Platform.ToLower() : "both";
+
+                        if (_fetchAsset.Required)
+                            if (!_isExtraction && !File.Exists(_fetchAssetPath))
+                                continue;
+
+                        var _fetchFileParent = _fetchName.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]).FirstOrDefault();
+
+                        if (Path.IsPathRooted(_fetchName) && !Path.GetPathRoot(_fetchName).Equals(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal))
                         {
-                            case "kh1":
-                                _packageFile = assetFile.Package != null && !fastMode ? assetFile.Package : "kh1_first";
-                                break;
-                            case "bbs":
-                                _packageFile = assetFile.Package != null && !fastMode ? assetFile.Package : "bbs_first";
-                                break;
-                            case "Recom":
-                                if (assetFile != null)
-                                    _packageFile = "Recom";
-                                break;
-                            default:
-                                _packageFile = assetFile.Package != null && !fastMode ? assetFile.Package : "kh2_first";
-                                break;
+                            Console.WriteLine($"File Path \"" + _fetchName + "\" cannot be copied as it is rooted and can cause instability! Aborting...");
+                            throw new PatcherException(modMetadata, new InvalidOperationException("Root Copy Detected!"));
                         }
 
-                        if (Path.IsPathRooted(name) && !Path.GetPathRoot(name).Equals(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal))
-                        {
-                            Log.Err($"File Path \"" + name + "\" cannot be copied as it is rooted and can cause instability! Aborting...");
-                            throw new PatcherException(metadata, new InvalidOperationException("Root Copy Detected!"));
-                        }
+                        var _fetchOutputPath = Path.Combine(buildOutputPath, _fetchName);
+                        var _fetchOutputDir = Path.GetDirectoryName(_fetchOutputPath);
 
-                        var dstFile = context.GetDestinationPath(name);
-                        var packageMapLocation = "";
-                        var _pcFile = name.Contains("remastered") || name.Contains("raw");
+                        var _fetchPackageMap = "";
 
-                        // Special case for mods that want to bundle scripts or DLL files
-                        var nonGameFile = name.StartsWith("scripts/") || name.StartsWith("scripts\\") || name.StartsWith("dlls/") || name.StartsWith("dlls\\");
+                        var _isFileRemastered = _fetchName.StartsWith("remastered");
+                        var _isFileRAW = _fetchName.StartsWith("raw");
 
-                        var _extraPath = _pcFile ? "" : "original/";
+                        var _isFilePC = _isFileRemastered || _isFileRAW;
+                        var _isFileSpecial = _fetchFileParent == "scripts" || _fetchFileParent == "dll";
 
-                        if (nonGameFile)
-                        {
-                            packageMapLocation = "special/" + name;
-                        }
+                        if (_isFileSpecial)
+                            _fetchPackageMap = "special/" + _fetchName;
+
                         else
                         {
-                            switch (platform)
+                            if (targetPlatform == 0x00 && (_fetchAsset.Platform == "pc" || _isFilePC))
+                                continue;
+
+                            else if (targetPlatform != 0x00)
                             {
-                                default:
-                                {
-                                    if (assetFile.Platform.ToLower() == "pc")
-                                        continue;
+                                if (_fetchAsset.Platform == "ps2")
+                                    continue;
 
-                                    else if (_pcFile)
-                                        continue;
-                                }
-                                break;
-
-                                case 2:
-                                {
-                                    if (assetFile.Platform.ToLower() == "ps2")
-                                        continue;
-
-                                    if (assetFile.Platform.ToLower() != "ps2")
-                                        packageMapLocation = _packageFile + "/" + _extraPath + name;
-
-                                    else if (_pcFile)
-                                        packageMapLocation = _packageFile + "/" + name;
-                                }
-                                break;
+                                _fetchPackageMap = Path.Combine(_fetchPackage, _isFilePC ? "" : "original/", _fetchName);
                             }
                         }
 
-                        if (packageMap != null && packageMapLocation.Length > 0)
+                        if (packageMap != null && _fetchPackageMap.Length > 0)
                         {
-                            // Protect against multiple mods having the same file where one uses forward slash and one uses backslash
-                            lock (exclusiveLock)
+                            lock (_protectPackageMap)
+                                packageMap[_fetchName.Replace("\\", "/")] = _fetchPackageMap;
+                        }
+
+                        if (!Directory.Exists(_fetchOutputDir))
+                            Directory.CreateDirectory(_fetchOutputDir);
+
+                        var _multiExists = !_isExtraction;
+
+                        if (!_multiExists && _fetchAsset.Multi != null)
+                        {
+                            foreach (var _multiEntry in _fetchAsset.Multi)
                             {
-                                packageMap[name.Replace("\\", "/")] = packageMapLocation;
+                                var _fetchMultiPath = Path.Combine(extractDataPath, _multiEntry.Name);
+
+                                if (File.Exists(_fetchMultiPath))
+                                    _multiExists = true;
                             }
                         }
 
-                        context.EnsureDirectoryExists(dstFile);
+                        var _fetchSourcePath = (_fetchAsset.Source[0].Type != "internal" && _fetchAsset.Source[0].Name != null) ? Path.Combine(modFilesPath, _fetchAsset.Source[0].Name) : null;
+                        var _fetchSourceAssetPath = (_isExtraction && _fetchAsset.Source[0].Type == "internal" && _fetchAsset.Source[0].Name != null) ? Path.Combine(extractDataPath, _fetchAsset.Source[0].Name) : null;
 
-                        //Update: Prevent from copying a blank file should it not exist.
-                        try
+                        var _shouldCopyFile = (_fetchAsset.Method != "copy" && _fetchAsset.Method != "imd" && ((_fetchAssetPath != null && File.Exists(_fetchAssetPath)) || _multiExists)) ||
+                                              ((_fetchAsset.Method == "copy" || _fetchAsset.Method == "imd") && (_fetchSourcePath != null && File.Exists(_fetchSourcePath))) ||
+                                              ((_fetchAsset.Method == "copy" || _fetchAsset.Method == "imd") && (_fetchSourceAssetPath != null && File.Exists(_fetchSourceAssetPath)) || _multiExists) ||
+                                              Tests;
+
+                        if (_shouldCopyFile)
                         {
-                            bool multi = false;
-                            if (assetFile.Multi != null)
+                            if (_fetchAssetPath != null)
                             {
-                                foreach (var entry in assetFile.Multi)
-                                {
-                                    if (File.Exists(context.GetOriginalAssetPath(entry.Name)))
-                                    {
-                                        multi = true;
-                                    }
-                                }
+                                if (!File.Exists(_fetchOutputPath) && File.Exists(_fetchAssetPath))
+                                    File.Copy(_fetchAssetPath, _fetchOutputPath);
                             }
-                            //If editing subfiles (not Method: copy and not Method: imd)  make sure the original file exists OR
-                            //If copying a file from the mod (NOT Type: internal) make sure it exists (doesnt check if the location its going normally exists) OR
-                            //If copying a file from the users extraction (Type: internal) make sure it exists (doesnt check if the location its going normally exists) OR
-                            //Ignore if its from a test
 
-                            var needToCopyOriginalFile =
-                                (false
-                                || (true
-                                    && assetFile.Method != "copy"
-                                    && assetFile.Method != "imd"
-                                    && (false
-                                        || File.Exists(context.GetOriginalAssetPath(assetFile.Name))
-                                        || multi
-                                    )
-                                )
-                                || (true
-                                    && (assetFile.Method == "copy" || assetFile.Method == "imd")
-                                    && assetFile.Source[0].Type != "internal"
-                                    && File.Exists(context.GetSourceModAssetPath(assetFile.Source[0].Name))
-                                )
-                                || (true
-                                    && (assetFile.Method == "copy" || assetFile.Method == "imd")
-                                    && assetFile.Source[0].Type == "internal"
-                                    && (false
-                                        || File.Exists(context.GetOriginalAssetPath(assetFile.Source[0].Name))
-                                        || multi
-                                    )
-                                )
-                                || Tests
-                                );
-
-                            if (needToCopyOriginalFile)
-                            {
-                                context.CopyOriginalFile(name, dstFile);
-
-                                using var _stream = File.Open(dstFile, FileMode.OpenOrCreate, FileAccess.ReadWrite);
-                                PatchFile(context, assetFile, _stream);
-
-                                _stream.Close();
-                                _stream.Dispose();
-                            }
                             else
                             {
-                                // The following codes are for validation purposes only.
+                                var _fetchDataPath = Path.Combine(gameFilesPath, "Image", targetPlatform == 0x01 ? "dt" : "en");
+                                var _fetchHeaderFiles = Directory.GetFiles(_fetchDataPath).Where(x => x.Contains(_fetchGameId) && x.EndsWith(".hed"));
 
-                                List<string> globalFilePaths = new List<string> { ".a.fr", ".a.gr", ".a.it", ".a.sp", ".a.us", "/fr/", "/gr/", "/it/", "/sp/", "/us/" };
-                                List<string> emulatorRegionPaths = new List<string> { "/jp/", "/us/", "/it/", "/sp/", "/gr/", "/fr/", "/fm/" };
-                                if (assetFile.Method != "copy" && assetFile.Method != "imd")
+                                _fetchHeaderFiles.AsParallel().ForAll(_fetchHeader =>
                                 {
-                                    if (platform == 2)
+                                    var _fetchPackageFile = Path.ChangeExtension(_fetchHeader, "pkg");
+                                    var _fetchRegularName = _fetchName;
+
+                                    if (_isFileRAW)
+                                        _fetchRegularName = _fetchName.Replace("raw/", "");
+
+                                    if (_isFileRemastered)
+                                        _fetchRegularName = _fetchName.Replace("remastered/", "");
+
+                                    using (var _fetchHeaderStream = File.OpenRead(_fetchHeader))
                                     {
-                                        if (Language != "jp")
+                                        var _fetchEntries = Hed.Read(_fetchHeaderStream);
+                                        var _fetchTargetEntry = _fetchEntries.FirstOrDefault(x => Egs.Helpers.ToString(x.MD5) == Egs.Helpers.CreateMD5(_fetchRegularName));
+
+                                        if (_fetchTargetEntry != null)
                                         {
-                                            if (!context.GetOriginalAssetPath(name).Contains(".a.fm") && !context.GetOriginalAssetPath(name).Contains("/jp/"))
+                                            using (var _fetchPackageStream = File.OpenRead(_fetchPackageFile))
                                             {
-                                                Log.Warn("File not found: " + context.GetOriginalAssetPath(name) + " Skipping. \nPlease check your game extraction.");
-                                            }
-                                        }
-                                        else
-                                        {
-                                            if (!globalFilePaths.Any(x => context.GetOriginalAssetPath(name).Contains(x)))
-                                            {
-                                                Log.Warn("File not found: " + context.GetOriginalAssetPath(name) + " Skipping. \nPlease check your game extraction.");
+                                                if (!_isFileRemastered)
+                                                {
+                                                    var _fetchTargetAsset = new EgsHdAsset(_fetchPackageStream.SetPosition(_fetchTargetEntry.Offset));
+                                                    var _fetchAssetData = _isFileRAW ? _fetchTargetAsset.OriginalRawData : _fetchTargetAsset.OriginalData;
+
+                                                    File.WriteAllBytes(_fetchOutputPath, _fetchAssetData);
+                                                }
                                             }
                                         }
                                     }
-                                    else
-                                    {
-                                        string matchedRegion = emulatorRegionPaths.FirstOrDefault(x => name.Contains(x));
-                                        if (matchedRegion != null)
-                                        {
-                                            string emuRegionPath = context.GetOriginalAssetPath(name.Substring(0, name.IndexOf(matchedRegion) + 3));
-                                            if (Directory.Exists(emuRegionPath))
-                                            {
-                                                Log.Warn("File not found: " + context.GetOriginalAssetPath(name) + " Skipping. \nPlease check your game extraction.");
-                                            }
-                                        }
-                                    }
-                                }
-                                else if (assetFile.Source[0].Type == "internal")
-                                {
-                                    if (platform == 2)
-                                    {
-                                        if (Language != "jp")
-                                        {
-                                            if (!context.GetOriginalAssetPath(assetFile.Source[0].Name).Contains(".a.fm") && !context.GetOriginalAssetPath(assetFile.Source[0].Name).Contains("/jp/") && (assetFile.Multi == null || assetFile.Name == name))
-                                            {
-                                                Log.Warn("File not found: " + context.GetOriginalAssetPath(assetFile.Source[0].Name) + " Skipping. \nPlease check your game extraction.");
-                                            }
-                                        }
-                                        else
-                                        {
-                                            if (!globalFilePaths.Any(x => context.GetOriginalAssetPath(assetFile.Source[0].Name).Contains(x)) && (assetFile.Multi == null || assetFile.Name == name))
-                                            {
-                                                Log.Warn("File not found: " + context.GetOriginalAssetPath(assetFile.Source[0].Name) + " Skipping. \nPlease check your game extraction.");
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        string matchedRegion = emulatorRegionPaths.FirstOrDefault(x => assetFile.Source[0].Name.Contains(x));
-                                        if (matchedRegion != null)
-                                        {
-                                            string emuRegionPath = context.GetOriginalAssetPath(assetFile.Source[0].Name.Substring(0, assetFile.Source[0].Name.IndexOf(matchedRegion) + 3));
-                                            if (Directory.Exists(emuRegionPath))
-                                            {
-                                                Log.Warn("File not found: " + context.GetOriginalAssetPath(assetFile.Source[0].Name) + " Skipping. \nPlease check your game extraction.");
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    Log.Warn("File not found: " + context.GetSourceModAssetPath(assetFile.Source[0].Name) + " Skipping. \nPlease check your mod install of: " + metadata.Title);
-                                }
+                                });
                             }
+
+                            using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
+                                PatchFile(_fetchContext, _fetchAsset, _fileStream);
                         }
-                        catch (IOException) { }
-                        //This is here so the user does not have to close Mod Manager to see what the warnings were if any. Helpful especially on PC since the build window closes after build unlike emulator where it stays open during mod injection.
-                        Log.Flush();
                     }
                 });
             }
 
             catch (Exception ex)
             {
-                Log.Err($"Patcher failed: {ex.Message}");
-                throw new PatcherException(metadata, ex);
+                Console.WriteLine($"Patcher failed: {ex.Message}");
+                throw new PatcherException(modMetadata, ex);
             }
         }
 
@@ -414,8 +335,6 @@ namespace OpenKh.Patcher
 
             stream.SetLength(stream.Position);
         }
-
-
 
         private static void CopyFile(Context context, AssetFile assetFile, Stream stream)
         {

@@ -4,8 +4,10 @@ using LibGit2Sharp.Handlers;
 using OpenKh.Bbs;
 using OpenKh.Kh2;
 using OpenKh.Patcher;
+using OpenKh.Tools.ModManager.Models;
 using OpenKh.Tools.ModManager.ViewModels;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -440,6 +442,46 @@ namespace OpenKh.Tools.ModManager.Services
             }
 
             // All is good, return success.
+            return 0x00;
+        }
+        
+        public static async Task<byte> Build(IEnumerable<ModModel> modsList, Config currentConfig)
+        {
+            var _fetchPatcher = new PatcherProcessor();
+            var _fetchPackageMap = new ConcurrentDictionary<string, string>();
+
+            var _fetchGameName = currentConfig.TargetGame.ToString().ToLower();
+            var _fetchDataPath = !string.IsNullOrEmpty(currentConfig.DataPath) ? Path.Combine(currentConfig.DataPath, _fetchGameName) : null;
+            var _fetchBuildPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "build");
+
+            await Task.Run(() =>
+            {
+                foreach (var _fetchMod in modsList)
+                {
+                    if (!_fetchMod.ModValid || !_fetchMod.ModActive)
+                        continue;
+
+                    var _fetchYamlPath = Path.Combine(_fetchMod.ModPath, "mod.yml");
+                    var _fetchMetadata = Metadata.Read(_fetchYamlPath);
+
+                    _fetchPatcher.Patch
+                    (
+                        _fetchDataPath,
+                        _fetchBuildPath,
+                        _fetchMetadata,
+                        _fetchMod.ModPath,
+                        currentConfig.GamePath,
+                        (int)currentConfig.TargetPlatform,
+                        (int)currentConfig.TargetGame,
+                        _fetchPackageMap
+                    );
+                }
+            });
+
+            using (var _writePackageMap = new StreamWriter(Path.Combine(_fetchBuildPath, "patch-package-map.txt")))
+                foreach (var _mapEntry in _fetchPackageMap)
+                    _writePackageMap.WriteLine(_mapEntry.Key + " $$$$ " + _mapEntry.Value);
+
             return 0x00;
         }
     }
