@@ -37,10 +37,10 @@ namespace OpenKh.Patcher
         {
             var _fetchYamlRaw = File.ReadAllText(fileName);
 
-            try
-            {
-                return YamlSerializer.Deserialize<Metadata>(_fetchYamlRaw, new YamlSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-            }
+            // Replace all back slashes as Windows supports forward slashes but Linux doesn't support back slashes.
+            _fetchYamlRaw = _fetchYamlRaw.Replace('\\', '/');
+
+            try { return YamlSerializer.Deserialize<Metadata>(_fetchYamlRaw, new YamlSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }); }
 
             catch (SharpYaml.YamlException ex)
             {
