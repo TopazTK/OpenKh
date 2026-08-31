@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using LibGit2Sharp;
 using LibGit2Sharp.Handlers;
@@ -302,6 +303,18 @@ public partial class MainView : Window
         }
     }
 
+    private async void OnOpenFolderClicked(object? sender, RoutedEventArgs e)
+    {
+        var _fetchContext = DataContext as MainViewModel;
+        var _fetchCurrentMod = _fetchContext.CurrentMod;
+
+        var _fetchDirectoryInfo = new DirectoryInfo(_fetchCurrentMod.ModPath);
+        var _fetchTopLevel = TopLevel.GetTopLevel(this);
+
+        if (_fetchTopLevel?.Launcher != null)
+            await _fetchTopLevel.Launcher.LaunchDirectoryInfoAsync(_fetchDirectoryInfo);
+    }
+
     private void OnModActiveChanged(object? sender, ModListView.ModActiveChangedEventArgs e)
     {
         var _fetchContext = DataContext as MainViewModel;
@@ -354,11 +367,52 @@ public partial class MainView : Window
         };
 
         var _fetchContext = DataContext as MainViewModel;
-        var _buildResult = await InstallService.Build(_fetchContext.InstalledMods, _fetchContext.CurrentConfig, _buildProgressHandler, _assetProgressHandler);
+        var _fetchConfig = _fetchContext.CurrentConfig;
+
+        var _buildResult = await InstallService.Build(_fetchContext.InstalledMods, _fetchConfig, _buildProgressHandler, _assetProgressHandler);
         
         _progressDialog.Close(true);
 
         if (_buildResult == 0x00)
-            return;
+        {
+            var _fetchAPIFilePath = Path.Combine(_fetchConfig.GamePath, "steam_appid.txt");
+            var _fetchLaunchFilePath = Path.Combine(_fetchConfig.GamePath, Config.GameExecutable[_fetchConfig.TargetGame]);
+
+            var _fetchAPIExists = _fetchConfig.TargetPlatform == Platform.STEAM ? File.Exists(_fetchAPIFilePath) : false;
+            var _fetchLinuxDirect = (_fetchAPIExists && OperatingSystem.IsLinux()) ? "bash -c 'exec \"${@/KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe/" + Config.GameExecutable[_fetchConfig.TargetGame] + "}\"' -- %command%" : "";
+                 
+            Uri _fetchTargetUri = null;
+            FileInfo _fetchTargetFile = null;
+
+            if (!OperatingSystem.IsWindows() || !_fetchAPIExists)
+            {
+                switch (_fetchConfig.TargetPlatform)
+                {
+                    case Platform.STEAM:
+                        _fetchTargetUri = new Uri($"steam://rungameid/2552430//{_fetchLinuxDirect}");
+                        break;
+                    case Platform.EPIC_GAMES_STORE:
+                        _fetchTargetUri = new Uri("com.epicgames.launcher://apps/4158b699dd70447a981fee752d970a3e%3A5aac304f0e8948268ddfd404334dbdc7%3A68c214c58f694ae88c2dab6f209b43e4?action=launch");
+                        break;
+                }
+            }
+
+            var _fetchTopLevel = TopLevel.GetTopLevel(this);
+
+            if (_fetchTopLevel?.Launcher != null && _fetchTargetUri != null )
+                await _fetchTopLevel.Launcher.LaunchUriAsync(_fetchTargetUri);
+
+            else
+            {
+                var _fetchProcessInfo = new ProcessStartInfo
+                {
+                    FileName = _fetchLaunchFilePath,
+                    WorkingDirectory = _fetchConfig.GamePath,
+                    UseShellExecute = true
+                };
+
+                Process.Start(_fetchProcessInfo);
+            }
+        }
     }
 }
