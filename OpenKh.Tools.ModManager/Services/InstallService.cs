@@ -468,7 +468,7 @@ namespace OpenKh.Tools.ModManager.Services
             var _fetchGameId = PatcherProcessor.GameShorthand[(int)currentConfig.Frontend.TargetGame];
 
             var _fetchDataPath = !string.IsNullOrEmpty(currentConfig.Frontend.DataPath) ? Path.Combine(currentConfig.Frontend.DataPath, _fetchGameId) : null;
-            var _fetchBuildPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "build", _fetchGameId);
+            var _fetchBuildPath = Path.Combine(AppContext.BaseDirectory, "build", _fetchGameId);
 
             if (!Directory.Exists(_fetchBuildPath))
                 Directory.CreateDirectory(_fetchBuildPath);
