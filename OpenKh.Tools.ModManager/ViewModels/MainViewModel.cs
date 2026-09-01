@@ -43,7 +43,7 @@ public partial class MainViewModel : ViewModelBase
     protected void OnModPropertyChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         var _fetchModList = sender as ObservableCollection<ModModel>;
-        var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", _currentConfig.Frontend.TargetGame.ToString().ToLower());
+        var _fetchModsPath = Path.Combine(AppContext.BaseDirectory, "mods", _currentConfig.Frontend.TargetGame.ToString().ToLower());
 
         var _fetchMemory = new ObservableCollection<MemoryModel>();
 
@@ -52,7 +52,7 @@ public partial class MainViewModel : ViewModelBase
             if (!_fetchMod.ModValid)
                 continue;
 
-            var _fetchRelativePath = Path.GetRelativePath(System.AppDomain.CurrentDomain.BaseDirectory, _fetchMod.ModPath);
+            var _fetchRelativePath = Path.GetRelativePath(AppContext.BaseDirectory, _fetchMod.ModPath);
 
             var _fetchBytes = Encoding.ASCII.GetBytes(_fetchRelativePath);
             var _fetchHash = MD5.HashData(_fetchBytes);
@@ -82,7 +82,7 @@ public partial class MainViewModel : ViewModelBase
 
         if (CurrentConfig == null)
         {
-            var _fetchConfigFile = File.ReadAllText("config.yml");
+            var _fetchConfigFile = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "config.yml"));
             CurrentConfig = YamlSerializer.Deserialize<Config>(_fetchConfigFile);
         }
 
@@ -108,7 +108,7 @@ public partial class MainViewModel : ViewModelBase
         // Construct the mod folder path for the specified game.
 
         var _fetchMods = new ObservableCollection<ModModel>();
-        var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", CurrentConfig.Frontend.TargetGame.ToString().ToLower());
+        var _fetchModsPath = Path.Combine(AppContext.BaseDirectory, "mods", CurrentConfig.Frontend.TargetGame.ToString().ToLower());
 
         // For each directory that exists in the mod folder:
 
@@ -220,7 +220,7 @@ public partial class MainViewModel : ViewModelBase
             {
                 var _fetchMod = _fetchMods.First(x =>
                 {
-                    var _fetchRelativePath = Path.GetRelativePath(System.AppDomain.CurrentDomain.BaseDirectory, x.ModPath);
+                    var _fetchRelativePath = Path.GetRelativePath(AppContext.BaseDirectory, x.ModPath);
                     var _fetchBytes = Encoding.ASCII.GetBytes(_fetchRelativePath);
                     var _fetchHash = MD5.HashData(_fetchBytes);
 

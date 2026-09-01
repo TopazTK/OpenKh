@@ -57,7 +57,7 @@ public partial class MainView : Window
         var _fetchSerialize = YamlSerializer.Serialize<Config>(_fetchViewModel.CurrentConfig);
 
         // Overwrite the config file.
-        File.WriteAllText("config.yml", _fetchSerialize);
+        File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "config.yml"), _fetchSerialize);
 
         // We gotta still CLOSE the thing, no?
         base.OnClosing(e);
@@ -175,7 +175,7 @@ public partial class MainView : Window
         var _fetchModsList = _fetchContext.InstalledMods;
         var _fetchConfig = _fetchContext.CurrentConfig.Frontend;
 
-        var _fetchModsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "mods", _fetchConfig.TargetGame.ToString().ToLower());
+        var _fetchModsPath = Path.Combine(System.AppContext.BaseDirectory, "mods", _fetchConfig.TargetGame.ToString().ToLower());
 
         var _fetchInstallResult = 0x00;
 
@@ -327,12 +327,12 @@ public partial class MainView : Window
         var _fetchModList = _fetchContext.InstalledMods;
         var _fetchConfig = _fetchContext.CurrentConfig;
 
-        var _fetchMemoryPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mods", _fetchConfig.Frontend.TargetGame.ToString().ToLower(), "mod_memory.yml");
+        var _fetchMemoryPath = Path.Combine(AppContext.BaseDirectory, "mods", _fetchConfig.Frontend.TargetGame.ToString().ToLower(), "mod_memory.yml");
 
         var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
         var _fetchMemory = YamlSerializer.Deserialize<ObservableCollection<MemoryModel>>(_fetchMemoryRAW);
 
-        var _fetchRelativePath = Path.GetRelativePath(AppDomain.CurrentDomain.BaseDirectory, e.TargetMod.ModPath);
+        var _fetchRelativePath = Path.GetRelativePath(AppContext.BaseDirectory, e.TargetMod.ModPath);
 
         var _fetchBytes = Encoding.ASCII.GetBytes(_fetchRelativePath);
         var _fetchHash = MD5.HashData(_fetchBytes);
@@ -388,7 +388,7 @@ public partial class MainView : Window
                 if (!File.Exists(_fetchReMIXBackup))
                 {
                     File.Move(_fetchReMIXFilePath, _fetchReMIXBackup);
-                    File.Copy("resources/OpenKh.Command.Launcher.exe", _fetchReMIXFilePath, true);
+                    File.Copy(Path.Combine(AppContext.BaseDirectory, "resources/OpenKh.Command.Launcher.exe"), _fetchReMIXFilePath, true);
                 }
             }
 
