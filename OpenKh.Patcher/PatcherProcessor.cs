@@ -226,6 +226,8 @@ namespace OpenKh.Patcher
 
                         if (_shouldCopyFile)
                         {
+                            byte[] _fetchAssetData = null;
+
                             if (_fetchAssetPath != null)
                             {
                                 if (!File.Exists(_fetchOutputPath) && File.Exists(_fetchAssetPath))
@@ -260,7 +262,7 @@ namespace OpenKh.Patcher
                                                 if (!_isFileRemastered)
                                                 {
                                                     var _fetchTargetAsset = new EgsHdAsset(_fetchPackageStream.SetPosition(_fetchTargetEntry.Offset));
-                                                    var _fetchAssetData = _isFileRAW ? _fetchTargetAsset.OriginalRawData : _fetchTargetAsset.OriginalData;
+                                                    _fetchAssetData = _fetchTargetAsset.OriginalData;
 
                                                     File.WriteAllBytes(_fetchOutputPath, _fetchAssetData);
                                                 }
@@ -271,7 +273,7 @@ namespace OpenKh.Patcher
                             }
 
                             using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
-                                PatchFile(_fetchContext, _fetchAsset, _fileStream);
+                                PatchFile(_fetchContext, _fetchAsset, _fileStream, _fetchAssetData);
                         }
                     }
 
@@ -294,7 +296,7 @@ namespace OpenKh.Patcher
             }
         }
 
-        private static void PatchFile(Context context, AssetFile assetFile, Stream stream)
+        private static void PatchFile(Context context, AssetFile assetFile, Stream stream, byte[] originalData = null)
         {
             if (assetFile == null)
                 throw new Exception("Asset file is null.");
@@ -302,7 +304,7 @@ namespace OpenKh.Patcher
             switch (assetFile.Method)
             {
                 case "copy":
-                    CopyFile(context, assetFile, stream);
+                    CopyFile(context, assetFile, stream, originalData);
                     break;
                 case "bar":
                 case "binarc":
@@ -352,26 +354,39 @@ namespace OpenKh.Patcher
             stream.SetLength(stream.Position);
         }
 
-        private static void CopyFile(Context context, AssetFile assetFile, Stream stream)
+        private static void CopyFile(Context context, AssetFile assetFile, Stream stream, byte[] originalData = null)
         {
             if (assetFile.Source == null || assetFile.Source.Count == 0)
                 throw new Exception($"File '{assetFile.Name}' does not contain any source");
 
-            string _fetchSource;
 
             if (assetFile.Source[0].Type == "internal")
-                _fetchSource = Path.Combine(context.OriginalAssetPath, assetFile.Source[0].Name);
+            {
+                if (context.OriginalAssetPath != null)
+                {
+                    var _fetchSource = Path.Combine(context.OriginalAssetPath, assetFile.Source[0].Name);
+
+                    using (var _fetchStream = File.OpenRead(_fetchSource))
+                        _fetchStream.CopyTo(stream);
+                }
+
+                else if (originalData != null)
+                {
+                    using (var _memoryRead = new MemoryStream(originalData))
+                        _memoryRead.CopyTo(stream);
+                }
+            }
 
             else
             {
-                _fetchSource = Path.Combine(context.SourceModAssetPath, assetFile.Source[0].Name);
+                var _fetchSource = Path.Combine(context.SourceModAssetPath, assetFile.Source[0].Name);
 
                 if (!File.Exists(_fetchSource))
                     throw new FileNotFoundException($"The mod does not contain the file {assetFile.Source[0].Name}", _fetchSource);
-            }
 
-            using (var _fetchStream = File.OpenRead(_fetchSource))
-                _fetchStream.CopyTo(stream);
+                using (var _fetchStream = File.OpenRead(_fetchSource))
+                    _fetchStream.CopyTo(stream);
+            }
         }
 
         //Binarc Update: Specify by Name OR Index. Some files in BARS may have the same name but different indexes, and you want to patch a later index only.
