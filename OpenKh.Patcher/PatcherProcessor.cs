@@ -232,7 +232,7 @@ namespace OpenKh.Patcher
                             {
                                 if (!File.Exists(_fetchOutputPath) && File.Exists(_fetchAssetPath))
                                     File.Copy(_fetchAssetPath, _fetchOutputPath);
-                            }
+                            } 
 
                             else
                             {

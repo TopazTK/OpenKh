@@ -5,7 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using LibGit2Sharp;
 using OpenKh.Patcher;
 using OpenKh.Tools.ModManager.Models;
-using OpenKh.Tools.ModManager.Services;
+using OpenKh.Tools.ModManager.Classes;
 using SharpYaml;
 using System;
 using System.Collections.Generic;
@@ -17,6 +17,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Xe.BinaryMapper;
+using OpenKh.Tools.ModManager.Services;
 
 namespace OpenKh.Tools.ModManager.ViewModels;
 
@@ -40,30 +41,41 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasModsInstalled = false;
 
+    /// <summary>
+    /// Activates whenever InstalledMods has a property change.
+    /// It commits said changes to the targeted game's mod memory.
+    /// </summary>
     protected void OnModPropertyChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        // Fetch the mod memory path and fetch the modlist from the sender.
         var _fetchModList = sender as ObservableCollection<ModModel>;
-        var _fetchModsPath = Path.Combine(AppContext.BaseDirectory, "mods", _currentConfig.Frontend.TargetGame.ToString().ToLower());
+        var _fetchMemoryPath = Path.Combine(PathService.ResolveMod(CurrentConfig), "mod_memory.yml");
 
-        var _fetchMemory = new ObservableCollection<MemoryModel>();
+        // Create the actual mod memory collection.
+        var _modMemoryList = new ObservableCollection<MemoryModel>();
 
+        // For every mod that exists:
         foreach (var _fetchMod in _fetchModList)
         {
+            // If the mod is invalid do not memorize it.
             if (!_fetchMod.ModValid)
                 continue;
 
-            var _fetchRelativePath = Path.GetRelativePath(AppContext.BaseDirectory, _fetchMod.ModPath);
-
-            var _fetchBytes = Encoding.ASCII.GetBytes(_fetchRelativePath);
-            var _fetchHash = MD5.HashData(_fetchBytes);
-
-            var _fetchHashStr = Convert.ToHexString(_fetchHash);
-
-            _fetchMemory.Add(new MemoryModel { ModHash = _fetchHashStr, ModActive = _fetchMod.ModActive, ModIndex = _fetchModList.IndexOf(_fetchMod) });
+            // Construct the memory structure (Hash, Is Active, Current Index)
+            _modMemoryList.Add
+            (
+                new MemoryModel 
+                { 
+                    ModHash = ModService.ResolveMD5(_fetchMod, CurrentConfig), 
+                    ModActive = _fetchMod.ModActive, 
+                    ModIndex = _fetchModList.IndexOf(_fetchMod) 
+                }
+            );
         }
 
-        var _fetchSerial = YamlSerializer.Serialize(_fetchMemory);
-        File.WriteAllText(Path.Combine(_fetchModsPath, "mod_memory.yml"), _fetchSerial);
+        // Serialize and commit the mod memory.
+        var _fetchSerial = YamlSerializer.Serialize(_modMemoryList);
+        File.WriteAllText(_fetchMemoryPath, _fetchSerial);
     }
 
     public void InitializeView(bool selectLast = false)
@@ -90,13 +102,29 @@ public partial class MainViewModel : ViewModelBase
 
         if (CurrentConfig.Frontend.TargetPlatform != Platform.PCSX2)
         {
+            // Fetch the bare arguments we will use.
+            var _configFrontend = CurrentConfig.Frontend;
+            var _fetchTargetGame = _configFrontend.TargetGame;
+
+            // Check if the game is Dream Drop Distance and the second Game Path has been declared.
+            // Otherwise, check if the game is NOT Dream Drop Distance.
+            // If neither of these are true, the config isn't valid.
+
+            var _isDDDConfigValid = _fetchTargetGame != Game.DREAM_DROP_DISTANCE || (_fetchTargetGame == Game.DREAM_DROP_DISTANCE && _configFrontend.GamePath.Length < 2);
+
+            if (!_isDDDConfigValid)
+                ConfigurationValid = false;
+
+            // Fetch the second Game Path if the game is Dream Drop Distance, fetch the first one otherwise.
+            var _fetchGamePath = _fetchTargetGame == Game.DREAM_DROP_DISTANCE ? _configFrontend.GamePath[1] : _configFrontend.GamePath[0];
+
             // Construct the paths for the game executable and Panacea.
-            var _gameExecutablePath = Path.Combine(CurrentConfig.Frontend.GamePath, Config.GameExecutable[CurrentConfig.Frontend.TargetGame]);
-            var _panaceaPath = Path.Combine(CurrentConfig.Frontend.GamePath, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+            var _fetchExePath = Path.Combine(_fetchGamePath, Config.GameExecutable[CurrentConfig.Frontend.TargetGame]);
+            var _fetchPanaceaPath = Path.Combine(_fetchGamePath, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
 
             // Verify the game executable and directory exists as configured. If the build type is PANACEA, also verify Panacea's existence.
-            var _isGameConfigValid = Directory.Exists(CurrentConfig.Frontend.GamePath) && File.Exists(_gameExecutablePath);
-            var _isPanaceaConfigValid = (CurrentConfig.Frontend.ModBuildType == BuildType.PANACEA && File.Exists(_panaceaPath)) || CurrentConfig.Frontend.ModBuildType == BuildType.PATCH;
+            var _isGameConfigValid = Directory.Exists(_fetchGamePath) && File.Exists(_fetchExePath);
+            var _isPanaceaConfigValid = (CurrentConfig.Frontend.ModBuildType == BuildType.PANACEA && File.Exists(_fetchPanaceaPath)) || CurrentConfig.Frontend.ModBuildType == BuildType.PATCH;
 
             // If either are not valid, mark the config as faulty.
             if (!_isGameConfigValid || !_isPanaceaConfigValid)
@@ -108,7 +136,7 @@ public partial class MainViewModel : ViewModelBase
         // Construct the mod folder path for the specified game.
 
         var _fetchMods = new ObservableCollection<ModModel>();
-        var _fetchModsPath = Path.Combine(AppContext.BaseDirectory, "mods", CurrentConfig.Frontend.TargetGame.ToString().ToLower());
+        var _fetchModsPath = PathService.ResolveMod(CurrentConfig);
 
         // For each directory that exists in the mod folder:
 
@@ -178,7 +206,8 @@ public partial class MainViewModel : ViewModelBase
                             var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
 
                             foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                                _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                                if (_fetchFile.Exists)
+                                    _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
                         }
                     }
                 });
@@ -207,56 +236,63 @@ public partial class MainViewModel : ViewModelBase
             }
         }
 
+        // When all mods are loaded, start processing the "mod memory" for the targeted game.\
+        // If the mod memory does not exist, assume default order and mark all active.
+
         var _fetchModMemoryPath = Path.Combine(_fetchModsPath, "mod_memory.yml");
 
         if (File.Exists(_fetchModMemoryPath))
         {
+            // Fetch the raw YAML data and deserialize it.
             var _fetchRawYaml = File.ReadAllText(_fetchModMemoryPath);
             var _fetchModMemory = YamlSerializer.Deserialize<ObservableCollection<MemoryModel>>(_fetchRawYaml);
 
-            var _fetchTempList = new ModModel[_fetchMods.Count];
+            // Make a temporary array for us to order the mods.
+            // And a temporary list for us to commit the mods.
+
+            var _tempModArray = new ModModel[_fetchMods.Count];
+            var _tempModList = new List<ModModel>();
 
             foreach (var _fetchMemory in _fetchModMemory)
             {
-                var _fetchMod = _fetchMods.First(x =>
-                {
-                    var _fetchRelativePath = Path.GetRelativePath(AppContext.BaseDirectory, x.ModPath);
-                    var _fetchBytes = Encoding.ASCII.GetBytes(_fetchRelativePath);
-                    var _fetchHash = MD5.HashData(_fetchBytes);
-
-                    return Convert.ToHexString(_fetchHash) == _fetchMemory.ModHash;
-                });
+                var _fetchMod = _fetchMods.FirstOrDefault(x => ModService.ResolveMD5(x, CurrentConfig) == _fetchMemory.ModHash);
 
                 if (_fetchMod == null || !_fetchMod.ModValid)
                     continue;
 
                 _fetchMod.ModActive = _fetchMemory.ModActive;
-                _fetchTempList[_fetchMemory.ModIndex] = _fetchMod;
+                _tempModArray[_fetchMemory.ModIndex] = _fetchMod;
 
                 _fetchMods.Remove(_fetchMod);
             }
 
-            InstalledMods = new ObservableCollection<ModModel>(_fetchTempList.Where(x => x != null));
+            // Add all the existing mods from the array.
+            _tempModList.AddRange(_tempModArray.Where(x => x != null));
 
-            foreach (var _fetchMod in _fetchMods.Where(x => x.ModValid))
-                InstalledMods.Add(_fetchMod);
+            // Add all the valid mods from the original list which didn't exist on the mod memory.
+            _tempModList.AddRange(_fetchMods.Where(x => x.ModValid));
 
-            foreach (var _fetchMod in _fetchMods.Where(x => !x.ModValid))
-                InstalledMods.Add(_fetchMod);
+            // Add all the invalid mods from the original list which didn't exist on the mod memory.
+            _tempModList.AddRange(_fetchMods.Where(x => !x.ModValid));
+
+            // Sync to the actual installed mods collection.
+            InstalledMods = new ObservableCollection<ModModel>(_tempModList);
         }
 
         else
             InstalledMods = _fetchMods;
         
+        // Register mod property event to handle mod memory.
         InstalledMods.CollectionChanged += OnModPropertyChanged;
 
-        // If there is at least one mod, select the first mod.
+        // If there is at least one mod, select the first mod and declare we have mods.
         if (InstalledMods.Count > 0)
         {
             HasModsInstalled = true;
             CurrentMod = InstalledMods.First();
         }
 
+        // Initialization is complete.
         Initialized = true;
     }
 

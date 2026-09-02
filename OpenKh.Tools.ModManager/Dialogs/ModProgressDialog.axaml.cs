@@ -16,14 +16,14 @@ namespace OpenKh.Tools.ModManager.Dialogs
 
         private void OnCancelEvent(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            InstallService.CancelTokenSource.Cancel();
+            ModService.CancelTokenSource.Cancel();
             Close(false);
         }
 
         protected override void OnClosing(WindowClosingEventArgs e)
         {
             if (e.CloseReason == WindowCloseReason.WindowClosing && !e.IsProgrammatic)
-                InstallService.CancelTokenSource.Cancel();
+                ModService.CancelTokenSource.Cancel();
         }
     }
 }

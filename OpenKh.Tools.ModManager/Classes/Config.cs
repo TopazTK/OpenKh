@@ -7,7 +7,7 @@ using SharpYaml;
 using SharpYaml.Model;
 using SharpYaml.Serialization;
 
-namespace OpenKh.Tools.ModManager.Services
+namespace OpenKh.Tools.ModManager.Classes
 {
     public enum Platform : int
     {
@@ -37,9 +37,11 @@ namespace OpenKh.Tools.ModManager.Services
         public Platform TargetPlatform { get; set; }
         public Game TargetGame { get; set; }
         public BuildType ModBuildType { get; set; }
+        public string? ModPath { get; set; }
+        public string? BuildPath { get; set; }
         public bool UpdateMods { get; set; }
         public string? DataPath { get; set; }
-        public string? GamePath { get; set; }
+        public string[]? GamePath { get; set; }
     }
 
     public class Panacea
@@ -67,6 +69,15 @@ namespace OpenKh.Tools.ModManager.Services
             { Game.CHAIN_OF_MEMORIES, "KINGDOM HEARTS Re_Chain of Memories.exe" },
             { Game.BIRTH_BY_SLEEP, "KINGDOM HEARTS Birth by Sleep FINAL MIX.exe" },
             { Game.DREAM_DROP_DISTANCE, "KINGDOM HEARTS Dream Drop Distance.exe" },
+        };
+
+        public static Dictionary<Game, string> GameShorthand = new Dictionary<Game, string>()
+        {
+            { Game.KINGDOM_HEARTS, "kh1" },
+            { Game.KINGDOM_HEARTS_II, "kh2" },
+            { Game.CHAIN_OF_MEMORIES, "com" },
+            { Game.BIRTH_BY_SLEEP, "bbs" },
+            { Game.DREAM_DROP_DISTANCE, "ddd" },
         };
 
         public Frontend Frontend { get; set; }

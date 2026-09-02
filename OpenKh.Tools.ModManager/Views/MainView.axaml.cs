@@ -9,6 +9,7 @@ using LibGit2Sharp.Handlers;
 using OpenKh.Patcher;
 using OpenKh.Tools.ModManager.Dialogs;
 using OpenKh.Tools.ModManager.Models;
+using OpenKh.Tools.ModManager.Classes;
 using OpenKh.Tools.ModManager.Services;
 using OpenKh.Tools.ModManager.ViewModels;
 using OpenKh.Tools.ModManager.Views;
@@ -25,6 +26,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Avalonia.Media;
 
 namespace OpenKh.Tools.ModManager.Views;
 
@@ -173,9 +175,9 @@ public partial class MainView : Window
 
         var _fetchContext = DataContext as MainViewModel;
         var _fetchModsList = _fetchContext.InstalledMods;
-        var _fetchConfig = _fetchContext.CurrentConfig.Frontend;
+        var _fetchConfig = _fetchContext.CurrentConfig;
 
-        var _fetchModsPath = Path.Combine(System.AppContext.BaseDirectory, "mods", _fetchConfig.TargetGame.ToString().ToLower());
+        var _fetchModPath = PathService.ResolveMod(_fetchConfig);
 
         var _fetchInstallResult = 0x00;
 
@@ -192,7 +194,7 @@ public partial class MainView : Window
                     _progressDialog.InstallProgress.Value = progress.ReceivedObjects;
                 });
 
-                if (InstallService.CancelToken.IsCancellationRequested)
+                if (ModService.CancelToken.IsCancellationRequested)
                     return false;
 
                 return true;
@@ -206,7 +208,7 @@ public partial class MainView : Window
                     _progressDialog.InstallProgress.Value = processed;
                 });
 
-                if (InstallService.CancelToken.IsCancellationRequested)
+                if (ModService.CancelToken.IsCancellationRequested)
                     return false;
 
                 return true;
@@ -214,10 +216,10 @@ public partial class MainView : Window
             ;
 
             if (File.Exists(_fetchResult))
-                _fetchInstallResult = await InstallService.InstallLocal(_fetchModsPath, _fetchResult, _localProcessHandler);
+                _fetchInstallResult = await ModService.InstallLocal(_fetchModPath, _fetchResult, _localProcessHandler);
 
             else
-                _fetchInstallResult = await InstallService.InstallGit(_fetchModsPath, _fetchResult, _gitProcessHandler);
+                _fetchInstallResult = await ModService.InstallGit(_fetchModPath, _fetchResult, _gitProcessHandler);
 
             _progressDialog.Close(true);
 
@@ -229,11 +231,13 @@ public partial class MainView : Window
 
             else if (_fetchInstallResult == 0x00)
             {
-                var _fetchLatestDirectory = new DirectoryInfo(_fetchModsPath).GetDirectories().OrderByDescending(d => d.LastWriteTimeUtc).FirstOrDefault();
-                var _fetchYamlName = Path.Combine(_fetchLatestDirectory.FullName, "mod.yml");
+                var _fetchLatestMod = new DirectoryInfo(_fetchModPath).GetDirectories()
+                                                                      .OrderByDescending(d => d.LastWriteTimeUtc)
+                                                                      .First();
 
-                var _fetchPathGit = Path.Combine(_fetchLatestDirectory.FullName, ".git");
-                var _fetchPathIcon = Path.Combine(_fetchLatestDirectory.FullName, "icon.png");
+                var _fetchPathGit = Path.Combine(_fetchLatestMod.FullName, ".git");
+                var _fetchYamlName = Path.Combine(_fetchLatestMod.FullName, "mod.yml");
+                var _fetchPathIcon = Path.Combine(_fetchLatestMod.FullName, "icon.png");
 
                 var _fetchMetadata = Metadata.Read(_fetchYamlName);
 
@@ -244,7 +248,7 @@ public partial class MainView : Window
                         ModTitle = _fetchMetadata.Title,
                         ModAuthor = _fetchMetadata.OriginalAuthor,
                         ModDescription = _fetchMetadata.Description,
-                        ModPath = _fetchLatestDirectory.FullName,
+                        ModPath = _fetchLatestMod.FullName,
                         ModFilesList = _fetchMetadata.Assets.Select(x => x.Name).ToArray(),
                         ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
                         ModActive = true,
@@ -277,7 +281,8 @@ public partial class MainView : Window
                             var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
 
                             foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                                _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                                if (_fetchFile.Exists)
+                                    _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
                         }
                     }
 
@@ -298,7 +303,7 @@ public partial class MainView : Window
                         ModAuthor = "This mod is invalid!",
                         ModDescription = "This mod contains errors within its YAML file. Please check the formatting!",
                         ModIcon = new Bitmap(AssetLoader.Open(uri)),
-                        ModPath = _fetchLatestDirectory.FullName,
+                        ModPath = _fetchLatestMod.FullName,
                         ModActive = false,
                         ModValid = false
                     };
@@ -314,8 +319,8 @@ public partial class MainView : Window
         var _fetchContext = DataContext as MainViewModel;
         var _fetchCurrentMod = _fetchContext.CurrentMod;
 
+        var _fetchTopLevel = GetTopLevel(this);
         var _fetchDirectoryInfo = new DirectoryInfo(_fetchCurrentMod.ModPath);
-        var _fetchTopLevel = TopLevel.GetTopLevel(this);
 
         if (_fetchTopLevel?.Launcher != null)
             await _fetchTopLevel.Launcher.LaunchDirectoryInfoAsync(_fetchDirectoryInfo);
@@ -327,21 +332,31 @@ public partial class MainView : Window
         var _fetchModList = _fetchContext.InstalledMods;
         var _fetchConfig = _fetchContext.CurrentConfig;
 
-        var _fetchMemoryPath = Path.Combine(AppContext.BaseDirectory, "mods", _fetchConfig.Frontend.TargetGame.ToString().ToLower(), "mod_memory.yml");
+        var _fetchMemoryPath = Path.Combine(PathService.ResolveMod(_fetchConfig), "mod_memory.yml");
 
         var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
         var _fetchMemory = YamlSerializer.Deserialize<ObservableCollection<MemoryModel>>(_fetchMemoryRAW);
 
-        var _fetchRelativePath = Path.GetRelativePath(AppContext.BaseDirectory, e.TargetMod.ModPath);
+        var _fetchSenderHash = ModService.ResolveMD5(e.TargetMod, _fetchConfig);
+        var _fetchMemoryItem = _fetchMemory.FirstOrDefault(x => x.ModHash == _fetchSenderHash);
 
-        var _fetchBytes = Encoding.ASCII.GetBytes(_fetchRelativePath);
-        var _fetchHash = MD5.HashData(_fetchBytes);
-        var _fetchHashStr = Convert.ToHexString(_fetchHash);
+        if (_fetchMemoryItem == null)
+        {
+            _fetchMemoryItem = new MemoryModel
+            {
+                ModHash = _fetchSenderHash,
+                ModActive = e.IsChecked,
+                ModIndex = _fetchModList.IndexOf(e.TargetMod)
+            };
 
-        var _fetchMemoryItem = _fetchMemory.FirstOrDefault(x => x.ModHash == _fetchHashStr);
-        var _fetchMemoryIndex = _fetchMemory.IndexOf(_fetchMemoryItem);
+            _fetchMemory.Add(_fetchMemoryItem);
+        }
 
-        _fetchMemory[_fetchMemoryIndex].ModActive = e.IsChecked;
+        else
+        {
+            var _fetchMemoryIndex = _fetchMemory.IndexOf(_fetchMemoryItem);
+            _fetchMemory[_fetchMemoryIndex].ModActive = e.IsChecked;
+        }
 
         var _fetchSerial = YamlSerializer.Serialize(_fetchMemory);
         File.WriteAllText(_fetchMemoryPath, _fetchSerial);
@@ -350,62 +365,9 @@ public partial class MainView : Window
     private async void OnRunRequested(object? sender, RoutedEventArgs e)
     {
         var _fetchContext = DataContext as MainViewModel;
-
         var _fetchConfig = _fetchContext.CurrentConfig;
-        var _fetchFrontConfig = _fetchConfig.Frontend;
 
-        var _fetchAPIFilePath = Path.Combine(_fetchFrontConfig.GamePath, "steam_appid.txt");
-
-        var _fetchReMIXFilePath = Path.Combine(_fetchFrontConfig.GamePath, "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe");
-        var _fetchLaunchFilePath = Path.Combine(_fetchFrontConfig.GamePath, Config.GameExecutable[_fetchFrontConfig.TargetGame]);
-
-        var _fetchAPIExists = _fetchFrontConfig.TargetPlatform == Platform.STEAM ? File.Exists(_fetchAPIFilePath) : false;
-
-        Uri _fetchTargetUri = null;
-        FileInfo _fetchTargetFile = null;
-
-        if (!OperatingSystem.IsWindows() || !_fetchAPIExists)
-        {
-            switch (_fetchFrontConfig.TargetPlatform)
-            {
-                case Platform.STEAM:
-                    _fetchTargetUri = new Uri($"steam://rungameid/2552430" + (_fetchAPIExists ? $"//{PatcherProcessor.GameShorthand[(int)_fetchFrontConfig.TargetGame]}" : ""));
-                    break;
-                case Platform.EPIC_GAMES_STORE:
-                    _fetchTargetUri = new Uri("com.epicgames.launcher://apps/4158b699dd70447a981fee752d970a3e%3A5aac304f0e8948268ddfd404334dbdc7%3A68c214c58f694ae88c2dab6f209b43e4?action=launch");
-                    break;
-            }
-        }
-
-        var _fetchTopLevel = TopLevel.GetTopLevel(this);
-
-        if (_fetchTopLevel?.Launcher != null && _fetchTargetUri != null)
-        {
-            if (_fetchAPIExists)
-            {
-                var _fetchReMIXBackup = Path.ChangeExtension(_fetchReMIXFilePath, ".bak");
-
-                if (!File.Exists(_fetchReMIXBackup))
-                {
-                    File.Move(_fetchReMIXFilePath, _fetchReMIXBackup);
-                    File.Copy(Path.Combine(AppContext.BaseDirectory, "resources/OpenKh.Command.Launcher.exe"), _fetchReMIXFilePath, true);
-                }
-            }
-
-            await _fetchTopLevel.Launcher.LaunchUriAsync(_fetchTargetUri);
-        }
-
-        else
-        {
-            var _fetchProcessInfo = new ProcessStartInfo
-            {
-                FileName = _fetchLaunchFilePath,
-                WorkingDirectory = _fetchFrontConfig.GamePath,
-                UseShellExecute = true
-            };
-
-            Process.Start(_fetchProcessInfo);
-        }
+        await ModService.Run(_fetchConfig, GetTopLevel(this));
     }
 
 
@@ -424,7 +386,7 @@ public partial class MainView : Window
         var _fetchFrontConfig = _fetchConfig.Frontend;
 
         var _buildResult = 
-            await InstallService.Build
+            await ModService.Build
             (
                 _fetchContext.InstalledMods, 
                 _fetchConfig,
@@ -443,7 +405,7 @@ public partial class MainView : Window
                         _progressDialog.AssetProgress.Value = _assetProcessed;
                     });
 
-                    if (InstallService.CancelToken.IsCancellationRequested)
+                    if (ModService.CancelToken.IsCancellationRequested)
                         return false;
 
                     return true;
@@ -454,7 +416,7 @@ public partial class MainView : Window
                     _assetProcessed = processed;
                     _assetTotal = total;
 
-                    if (InstallService.CancelToken.IsCancellationRequested)
+                    if (ModService.CancelToken.IsCancellationRequested)
                         return false;
 
                     return true;
@@ -485,7 +447,7 @@ public partial class MainView : Window
         var _fetchFrontConfig = _fetchConfig.Frontend;
 
         var _buildResult =
-            await InstallService.Build
+            await ModService.Build
             (
                 _fetchContext.InstalledMods,
                 _fetchConfig,
@@ -504,7 +466,7 @@ public partial class MainView : Window
                         _progressDialog.AssetProgress.Value = _assetProcessed;
                     });
 
-                    if (InstallService.CancelToken.IsCancellationRequested)
+                    if (ModService.CancelToken.IsCancellationRequested)
                         return false;
 
                     return true;
@@ -515,7 +477,7 @@ public partial class MainView : Window
                     _assetProcessed = processed;
                     _assetTotal = total;
 
-                    if (InstallService.CancelToken.IsCancellationRequested)
+                    if (ModService.CancelToken.IsCancellationRequested)
                         return false;
 
                     return true;
@@ -526,60 +488,8 @@ public partial class MainView : Window
         switch (_buildResult)
         {
             case 0:
-            {
-                var _fetchAPIFilePath = Path.Combine(_fetchFrontConfig.GamePath, "steam_appid.txt");
-
-                var _fetchReMIXFilePath = Path.Combine(_fetchFrontConfig.GamePath, "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe");
-                var _fetchLaunchFilePath = Path.Combine(_fetchFrontConfig.GamePath, Config.GameExecutable[_fetchFrontConfig.TargetGame]);
-
-                var _fetchAPIExists = _fetchFrontConfig.TargetPlatform == Platform.STEAM ? File.Exists(_fetchAPIFilePath) : false;
-
-                Uri _fetchTargetUri = null;
-                FileInfo _fetchTargetFile = null;
-
-                if (!OperatingSystem.IsWindows() || !_fetchAPIExists)
-                {
-                    switch (_fetchFrontConfig.TargetPlatform)
-                    {
-                        case Platform.STEAM:
-                            _fetchTargetUri = new Uri($"steam://rungameid/2552430" + (_fetchAPIExists ? $"//{PatcherProcessor.GameShorthand[(int)_fetchFrontConfig.TargetGame]}" : ""));
-                            break;
-                        case Platform.EPIC_GAMES_STORE:
-                            _fetchTargetUri = new Uri("com.epicgames.launcher://apps/4158b699dd70447a981fee752d970a3e%3A5aac304f0e8948268ddfd404334dbdc7%3A68c214c58f694ae88c2dab6f209b43e4?action=launch");
-                            break;
-                    }
-                }
-
-                var _fetchTopLevel = TopLevel.GetTopLevel(this);
-
-                if (_fetchTopLevel?.Launcher != null && _fetchTargetUri != null)
-                {
-                    if (_fetchAPIExists)
-                    {
-                        var _fetchReMIXBackup = Path.ChangeExtension(_fetchReMIXFilePath, ".bak");
-
-                        if (!File.Exists(_fetchReMIXBackup))
-                        {
-                            File.Move(_fetchReMIXFilePath, _fetchReMIXBackup);
-                            File.Copy("resources/OpenKh.Command.Launcher.exe", _fetchReMIXFilePath, true);
-                        }
-                    }
-
-                    await _fetchTopLevel.Launcher.LaunchUriAsync(_fetchTargetUri);
-                }
-
-                else
-                {
-                    var _fetchProcessInfo = new ProcessStartInfo
-                    {
-                        FileName = _fetchLaunchFilePath,
-                        WorkingDirectory = _fetchFrontConfig.GamePath,
-                        UseShellExecute = true
-                    };
-
-                    Process.Start(_fetchProcessInfo);
-                }
-            } break;
+                await ModService.Run(_fetchConfig, GetTopLevel(this));
+            break;
 
             case 1:
             {

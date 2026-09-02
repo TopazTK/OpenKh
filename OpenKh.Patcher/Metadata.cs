@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -40,7 +41,17 @@ namespace OpenKh.Patcher
             // Replace all back slashes as Windows supports forward slashes but Linux doesn't support back slashes.
             _fetchYamlRaw = _fetchYamlRaw.Replace('\\', '/');
 
-            try { return YamlSerializer.Deserialize<Metadata>(_fetchYamlRaw, new YamlSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }); }
+            try 
+            { 
+                var _fetchSerial = YamlSerializer.Deserialize<Metadata>(_fetchYamlRaw, new YamlSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+                // A single mod should not be able to patch a file more than once.
+                // Ignore any and all duplicates that target the same file.
+                var _fetchAssetUnique = _fetchSerial.Assets.DistinctBy(x => x.Name);
+                _fetchSerial.Assets = _fetchAssetUnique.ToList();
+
+                return _fetchSerial;
+            }
 
             catch (SharpYaml.YamlException ex)
             {

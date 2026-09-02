@@ -1,37 +1,42 @@
+using Avalonia.Controls;
 using Avalonia.Threading;
 using LibGit2Sharp;
 using LibGit2Sharp.Handlers;
 using OpenKh.Bbs;
 using OpenKh.Kh2;
 using OpenKh.Patcher;
+using OpenKh.Tools.ModManager.Classes;
 using OpenKh.Tools.ModManager.Models;
 using OpenKh.Tools.ModManager.ViewModels;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace OpenKh.Tools.ModManager.Services
 {
-    public static class InstallService
+    public static class ModService
     {
         // We need a cancellation token to interrupt what we are doing should the user not want to do that anymore.
         public static CancellationTokenSource CancelTokenSource = new CancellationTokenSource();
         public static CancellationToken CancelToken = CancelTokenSource.Token;
 
-        private static void ResetToken()
+        public static string ResolveMD5(ModModel currentMod, Config currentConfig)
         {
-            CancelTokenSource.Dispose();
+            var _fetchRelativePath = Path.GetRelativePath(PathService.ResolveMod(currentConfig), currentMod.ModPath);
+            var _fetchBytes = Encoding.ASCII.GetBytes(_fetchRelativePath);
+            var _fetchHash = MD5.HashData(_fetchBytes);
 
-            CancelTokenSource = new CancellationTokenSource();
-            CancelToken = CancelTokenSource.Token;
+            return Convert.ToHexString(_fetchHash);
         }
 
         /// <summary>
@@ -43,7 +48,15 @@ namespace OpenKh.Tools.ModManager.Services
         /// <returns>Error code. 0x00 is success, 0x01 is invlaid mod, 0x03 is cancellation.</returns>
         public static async Task<byte> InstallGit(string modPath, string repoName, TransferProgressHandler? reportProgress = null)
         {
-            ResetToken();
+            // Reset the cancel token if it was called prior.
+
+            if (CancelToken.IsCancellationRequested)
+            {
+                CancelTokenSource.Dispose();
+
+                CancelTokenSource = new CancellationTokenSource();
+                CancelToken = CancelTokenSource.Token;
+            }
 
             // Fetch the platfrom from the given string.
             var _fetchPlatform = repoName.Contains('@') ? repoName.Split('@').Last() : null;
@@ -224,7 +237,15 @@ namespace OpenKh.Tools.ModManager.Services
         /// <returns>Error code. 0x00 is success, 0x01 is invlaid mod, 0x03 is cancellation.</returns>
         public static async Task<byte> InstallLocal(string modPath, string fileName, Func<int, int, bool>? reportProgress = null)
         {
-            ResetToken();
+            // Reset the cancel token if it was called prior.
+
+            if (CancelToken.IsCancellationRequested)
+            {
+                CancelTokenSource.Dispose();
+
+                CancelTokenSource = new CancellationTokenSource();
+                CancelToken = CancelTokenSource.Token;
+            }
 
             // Get the extension to check and the mod path to process.
             var _fetchExtension = Path.GetExtension(fileName).ToLower();
@@ -312,11 +333,12 @@ namespace OpenKh.Tools.ModManager.Services
 
                 File.Copy(fileName, _fetchCurrentLuaName);
 
-                var _fetchMetadata = new Metadata();
-
-                _fetchMetadata.Title = Path.GetFileNameWithoutExtension(fileName) + " (Lua)";
-                _fetchMetadata.Description = "This Metadata has been automatically generated for this Lua Modification.";
-                _fetchMetadata.Assets = new List<AssetFile>();
+                var _createMetadata = new Metadata
+                {
+                    Title = Path.GetFileNameWithoutExtension(fileName) + " (Lua)",
+                    Description = "This Metadata has been automatically generated for this Lua Modification.",
+                    Assets = new List<AssetFile>()
+                };
 
                 var _createSource = new AssetFile() { Name = Path.GetFileName(fileName) };
                 var _createFile = new AssetFile()
@@ -326,7 +348,7 @@ namespace OpenKh.Tools.ModManager.Services
                     Source = new List<AssetFile>() { _createSource },
                 };
 
-                _fetchMetadata.Assets.Add(_createFile);
+                _createMetadata.Assets.Add(_createFile);
 
                 using (var _strReader = new StreamReader(_fetchCurrentLuaName))
                 {
@@ -345,13 +367,13 @@ namespace OpenKh.Tools.ModManager.Services
                             switch (_lineLead)
                             {
                                 case "LUAGUI_NAME":
-                                    _fetchMetadata.Title = "\"" + _lineGib + "\"";
+                                    _createMetadata.Title = "\"" + _lineGib + "\"";
                                     break;
                                 case "LUAGUI_AUTH":
-                                    _fetchMetadata.OriginalAuthor = "\"" + _lineGib + "\"";
+                                    _createMetadata.OriginalAuthor = "\"" + _lineGib + "\"";
                                     break;
                                 case "LUAGUI_DESC":
-                                    _fetchMetadata.Description = "\"" + _lineGib + "\"";
+                                    _createMetadata.Description = "\"" + _lineGib + "\"";
                                     break;
                             }
                         }
@@ -359,7 +381,7 @@ namespace OpenKh.Tools.ModManager.Services
                 }
 
                 var _yamlPath = Path.Combine(_fetchCurrentModDir, "mod.yml");
-                File.WriteAllText(_yamlPath, _fetchMetadata.ToString());
+                File.WriteAllText(_yamlPath, _createMetadata.ToString());
             }
 
             // If the file is ANY PCPatch Package, handle it.
@@ -457,9 +479,25 @@ namespace OpenKh.Tools.ModManager.Services
             return 0x00;
         }
 
+        /// <summary>
+        /// Builds the mods given according to the config given and reports back progress.
+        /// </summary>
+        /// <param name="modsList">The mods to build.</param>
+        /// <param name="currentConfig">The config to base the build on.</param>
+        /// <param name="reportModProgress">[Optional] Callback to the mod build progress.</param>
+        /// <param name="reportAssetProgress">[Optional] Callback to the asset build progress per mod.</param>
+        /// <returns>Error code. 0x00 is success, 0x01 is failure, 0x03 is cancellation.</returns>
         public static async Task<byte> Build(IEnumerable<ModModel> modsList, Config currentConfig, Func<string, int, int, bool>? reportModProgress = null, Func<int, int, bool>? reportAssetProgress = null)
         {
-            ResetToken();
+            // Reset the cancel token if it was called prior.
+
+            if (CancelToken.IsCancellationRequested)
+            {
+                CancelTokenSource.Dispose();
+
+                CancelTokenSource = new CancellationTokenSource();
+                CancelToken = CancelTokenSource.Token;
+            }
 
             var _fetchPatcher = new PatcherProcessor();
             var _fetchPackageMap = new ConcurrentDictionary<string, string>();
@@ -467,8 +505,11 @@ namespace OpenKh.Tools.ModManager.Services
             var _fetchGameName = currentConfig.Frontend.TargetGame.ToString().ToLower();
             var _fetchGameId = PatcherProcessor.GameShorthand[(int)currentConfig.Frontend.TargetGame];
 
-            var _fetchDataPath = !string.IsNullOrEmpty(currentConfig.Frontend.DataPath) ? Path.Combine(currentConfig.Frontend.DataPath, _fetchGameId) : null;
-            var _fetchBuildPath = Path.Combine(AppContext.BaseDirectory, "build", _fetchGameId);
+            var _fetchDataPath = PathService.ResolveData(currentConfig);
+            var _fetchGamePath = PathService.ResolveGame(currentConfig);
+            var _fetchBuildPath = PathService.ResolveBuild(currentConfig);
+
+            var _fetchPKGMapPath = Path.Combine(_fetchBuildPath, "patch-package-map.txt");
 
             if (!Directory.Exists(_fetchBuildPath))
                 Directory.CreateDirectory(_fetchBuildPath);
@@ -479,11 +520,9 @@ namespace OpenKh.Tools.ModManager.Services
                 Directory.CreateDirectory(_fetchBuildPath);
             }
 
+            var _currentModName = "";
             var _currentModIndex = 0;
             var _currentModCount = modsList.Where(x => x.ModValid && x.ModActive).Count();
-
-            var _isBuilding = true;
-            string _currentMod = "";
 
             if (reportModProgress != null)
             {
@@ -491,7 +530,7 @@ namespace OpenKh.Tools.ModManager.Services
                 {
                     while (!CancelToken.IsCancellationRequested)
                     {
-                        var _fetchProgress = reportModProgress(_currentMod, _currentModIndex, _currentModCount);
+                        var _fetchProgress = reportModProgress(_currentModName, _currentModIndex, _currentModCount);
 
                         if (!_fetchProgress)
                             break;
@@ -512,7 +551,7 @@ namespace OpenKh.Tools.ModManager.Services
                     if (!_fetchMod.ModValid || !_fetchMod.ModActive)
                         continue;
 
-                    _currentMod = _fetchMod.ModTitle;
+                    _currentModName = _fetchMod.ModTitle;
 
                     var _fetchYamlPath = Path.Combine(_fetchMod.ModPath, "mod.yml");
                     var _fetchMetadata = Metadata.Read(_fetchYamlPath);
@@ -525,7 +564,7 @@ namespace OpenKh.Tools.ModManager.Services
                             _fetchBuildPath,
                             _fetchMetadata,
                             _fetchMod.ModPath,
-                            currentConfig.Frontend.GamePath,
+                            _fetchGamePath,
                             (int)currentConfig.Frontend.TargetPlatform,
                             (int)currentConfig.Frontend.TargetGame,
                             _fetchPackageMap,
@@ -544,11 +583,79 @@ namespace OpenKh.Tools.ModManager.Services
                 return 0x03;
             }
 
-            using (var _writePackageMap = new StreamWriter(Path.Combine(_fetchBuildPath, "patch-package-map.txt")))
+            using (var _writePackageMap = new StreamWriter(_fetchPKGMapPath))
                 foreach (var _mapEntry in _fetchPackageMap)
                     _writePackageMap.WriteLine(_mapEntry.Key + " $$$$ " + _mapEntry.Value);
 
             return 0x00;
+        }
+    
+        /// <summary>
+        /// Runs the game. Requires to be called from a View because of Avalonia's cross-platform launch service.
+        /// </summary>
+        /// <param name="currentConfig">The config to base the launch on.</param>
+        /// <param name="topLevelObject">The top-level fetched from the calling View.</param>
+        /// <returns>Only true for now.</returns>
+        public static async Task<bool> Run(Config currentConfig, TopLevel topLevelObject)
+        {
+            var _fetchTargetGame = currentConfig.Frontend.TargetGame;
+            var _fetchTargetPlatform = currentConfig.Frontend.TargetPlatform;
+
+            var _fetchGamePath = PathService.ResolveGame(currentConfig);
+
+            var _fetchAPIFilePath = Path.Combine(_fetchGamePath, "steam_appid.txt");
+
+            var _fetchReMIXFilePath = Path.Combine(_fetchGamePath, "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe");
+            var _fetchLauncherPath = Path.Combine(AppContext.BaseDirectory, "resources/OpenKh.Command.Launcher.exe");
+            var _fetchTargetGamePath = Path.Combine(_fetchGamePath, Config.GameExecutable[_fetchTargetGame]);
+
+            var _fetchAPIExists = _fetchTargetPlatform == Platform.STEAM ? File.Exists(_fetchAPIFilePath) : false;
+
+            Uri _fetchTargetUri = null;
+            FileInfo _fetchTargetFile = null;
+
+            if (!OperatingSystem.IsWindows() || !_fetchAPIExists)
+            {
+                switch (_fetchTargetPlatform)
+                {
+                    case Platform.STEAM:
+                        _fetchTargetUri = new Uri($"steam://rungameid/2552430" + (_fetchAPIExists ? $"//{ Config.GameShorthand[_fetchTargetGame] }" : ""));
+                        break;
+                    case Platform.EPIC_GAMES_STORE:
+                        _fetchTargetUri = new Uri("com.epicgames.launcher://apps/4158b699dd70447a981fee752d970a3e%3A5aac304f0e8948268ddfd404334dbdc7%3A68c214c58f694ae88c2dab6f209b43e4?action=launch");
+                        break;
+                }
+            }
+
+            if (topLevelObject.Launcher != null && _fetchTargetUri != null)
+            {
+                if (_fetchAPIExists)
+                {
+                    var _fetchReMIXBackup = Path.ChangeExtension(_fetchReMIXFilePath, ".bak");
+
+                    if (!File.Exists(_fetchReMIXBackup))
+                    {
+                        File.Move(_fetchReMIXFilePath, _fetchReMIXBackup);
+                        File.Copy(_fetchLauncherPath, _fetchReMIXFilePath, true);
+                    }
+                }
+
+                await topLevelObject.Launcher.LaunchUriAsync(_fetchTargetUri);
+            }
+
+            else
+            {
+                var _fetchProcessInfo = new ProcessStartInfo
+                {
+                    FileName = _fetchTargetGamePath,
+                    WorkingDirectory = _fetchGamePath,
+                    UseShellExecute = true
+                };
+
+                Process.Start(_fetchProcessInfo);
+            }
+
+            return true;
         }
     }
 }
