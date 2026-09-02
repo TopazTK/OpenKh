@@ -8,8 +8,6 @@
     xmlns:vm="using:OpenKh.Tools.ModManager.ViewModels"
     xmlns:view="clr-namespace:OpenKh.Tools.ModManager.Views"
     mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="490"
-    VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch"
-    VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
     Width="500" Height="490"
     x:Class="OpenKh.Tools.ModManager.Wizard.WizardGameSetup">
 

@@ -1,0 +1,74 @@
+<ContentPage xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="490"
+             Width="500" Height="490"
+             x:Class="OpenKh.Tools.ModManager.Wizard.WizardExtractSetup">
+
+        <ContentPage.Resources>
+        <StreamGeometry x:Key="icon_open_folder">M2 8V6.25C2 4.45507 3.45507 3 5.25
+            3H8.12868C8.72542 3 9.29771 3.23705 9.71967 3.65901L11.25 5.18934L8.65901
+            7.78033C8.51836 7.92098 8.32759 8 8.12868 8H2ZM2 9.5V17.75C2 19.5449 3.45507 21 5.25
+            21H18.75C20.5449 21 22 19.5449 22 17.75V8.75C22 6.95507 20.5449 5.5 18.75
+            5.5H13.0607L9.71967 8.84099C9.29771 9.26295 8.72542 9.5 8.12868 9.5H2Z</StreamGeometry>
+    </ContentPage.Resources>
+
+    <StackPanel Margin="10">
+        <TextBlock FontWeight="Bold" Text="Extract Game Data [Optional]"/>
+        <TextBlock Text="Extract game data to allow Mod Manager to build mods much faster." />
+
+        <Separator Margin="-10, 10, -10, 10" Grid.Row="2" />
+
+        <TextBlock TextWrapping="Wrap" Margin="0, 0, 0, 5">
+            Most mods within Mod Manager need to reference the original game
+            files in order to be built. Normally, this process is done in real time using
+            the game's archive files. However, this process is a bit slow to do. As
+            such, if you have disk space to sacrifice and want faster mod builds,
+            you can extract the game data for the Mod Manager to reference and use.
+        </TextBlock>
+
+        <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
+            <Bold>NOTE:</Bold> This will take a LOT of space. If you do not have the disk space, please consider skipping this step.
+        </TextBlock>
+
+        <StackPanel>
+        <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
+            Please choose what games you want to extract from below:
+        </TextBlock>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
+                <CheckBox Name="ExtractKH1" Content="KH [~23GB]"/>
+                <CheckBox Name="ExtractKH2" Content="KHII [~43GB]"/>
+                <CheckBox Name="ExtractCOM" Content="BBS [~19GB]"/>
+                <CheckBox Name="ExtractBBS" Content="COM [~14GB]"/>
+            </StackPanel>
+        <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
+            Please declare the path you want to extract to below, if you do not, it will default to the <Bold>"extract"</Bold> folder relative to the Mod Manager:
+        </TextBlock>
+            <Grid Margin="0, 5, 0, 5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="0.05*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Column="0" Name="PathExtractData"
+                    Text="{ReflectionBinding CurrentConfig.Frontend.DataPath}"
+                    HorizontalAlignment="Stretch" PlaceholderText="Path goes here..."
+                    Margin="0, 0, 10, 0" />
+                <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32"
+                    Background="Transparent" VerticalAlignment="Stretch">
+                    <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />
+                </Button>
+            </Grid>
+            <ProgressBar Name="ProgressExtract" Height="30" Margin="0, 5, 0, 5"/>
+            <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Start Extracting" />
+            <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Stop Extracting" IsVisible="false" />
+        </StackPanel>
+
+        <StackPanel Name="InstallPanel" IsVisible="False">
+        <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
+            It seems that direct launching is <Bold>currently allowed</Bold>.
+        </TextBlock>
+            <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Disallow Direct Launching" />
+        </StackPanel>
+    </StackPanel></ContentPage>

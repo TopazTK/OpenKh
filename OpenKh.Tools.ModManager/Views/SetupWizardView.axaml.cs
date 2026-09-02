@@ -23,7 +23,14 @@ namespace OpenKh.Tools.ModManager.Views
 
             _rootModel.CurrentWizardPage = new WizardGameSetup();
             _rootModel.PastWizardPages = new ObservableCollection<object?>();
-            _rootModel.FutureWizardPages = new ObservableCollection<object?>() { new WizardPanaceaSetup() };
+
+            _rootModel.FutureWizardPages = new ObservableCollection<object?>() 
+            { 
+                new WizardPanaceaSetup(),
+                new WizardScriptSetup(),
+                new WizardDirectLaunch(),
+                new WizardExtractSetup(),
+            };
 
             var _fetchApplication = Application.Current;
 
