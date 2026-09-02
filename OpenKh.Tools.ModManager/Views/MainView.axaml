@@ -119,7 +119,7 @@
                 </GroupBox>
             </Grid>
 
-            <view:ModStatusView Name="ModStatus" RunRequested="OnRunRequested" BuildRunRequested="OnBuildRunRequested" Grid.Row="1"/>
+            <view:ModStatusView Name="ModStatus" SetupRequested="OnSetupRequested" RunRequested="OnRunRequested" BuildRunRequested="OnBuildRunRequested" Grid.Row="1"/>
 
         </Grid>
     </DockPanel>

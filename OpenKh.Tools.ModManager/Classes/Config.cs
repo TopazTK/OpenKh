@@ -41,7 +41,9 @@ namespace OpenKh.Tools.ModManager.Classes
         public string? BuildPath { get; set; }
         public bool UpdateMods { get; set; }
         public string? DataPath { get; set; }
-        public string[]? GamePath { get; set; }
+        public string[]? GamePath { 
+            get; 
+            set; }
     }
 
     public class Panacea

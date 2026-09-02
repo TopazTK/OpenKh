@@ -385,10 +385,10 @@ public partial class MainView : Window
         var _fetchConfig = _fetchContext.CurrentConfig;
         var _fetchFrontConfig = _fetchConfig.Frontend;
 
-        var _buildResult = 
+        var _buildResult =
             await ModService.Build
             (
-                _fetchContext.InstalledMods, 
+                _fetchContext.InstalledMods,
                 _fetchConfig,
 
                 (string currModName, int procMod, int totalMod) =>
@@ -409,9 +409,9 @@ public partial class MainView : Window
                         return false;
 
                     return true;
-                }, 
+                },
 
-                (int processed, int total) => 
+                (int processed, int total) =>
                 {
                     _assetProcessed = processed;
                     _assetTotal = total;
@@ -489,14 +489,17 @@ public partial class MainView : Window
         {
             case 0:
                 await ModService.Run(_fetchConfig, GetTopLevel(this));
-            break;
+                break;
 
             case 1:
             {
                 var _errorDialog = new BuildModError();
                 _errorDialog.MainText.Text = string.Format(_errorDialog.MainText.Text, _currentModName);
                 await _errorDialog.ShowDialog(this);
-            } break;
+            }
+            break;
         }
     }
+
+    private async void OnSetupRequested(object? sender, RoutedEventArgs e) => await new SetupWizardView().ShowDialog(this);
 }

@@ -1,0 +1,81 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Markup.Xaml;
+using Avalonia.VisualTree;
+using CommunityToolkit.Mvvm.ComponentModel;
+using OpenKh.Tools.ModManager.ViewModels;
+using OpenKh.Tools.ModManager.Wizard;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+
+namespace OpenKh.Tools.ModManager.Views
+{
+    public partial class SetupWizardView : Window
+    {
+        private WizardViewModel _rootModel { get; set; }
+
+        public SetupWizardView()
+        {
+            _rootModel = new WizardViewModel();
+
+            _rootModel.CurrentWizardPage = new WizardGameSetup();
+            _rootModel.PastWizardPages = new ObservableCollection<object?>();
+            _rootModel.FutureWizardPages = new ObservableCollection<object?>() { new WizardPanaceaSetup() };
+
+            var _fetchApplication = Application.Current;
+
+            // Uhh how the fuck?
+            if (_fetchApplication == null)
+                throw new NullReferenceException("Application is null, this should not be possible.");
+
+            var _fetchLifetime = _fetchApplication.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
+            var _fetchMainView = _fetchLifetime.MainWindow;
+
+            // Uhh how the fuck, electric bogaloo?
+            if (_fetchMainView == null)
+                throw new NullReferenceException("MainView is null, this ALSO should not be possible.");
+
+            var _fetchContext = _fetchMainView.DataContext as MainViewModel;
+            DataContext = _fetchContext;
+
+            InitializeComponent();
+        }
+
+        private void OnNextPage(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            var _fetchBackList = _rootModel.PastWizardPages;
+            var _fetchNextList = _rootModel.FutureWizardPages;
+
+            var _fetchNextPage = _fetchNextList.First();
+            _fetchNextList.Remove(_fetchNextPage);
+
+            _fetchBackList.Add(_rootModel.CurrentWizardPage);
+            _rootModel.CurrentWizardPage = _fetchNextPage;
+
+            if (_fetchNextList.Count == 0)
+                NextButton.IsEnabled = false;
+
+            BackButton.IsEnabled = true;
+        }
+
+        private void OnBackPage(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            var _fetchBackList = _rootModel.PastWizardPages;
+            var _fetchNextList = _rootModel.FutureWizardPages;
+
+            var _fetchBackPage = _fetchBackList.Last();
+            _fetchBackList.Remove(_fetchBackPage);
+
+            _fetchNextList.Insert(0, _rootModel.CurrentWizardPage);
+            _rootModel.CurrentWizardPage = _fetchBackPage;
+
+            if (_fetchBackList.Count == 0)
+                BackButton.IsEnabled = false;
+
+            NextButton.IsEnabled = true;
+        }
+    }
+}

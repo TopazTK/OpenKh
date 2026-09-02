@@ -13,6 +13,20 @@ namespace OpenKh.Tools.ModManager.Views
     {
         #region Custom Events
 
+        public static readonly RoutedEvent<RoutedEventArgs> SetupRequestedEvent = RoutedEvent.Register<ModDetailsView, RoutedEventArgs>(nameof(SetupRequested), RoutingStrategies.Direct);
+
+        public event EventHandler<RoutedEventArgs> SetupRequested
+        {
+            add => AddHandler(SetupRequestedEvent, value);
+            remove => RemoveHandler(SetupRequestedEvent, value);
+        }
+
+        protected virtual void OnSetupRequested()
+        {
+            RoutedEventArgs args = new RoutedEventArgs(SetupRequestedEvent);
+            RaiseEvent(args);
+        }
+
         public static readonly RoutedEvent<RoutedEventArgs> RunRequestedEvent = RoutedEvent.Register<ModDetailsView, RoutedEventArgs>(nameof(RunRequested), RoutingStrategies.Direct);
 
         public event EventHandler<RoutedEventArgs> RunRequested
@@ -50,5 +64,7 @@ namespace OpenKh.Tools.ModManager.Views
 
         private void OnProcessBuildRun(object? sender, RoutedEventArgs e) => OnBuildRunRequested();
         private void OnProcessRun(object? sender, RoutedEventArgs e) => OnRunRequested();
+
+        private void OnSetupRequested(object? sender, RoutedEventArgs e) => OnSetupRequested();
     }
 }

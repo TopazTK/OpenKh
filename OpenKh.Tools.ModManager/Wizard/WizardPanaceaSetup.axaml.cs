@@ -1,14 +1,12 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using OpenKh.Tools.ModManager.ViewModels;
 
 namespace OpenKh.Tools.ModManager.Wizard
 {
-    public partial class WizardGameSetup : ContentPage
+    public partial class WizardPanaceaSetup : ContentPage
     {
-        public WizardGameSetup()
+        public WizardPanaceaSetup()
         {
             InitializeComponent();
         }

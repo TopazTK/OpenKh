@@ -1,8 +1,128 @@
 <ContentPage xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="OpenKh.Tools.ModManager.Wizard.WizardGameSetup">
-  Welcome to Avalonia!
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:convert="using:OpenKh.Tools.ModManager.Converters"
+    xmlns:model="using:OpenKh.Tools.ModManager.Models"
+    xmlns:class="using:OpenKh.Tools.ModManager.Classes"
+    xmlns:vm="using:OpenKh.Tools.ModManager.ViewModels"
+    xmlns:view="clr-namespace:OpenKh.Tools.ModManager.Views"
+    mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="490"
+    VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch"
+    VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+    Width="500" Height="490"
+    x:Class="OpenKh.Tools.ModManager.Wizard.WizardGameSetup">
+
+    <ContentPage.Resources>
+        <StreamGeometry x:Key="icon_open_folder">M2 8V6.25C2 4.45507 3.45507 3 5.25
+            3H8.12868C8.72542 3 9.29771 3.23705 9.71967 3.65901L11.25 5.18934L8.65901
+            7.78033C8.51836 7.92098 8.32759 8 8.12868 8H2ZM2 9.5V17.75C2 19.5449 3.45507 21 5.25
+            21H18.75C20.5449 21 22 19.5449 22 17.75V8.75C22 6.95507 20.5449 5.5 18.75
+            5.5H13.0607L9.71967 8.84099C9.29771 9.26295 8.72542 9.5 8.12868 9.5H2Z</StreamGeometry>
+        <convert:PropertyNotEqualConverter x:Key="CheckIfNotEqual" />
+        <convert:PropertyIsEqualConverter x:Key="CheckIfEqual" />
+    </ContentPage.Resources>
+
+
+    <StackPanel Margin="10">
+        <TextBlock FontWeight="Bold" Text="Game Setup" Grid.Row="0" />
+        <TextBlock TextWrapping="Wrap"
+            Text="Please select the version of the game you want to mod, as well as its location."
+            Grid.Row="1" />
+        <Separator Margin="-10, 10, -10, 10" Grid.Row="2" />
+        <Label Content="Game Platform:" />
+        <ComboBox Name="PlatformBox"
+            SelectedIndex="{ReflectionBinding CurrentConfig.Frontend.TargetPlatform}"
+            HorizontalAlignment="Stretch" PlaceholderText="Select a Platform..." Margin="0, 5, 0, 5">
+            <ComboBoxItem Content="Emulator" />
+            <ComboBoxItem Content="Steam" />
+            <ComboBoxItem Content="Epic Games Store" />
+        </ComboBox>
+
+        <!-- StackPanel for PC Platforms -->
+        <StackPanel>
+            <StackPanel.IsVisible>
+                <MultiBinding Converter="{StaticResource CheckIfNotEqual}">
+                    <Binding Path="#PlatformBox.SelectedIndex" />
+                    <ReflectionBinding Source="{x:Static class:Platform.PCSX2}" />
+                </MultiBinding>
+            </StackPanel.IsVisible>
+            <TextBlock TextWrapping="Wrap" Margin="0, 10, 0, 10">
+                <Bold>NOTE:</Bold> The Mod Manager supports working with all the legacy games within
+                the 1.5+2.5 as well as the 2.8 collections. As such, please input the paths for the
+                collections you want to mod. <Bold>At least one of these paths must be given!</Bold>
+            </TextBlock>
+            <TextBlock TextTrimming="CharacterEllipsis"> Enter path for <Bold>KINGDOM HEARTS 1.5+2.5
+                ReMIX</Bold>: </TextBlock>
+            <Grid Margin="0, 10, 0, 10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="0.05*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Column="0" Name="PathCollectionFirst"
+                    Text="{ReflectionBinding CurrentConfig.Frontend.GamePath[0]}"
+                    HorizontalAlignment="Stretch" PlaceholderText="Path goes here..."
+                    Margin="0, 0, 10, 0" />
+                <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32"
+                    Background="Transparent" VerticalAlignment="Stretch">
+                    <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />
+                </Button>
+            </Grid>
+            <TextBlock TextTrimming="CharacterEllipsis"> Enter path for <Bold>KINGDOM HEARTS 2.8
+                Final Chapter Prologue</Bold>: </TextBlock>
+            <Grid Margin="0, 10, 0, 10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="0.05*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Column="0" Name="PathCollectionSecond"
+                    Text="{ReflectionBinding CurrentConfig.Frontend.GamePath[1]}"
+                    HorizontalAlignment="Stretch" PlaceholderText="Path goes here..."
+                    Margin="0, 0, 10, 0" />
+                <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32"
+                    Background="Transparent" VerticalAlignment="Stretch">
+                    <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />
+                </Button>
+            </Grid>
+
+            <TextBlock TextWrapping="Wrap"> You can also choose to <Bold>detect your installations</Bold>
+                instead. Note that this will try to fetch your platform-specific library locations
+                and may not always be successful. </TextBlock>
+
+            <Button Margin="0, 10, 0, 10" Height="30" HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center" Content="Detect Installations..." />
+        </StackPanel>
+
+        <!-- Stack Panel for Emulator -->
+        <StackPanel>
+            <StackPanel.IsVisible>
+                <MultiBinding Converter="{StaticResource CheckIfEqual}">
+                    <Binding Path="#PlatformBox.SelectedIndex" />
+                    <ReflectionBinding Source="{x:Static class:Platform.PCSX2}" />
+                </MultiBinding>
+            </StackPanel.IsVisible>
+
+            <TextBlock TextTrimming="CharacterEllipsis" Margin="0, 10, 0, 0"> Enter path for the <Bold>
+                PCSX2</Bold> Emulator: </TextBlock>
+            <Grid Margin="0, 10, 0, 10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="0.05*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Column="0" Name="PathEmulator"
+                    Text="{ReflectionBinding CurrentConfig.Frontend.EmuPath}"
+                    HorizontalAlignment="Stretch" PlaceholderText="Path goes here..."
+                    Margin="0, 0, 10, 0" />
+                <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32" Background="Transparent" VerticalAlignment="Stretch">
+                    <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />
+                </Button>
+            </Grid>
+            <TextBlock TextWrapping="Wrap">
+                <Bold>NOTE:</Bold> Only PCSX2 versions up to <Bold>1.6.0</Bold> and <Bold>PCSX2-EX</Bold> are supported. 
+            </TextBlock>
+        </StackPanel>
+    </StackPanel>
 </ContentPage>

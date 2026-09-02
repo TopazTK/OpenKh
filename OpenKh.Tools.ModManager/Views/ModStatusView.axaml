@@ -21,7 +21,7 @@
         <Border ClipToBounds="True" Margin="3" CornerRadius="5" Background="{ReflectionBinding ConfigurationValid, Converter={StaticResource StatusToBackground}}">
             <Grid Margin="10, 0, 10, 0">
                 <Label VerticalAlignment="Center" FontWeight="Bold" Content="{ReflectionBinding ConfigurationValid, Converter={StaticResource StatusToText}}"/>
-                <Button Background="Transparent" HorizontalAlignment="Right" IsVisible="{ReflectionBinding !ConfigurationValid}">
+                <Button Background="Transparent" HorizontalAlignment="Right" IsVisible="{ReflectionBinding !ConfigurationValid}" Click="OnSetupRequested">
                     <PathIcon Data="{StaticResource icon_run_setup}" Height="24" Width="24"/>
                 </Button>   
                 <Button Background="Transparent" FontWeight="Bold" Content="Build and Run" HorizontalAlignment="Right" Click="OnProcessBuildRun">
