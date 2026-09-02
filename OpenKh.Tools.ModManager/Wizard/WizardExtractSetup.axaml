@@ -6,7 +6,7 @@
              Width="500" Height="490"
              x:Class="OpenKh.Tools.ModManager.Wizard.WizardExtractSetup">
 
-        <ContentPage.Resources>
+    <ContentPage.Resources>
         <StreamGeometry x:Key="icon_open_folder">M2 8V6.25C2 4.45507 3.45507 3 5.25
             3H8.12868C8.72542 3 9.29771 3.23705 9.71967 3.65901L11.25 5.18934L8.65901
             7.78033C8.51836 7.92098 8.32759 8 8.12868 8H2ZM2 9.5V17.75C2 19.5449 3.45507 21 5.25

@@ -63,7 +63,12 @@ namespace OpenKh.Tools.ModManager.Views
             _rootModel.CurrentWizardPage = _fetchNextPage;
 
             if (_fetchNextList.Count == 0)
+            {
                 NextButton.IsEnabled = false;
+
+                FinishButton.IsVisible = true;
+                CancelButton.IsVisible = false;
+            }
 
             BackButton.IsEnabled = true;
         }
@@ -81,6 +86,9 @@ namespace OpenKh.Tools.ModManager.Views
 
             if (_fetchBackList.Count == 0)
                 BackButton.IsEnabled = false;
+
+            FinishButton.IsVisible = false;
+            CancelButton.IsVisible = true;
 
             NextButton.IsEnabled = true;
         }
