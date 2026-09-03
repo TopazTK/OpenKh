@@ -103,7 +103,7 @@
         <StackPanel>
             <StackPanel.IsVisible>
                 <MultiBinding Converter="{StaticResource CheckIfEqual}">
-                    <Binding Path="#PlatformBox.SelectedIndex" />
+                    <Binding Path="#PlatformBox.SelectedIndex"/>
                     <ReflectionBinding Source="{x:Static class:Platform.PCSX2}" />
                 </MultiBinding>
             </StackPanel.IsVisible>
@@ -117,7 +117,7 @@
                 </Grid.ColumnDefinitions>
 
                 <TextBox Grid.Column="0" Name="PathEmulator"
-                    Text="{ReflectionBinding CurrentConfig.Frontend.EmuPath}"
+                    Text="{ReflectionBinding CurrentConfig.Emulator.EmuPath[0]}"
                     HorizontalAlignment="Stretch" PlaceholderText="Path goes here..."
                     Margin="0, 0, 10, 0" />
                 <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32" Background="Transparent" VerticalAlignment="Stretch">
