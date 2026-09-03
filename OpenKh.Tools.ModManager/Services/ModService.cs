@@ -611,6 +611,8 @@ namespace OpenKh.Tools.ModManager.Services
 
             var _fetchAPIExists = _fetchTargetPlatform == Platform.STEAM ? File.Exists(_fetchAPIFilePath) : false;
 
+            var _fetchSteamId = currentConfig.Frontend.TargetGame == Game.DREAM_DROP_DISTANCE ? 2552440 : 2552430;
+
             Uri _fetchTargetUri = null;
             FileInfo _fetchTargetFile = null;
 
@@ -619,7 +621,7 @@ namespace OpenKh.Tools.ModManager.Services
                 switch (_fetchTargetPlatform)
                 {
                     case Platform.STEAM:
-                        _fetchTargetUri = new Uri($"steam://rungameid/2552430" + (_fetchAPIExists ? $"//{ Config.GameShorthand[_fetchTargetGame] }" : ""));
+                        _fetchTargetUri = new Uri($"steam://rungameid/{_fetchSteamId}" + (_fetchAPIExists ? $"//{ Config.GameShorthand[_fetchTargetGame] }" : ""));
                         break;
                     case Platform.EPIC_GAMES_STORE:
                         _fetchTargetUri = new Uri("com.epicgames.launcher://apps/4158b699dd70447a981fee752d970a3e%3A5aac304f0e8948268ddfd404334dbdc7%3A68c214c58f694ae88c2dab6f209b43e4?action=launch");

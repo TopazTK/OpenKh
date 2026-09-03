@@ -28,6 +28,7 @@ namespace OpenKh.Tools.ModManager.Dialogs
                     new FilePickerFileType("OpenKH Mod Archive") { Patterns = new[] { "*.zip" } },
                     new FilePickerFileType("PCPatch Package") { Patterns = new[] { "*.kh1pcpatch", "*.kh2pcpatch", "*.bbspcpatch", "*.compcpatch", "*.dddpcpatch" } },
                     new FilePickerFileType("LuaBackend Script") { Patterns = new[] { "*.lua" } },
+                    new FilePickerFileType("All Files") { Patterns = new[] { "*" } },
                 }
             });
 

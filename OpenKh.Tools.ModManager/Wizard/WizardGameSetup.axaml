@@ -7,8 +7,8 @@
     xmlns:class="using:OpenKh.Tools.ModManager.Classes"
     xmlns:vm="using:OpenKh.Tools.ModManager.ViewModels"
     xmlns:view="clr-namespace:OpenKh.Tools.ModManager.Views"
-    mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="490"
-    Width="500" Height="490"
+    mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="500"
+    Width="500" Height="500"
     x:Class="OpenKh.Tools.ModManager.Wizard.WizardGameSetup">
 
     <ContentPage.Resources>
@@ -63,7 +63,7 @@
                     HorizontalAlignment="Stretch" PlaceholderText="Path goes here..."
                     Margin="0, 0, 10, 0" />
                 <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32"
-                    Background="Transparent" VerticalAlignment="Stretch">
+                    Background="Transparent" VerticalAlignment="Stretch"  Click="OnFolderClickFirst">
                     <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />
                 </Button>
             </Grid>
@@ -80,17 +80,23 @@
                     HorizontalAlignment="Stretch" PlaceholderText="Path goes here..."
                     Margin="0, 0, 10, 0" />
                 <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32"
-                    Background="Transparent" VerticalAlignment="Stretch">
+                    Background="Transparent" VerticalAlignment="Stretch" Click="OnFolderClickSecond">
                     <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />
                 </Button>
             </Grid>
 
-            <TextBlock TextWrapping="Wrap"> You can also choose to <Bold>detect your installations</Bold>
+            <TextBlock TextWrapping="Wrap"> 
+                You can also choose to <Bold>detect your installations</Bold>
                 instead. Note that this will try to fetch your platform-specific library locations
-                and may not always be successful. </TextBlock>
+                and may not always be successful. 
+            </TextBlock>
 
-            <Button Margin="0, 10, 0, 10" Height="30" HorizontalAlignment="Stretch"
-                HorizontalContentAlignment="Center" Content="Detect Installations..." />
+            <TextBlock TextWrapping="Wrap" Margin="0, 10, 0, 5"> 
+                <Bold>NOTE:</Bold> Detecting installations on Linux works for Steam only.
+            </TextBlock>
+
+            <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center" Content="Detect Installations..." Click="OnDetectClick"/>
         </StackPanel>
 
         <!-- Stack Panel for Emulator -->

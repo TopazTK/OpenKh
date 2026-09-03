@@ -181,33 +181,40 @@ public partial class MainViewModel : ViewModelBase
                         {
                             var _fetchGit = new Repository(_fetchPathGit);
 
-                            if (!_fetchGit.Info.IsHeadDetached)
+                            try
                             {
-                                var _fetchRemote = _fetchGit.Network.Remotes["origin"];
-
-                                _modModel.ModSource = new Uri(_fetchRemote.Url);
-                                _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
-
-                                _modModel.ModPlatform = _modModel.ModSource.Host;
-
-                                Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
-
-                                try
+                                if (!_fetchGit.Info.IsHeadDetached)
                                 {
+                                    var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+
+                                    _modModel.ModSource = new Uri(_fetchRemote.Url);
+                                    _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+
+                                    _modModel.ModPlatform = _modModel.ModSource.Host;
+
+                                    Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
+
                                     var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
                                     _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
-                                }
 
-                                catch (LibGit2SharpException) { }
+                                }
                             }
 
-                            _fetchGit.Dispose();
+                            catch (LibGit2SharpException) { }
 
+                            _fetchGit.Dispose();
                             var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
 
                             foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                                if (_fetchFile.Exists)
-                                    _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                            {
+                                try
+                                {
+                                    if (_fetchFile.Exists)
+                                        _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                                }
+
+                                catch (Exception) { }
+                            }
                         }
                     }
                 });
