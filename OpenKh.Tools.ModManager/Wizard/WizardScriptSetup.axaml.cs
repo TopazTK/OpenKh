@@ -18,6 +18,11 @@ namespace OpenKh.Tools.ModManager.Wizard
 {
     public partial class WizardScriptSetup : ContentPage
     {
+        private static string _templateConfig = "[{0}]\n" +
+                                                "scripts = [{{ path = \"{1}\", relative = false }}]\n" +
+                                                "exe = \"{2}\"\n" +
+                                                "game_docs = \"{3}\"\n";
+
         public static Dictionary<Game, string> GameIds = new Dictionary<Game, string>()
         {
             { Game.KINGDOM_HEARTS, "kh1" },
@@ -26,7 +31,6 @@ namespace OpenKh.Tools.ModManager.Wizard
             { Game.BIRTH_BY_SLEEP, "bbs" },
             { Game.DREAM_DROP_DISTANCE, "kh3d" },
         };
-
 
         public WizardScriptSetup()
         {
@@ -41,19 +45,18 @@ namespace OpenKh.Tools.ModManager.Wizard
                 NotInstallPanel.IsVisible = true;
 
                 var _fetchConfig = message.currentConfig;
-                var _fetchPaths = _fetchConfig.Frontend.GamePath;
 
-                var _fetchPanacea1525 = Path.Combine(_fetchPaths[0], "panacea_settings.txt");
-                var _fetchPanacea28 = Path.Combine(_fetchPaths[1], "panacea_settings.txt");
+                var _fetchPath1525 = PathService.ResolvePath1525(_fetchConfig);
+                var _fetchPath28 = PathService.ResolvePath28(_fetchConfig);
 
-                var _checkPanacea1525 = File.Exists(_fetchPanacea1525);
-                var _checkPanacea28 = File.Exists(_fetchPanacea1525);
+                var _fetchPanacea1525 = Path.Combine(_fetchPath1525, "panacea_settings.txt");
+                var _fetchPanacea28 = Path.Combine(_fetchPath28, "panacea_settings.txt");
 
-                var _fetchSettings1525 = Path.Combine(_fetchPaths[0], "LuaBackend.toml");
-                var _fetchAssembly1525 = Path.Combine(_fetchPaths[0], _checkPanacea1525 ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
+                var _fetchSettings1525 = Path.Combine(_fetchPath1525, "LuaBackend.toml");
+                var _fetchAssembly1525 = Path.Combine(_fetchPath1525, File.Exists(_fetchPanacea1525) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
 
-                var _fetchSettings28 = Path.Combine(_fetchPaths[1], "LuaBackend.toml");
-                var _fetchAssembly28 = Path.Combine(_fetchPaths[1], _checkPanacea1525 ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
+                var _fetchSettings28 = Path.Combine(_fetchPath28, "LuaBackend.toml");
+                var _fetchAssembly28 = Path.Combine(_fetchPath28, File.Exists(_fetchPanacea28) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
 
                 var _isConfigValid1525 = false;
                 var _isConfigValid28 = false;
@@ -75,9 +78,9 @@ namespace OpenKh.Tools.ModManager.Wizard
                         var _fetchGameScriptPath = Path.Combine(_fetchGameBuildPath, _fetchManagerGameID, "scripts");
 
                         var _fetchTableRoot = _fetchSettingsSerial[_fetchLuaGameID] as TomlTable;
-                        var _fetchTableScript = _fetchTableRoot["scripts"] as TomlTableArray;
+                        var _fetchTableScript = _fetchTableRoot["scripts"] as TomlArray;
 
-                        foreach (var _fetchScript in _fetchTableScript)
+                        foreach (TomlTable _fetchScript in _fetchTableScript)
                         {
                             var _fetchPath = (string) _fetchScript["path"];
                             var _fetchIsRelative = (bool) _fetchScript["relative"];
@@ -110,7 +113,7 @@ namespace OpenKh.Tools.ModManager.Wizard
                     var _fetchTableRoot = _fetchSettingsSerial["kh3d"] as TomlTable;
                     var _fetchTableScript = _fetchTableRoot["scripts"] as TomlTableArray;
 
-                    foreach (var _fetchScript in _fetchTableScript)
+                    foreach (TomlTable _fetchScript in _fetchTableScript)
                     {
                         var _fetchPath = (string)_fetchScript["path"];
                         var _fetchIsRelative = (bool)_fetchScript["relative"];
@@ -129,8 +132,8 @@ namespace OpenKh.Tools.ModManager.Wizard
                     }
                 };
 
-                _isConfigValid1525 = String.IsNullOrEmpty(_fetchPaths[0]) || _isConfigValid1525;
-                _isConfigValid28 = String.IsNullOrEmpty(_fetchPaths[1]) || _isConfigValid28;
+                _isConfigValid1525 = String.IsNullOrEmpty(_fetchPath1525) || _isConfigValid1525;
+                _isConfigValid28 = String.IsNullOrEmpty(_fetchPath28) || _isConfigValid28;
 
                 if (_isConfigValid1525 && _isConfigValid28)
                 {
@@ -145,6 +148,49 @@ namespace OpenKh.Tools.ModManager.Wizard
             var _fetchContext = DataContext as MainViewModel;
             var _fetchConfig = _fetchContext.CurrentConfig.Frontend;
 
+            var _fetchPath1525 = PathService.ResolvePath1525(_fetchContext.CurrentConfig);
+            var _fetchPath28 = PathService.ResolvePath28(_fetchContext.CurrentConfig);
+
+            var _configLines = new List<string>();
+
+            for (int i = 0x00; i < GameIds.Count(); i++)
+            {
+                var _fetchGame = (Game)i;
+                var _fetchLuaGameID = GameIds[_fetchGame];
+                var _fetchExecutable = Config.GameExecutable[_fetchGame];
+                var _fetchManagerGameID = Config.GameShorthand[_fetchGame];
+
+                var _fetchGamePath = _fetchGame == Game.DREAM_DROP_DISTANCE ? "KINGDOM HEARTS HD 2.8 Final Chapter Prologue" : "KINGDOM HEARTS HD 1.5+2.5 ReMIX";
+                var _fetchFolderBuild = PathService.ResolveBuild(_fetchContext.CurrentConfig, true);
+
+                var _fetchFolderScripts = Path.Combine(_fetchFolderBuild, _fetchManagerGameID, "scripts");
+                var _fetchFolderDocs = Path.Combine(_fetchConfig.TargetPlatform == Platform.STEAM ? "My Games" : "", _fetchGamePath);
+
+                var _formatTemplate = String.Format(_templateConfig, _fetchLuaGameID, _fetchFolderScripts, _fetchExecutable, _fetchFolderDocs).Replace("\\", "/");
+
+                _configLines.AddRange(_formatTemplate.Split('\n'));
+            }
+
+            var _fetchBackendPath = Path.Combine(AppContext.BaseDirectory, "resources/LuaBackend.dll");
+
+            if (!String.IsNullOrEmpty(_fetchPath1525))
+            {
+                var _fetchPanacea1525 = Path.Combine(_fetchPath1525, "panacea_settings.txt");
+                var _fetchAssembly1525 = Path.Combine(_fetchPath1525, File.Exists(_fetchPanacea1525) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
+
+                File.Copy(_fetchBackendPath, _fetchAssembly1525, true);
+                File.WriteAllLines(Path.Combine(_fetchPath1525, "LuaBackend.toml"), _configLines);
+            }
+
+            if (!String.IsNullOrEmpty(_fetchPath28))
+            {
+                var _fetchPanacea28 = Path.Combine(_fetchPath28, "panacea_settings.txt");
+                var _fetchAssembly28 = Path.Combine(_fetchPath28, File.Exists(_fetchPanacea28) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
+
+                File.Copy(_fetchBackendPath, _fetchPanacea28);
+                File.WriteAllLines(Path.Combine(_fetchPath28, "LuaBackend.toml"), _configLines);
+            }
+
             InstallPanel.IsVisible = true;
             NotInstallPanel.IsVisible = false;
         }
@@ -153,6 +199,27 @@ namespace OpenKh.Tools.ModManager.Wizard
         {
             var _fetchContext = DataContext as MainViewModel;
             var _fetchConfig = _fetchContext.CurrentConfig.Frontend;
+
+            var _fetchPath1525 = PathService.ResolvePath1525(_fetchContext.CurrentConfig);
+            var _fetchPath28 = PathService.ResolvePath28(_fetchContext.CurrentConfig);
+
+            if (!String.IsNullOrEmpty(_fetchPath1525))
+            {
+                var _fetchPanacea1525 = Path.Combine(_fetchPath1525, "panacea_settings.txt");
+                var _fetchAssembly1525 = Path.Combine(_fetchPath1525, File.Exists(_fetchPanacea1525) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
+
+                File.Delete(_fetchAssembly1525);
+                File.Delete(Path.Combine(_fetchPath1525, "LuaBackend.toml"));
+            }
+
+            if (!String.IsNullOrEmpty(_fetchPath28))
+            {
+                var _fetchPanacea28 = Path.Combine(_fetchPath28, "panacea_settings.txt");
+                var _fetchAssembly28 = Path.Combine(_fetchPath28, File.Exists(_fetchPanacea28) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
+
+                File.Delete(_fetchAssembly28);
+                File.Delete(Path.Combine(_fetchPath28, "LuaBackend.toml"));
+            }
 
             InstallPanel.IsVisible = false;
             NotInstallPanel.IsVisible = true;

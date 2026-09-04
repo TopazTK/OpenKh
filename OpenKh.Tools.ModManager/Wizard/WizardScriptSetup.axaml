@@ -22,14 +22,14 @@
         <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
             It seems that LuaBackend is <Bold>not currently installed</Bold>.
         </TextBlock>
-            <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Install LuaBackend" />
+            <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnInstallClick" Content="Install LuaBackend" />
         </StackPanel>
 
         <StackPanel Name="InstallPanel" IsVisible="False">
         <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
             It seems that Panacea is <Bold>currently installed</Bold>.
         </TextBlock>
-            <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Uninstall LuaBackend" />
+            <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnUninstallClick" Content="Uninstall LuaBackend" />
         </StackPanel>
     </StackPanel>
 </ContentPage>

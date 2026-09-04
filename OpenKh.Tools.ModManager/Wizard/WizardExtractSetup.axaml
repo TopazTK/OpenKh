@@ -2,8 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="490"
-             Width="500" Height="490"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="510"
+             Width="500" Height="510"
              x:Class="OpenKh.Tools.ModManager.Wizard.WizardExtractSetup">
 
     <ContentPage.Resources>
@@ -33,16 +33,21 @@
         </TextBlock>
 
         <StackPanel>
-        <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
+        <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 10">
             Please choose what games you want to extract from below:
         </TextBlock>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
-                <CheckBox Name="ExtractKH1" Content="KH [~23GB]"/>
-                <CheckBox Name="ExtractKH2" Content="KHII [~43GB]"/>
-                <CheckBox Name="ExtractCOM" Content="BBS [~19GB]"/>
-                <CheckBox Name="ExtractBBS" Content="COM [~14GB]"/>
+            <StackPanel Spacing="5" HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
+                    <ToggleButton Name="ExtractKH1" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts I [~23GB]"/>
+                    <ToggleButton Name="ExtractKH2" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts II [~43GB]"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
+                    <ToggleButton Name="ExtractCOM" Width="225" HorizontalContentAlignment="Center" Content="Re:Chain of Memories [~14GB]"/>
+                    <ToggleButton Name="ExtractBBS" Width="225" HorizontalContentAlignment="Center" Content="Birth by Sleep [~19GB]"/>
+                </StackPanel>
+                <ToggleButton Name="ExtractDDD" Width="225" HorizontalAlignment="Center" HorizontalContentAlignment="Center" Content="Dream Drop Distance [~19GB]"/>
             </StackPanel>
-        <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
+        <TextBlock TextWrapping="Wrap" Margin="0, 10, 0, 5">
             Please declare the path you want to extract to below, if you do not, it will default to the <Bold>"extract"</Bold> folder relative to the Mod Manager:
         </TextBlock>
             <Grid Margin="0, 5, 0, 5">
@@ -60,15 +65,9 @@
                     <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />
                 </Button>
             </Grid>
-            <ProgressBar Name="ProgressExtract" Height="30" Margin="0, 5, 0, 5"/>
+            <ProgressBar Name="ProgressExtract" Height="30"/>
             <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Start Extracting" />
             <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Stop Extracting" IsVisible="false" />
         </StackPanel>
-
-        <StackPanel Name="InstallPanel" IsVisible="False">
-        <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
-            It seems that direct launching is <Bold>currently allowed</Bold>.
-        </TextBlock>
-            <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Disallow Direct Launching" />
-        </StackPanel>
-    </StackPanel></ContentPage>
+    </StackPanel>
+</ContentPage>

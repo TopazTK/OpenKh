@@ -1,11 +1,15 @@
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using LibGit2Sharp;
 using OpenKh.Patcher;
-using OpenKh.Tools.ModManager.Models;
 using OpenKh.Tools.ModManager.Classes;
+using OpenKh.Tools.ModManager.Models;
+using OpenKh.Tools.ModManager.Services;
+using OpenKh.Tools.ModManager.Views;
 using SharpYaml;
 using System;
 using System.Collections.Generic;
@@ -15,9 +19,9 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Xe.BinaryMapper;
-using OpenKh.Tools.ModManager.Services;
 
 namespace OpenKh.Tools.ModManager.ViewModels;
 
@@ -37,6 +41,9 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private Config? _currentConfig = null;
+
+    [ObservableProperty]
+    private bool _doesConfigExist = false;
 
     [ObservableProperty]
     private bool _hasModsInstalled = false;
@@ -94,9 +101,44 @@ public partial class MainViewModel : ViewModelBase
 
         if (CurrentConfig == null)
         {
-            var _fetchConfigFile = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "config.yml"));
-            CurrentConfig = YamlSerializer.Deserialize<Config>(_fetchConfigFile);
+            var _fetchConfigFile = Path.Combine(AppContext.BaseDirectory, "config.yml");
+
+            if (File.Exists(_fetchConfigFile))
+            {
+                var _fetchConfigRAW = File.ReadAllText(_fetchConfigFile);
+
+                DoesConfigExist = true;
+                CurrentConfig = YamlSerializer.Deserialize<Config>(_fetchConfigRAW);
+            }
+
+            else
+            {
+                DoesConfigExist = false;
+
+                CurrentConfig = new Config
+                {
+                    Panacea = new Panacea(),
+
+                    Frontend = new Frontend()
+                    {
+                        GamePath = new string[2],
+                        TargetPlatform = Platform.STEAM,
+                        ModBuildType = BuildType.PANACEA,
+                        TargetGame = Game.KINGDOM_HEARTS_II
+                    },
+
+                    Emulator = new Emulator()
+                    {
+                        EmuPath = new string[1],
+                        RomPath = new string[3],
+                    }
+                };
+
+                var _fetchSerialize = YamlSerializer.Serialize(CurrentConfig);
+                File.WriteAllText(_fetchConfigFile, _fetchSerialize);
+            }
         }
+
 
         // Handle these if the platform is NOT set to PCSX2.
 
@@ -115,20 +157,55 @@ public partial class MainViewModel : ViewModelBase
             if (!_isDDDConfigValid)
                 ConfigurationValid = false;
 
-            // Fetch the second Game Path if the game is Dream Drop Distance, fetch the first one otherwise.
-            var _fetchGamePath = _fetchTargetGame == Game.DREAM_DROP_DISTANCE ? _configFrontend.GamePath[1] : _configFrontend.GamePath[0];
+            else
+            {
+                // Fetch the second Game Path if the game is Dream Drop Distance, fetch the first one otherwise.
+                var _fetchGamePath = _fetchTargetGame == Game.DREAM_DROP_DISTANCE ? PathService.ResolvePath28(CurrentConfig) : PathService.ResolvePath1525(CurrentConfig);
 
-            // Construct the paths for the game executable and Panacea.
-            var _fetchExePath = Path.Combine(_fetchGamePath, Config.GameExecutable[CurrentConfig.Frontend.TargetGame]);
-            var _fetchPanaceaPath = Path.Combine(_fetchGamePath, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+                if (String.IsNullOrEmpty(_fetchGamePath))
+                    ConfigurationValid = false;
 
-            // Verify the game executable and directory exists as configured. If the build type is PANACEA, also verify Panacea's existence.
-            var _isGameConfigValid = Directory.Exists(_fetchGamePath) && File.Exists(_fetchExePath);
-            var _isPanaceaConfigValid = (CurrentConfig.Frontend.ModBuildType == BuildType.PANACEA && File.Exists(_fetchPanaceaPath)) || CurrentConfig.Frontend.ModBuildType == BuildType.PATCH;
+                else
+                {
+                    // Construct the paths for the game executable and Panacea.
+                    var _fetchExePath = Path.Combine(_fetchGamePath, Config.GameExecutable[_configFrontend.TargetGame]);
+                    var _fetchSettingsPath = Path.Combine(_fetchGamePath, "panacea_settings.txt");
+                    var _fetchPanaceaPath = Path.Combine(_fetchGamePath, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
 
-            // If either are not valid, mark the config as faulty.
-            if (!_isGameConfigValid || !_isPanaceaConfigValid)
-                ConfigurationValid = false;
+                    // Verify the game executable and directory exists as configured. If the build type is PANACEA, also verify Panacea's existence.
+                    var _isGameConfigValid = Directory.Exists(_fetchGamePath) && File.Exists(_fetchExePath);
+                    var _isPanaceaConfigValid = (_configFrontend.ModBuildType == BuildType.PANACEA && File.Exists(_fetchPanaceaPath)) || _configFrontend.ModBuildType == BuildType.PATCH;
+
+                    if (_isPanaceaConfigValid && _configFrontend.ModBuildType == BuildType.PANACEA)
+                    {
+                        var _regexModPath = new Regex("mod_path=(.*)");
+
+                        if (File.Exists(_fetchPanaceaPath) && File.Exists(_fetchSettingsPath))
+                        {
+                            var _fetchSettingsRAW = File.ReadAllLines(_fetchSettingsPath);
+                            var _fetchConfigPath = _fetchSettingsRAW.FirstOrDefault(x => _regexModPath.IsMatch(x));
+
+                            if (_fetchConfigPath != null)
+                            {
+                                var _fetchMatch = _regexModPath.Match(_fetchConfigPath);
+                                var _fetchValue = _fetchMatch.Groups[1].Value.Replace("\"", "");
+
+                                var _fetchConfigValue = Path.GetFullPath(_fetchValue);
+
+                                var _fetchManagerPath = PathService.ResolveBuild(CurrentConfig, true);
+                                var _comparisonRules = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+                                if (!String.Equals(_fetchConfigValue, _fetchManagerPath, _comparisonRules))
+                                    _isPanaceaConfigValid = false;
+                            }
+                        }
+                    }
+
+                    // If either are not valid, mark the config as faulty.
+                    if (!_isGameConfigValid || !_isPanaceaConfigValid)
+                        ConfigurationValid = false;
+                }
+            }
         }
 
         // === Mod Parsing and Verification === //
@@ -288,7 +365,7 @@ public partial class MainViewModel : ViewModelBase
 
         else
             InstalledMods = _fetchMods;
-        
+
         // Register mod property event to handle mod memory.
         InstalledMods.CollectionChanged += OnModPropertyChanged;
 

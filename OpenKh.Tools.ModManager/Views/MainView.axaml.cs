@@ -27,6 +27,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Media;
+using System.Collections.Generic;
 
 namespace OpenKh.Tools.ModManager.Views;
 
@@ -38,7 +39,7 @@ public partial class MainView : Window
         Loaded += OnViewLoaded;
     }
 
-    private void OnViewLoaded(object? sender, RoutedEventArgs e)
+    private async void OnViewLoaded(object? sender, RoutedEventArgs e)
     {
         // Yea so Avalonia lists do not automatically highlight shit if they ain't empty so we gotta do it here.
         // If this ever breaks that means something is wrong.
@@ -50,6 +51,28 @@ public partial class MainView : Window
 
         if (_fetchContext.InstalledMods != null && _fetchContext.InstalledMods.Count > 0)
             _fetchContext.CurrentMod = _fetchContext.InstalledMods[0];
+
+        if (!_fetchContext.DoesConfigExist)
+        {
+            this.IsVisible = false;
+
+            var _temporaryOwner = new Window
+            {
+                ShowInTaskbar = false,
+                Background = Brushes.Transparent,
+                WindowDecorations = WindowDecorations.None,
+                TransparencyLevelHint = new List<WindowTransparencyLevel>() { WindowTransparencyLevel.Transparent }
+            };
+
+            _temporaryOwner.Show();
+            _fetchContext.DoesConfigExist = true;
+
+            var _fetchWizard = new SetupWizardView();
+            await _fetchWizard.ShowDialog(_temporaryOwner);
+
+            _temporaryOwner.Close();
+            this.IsVisible = true;
+        }
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)

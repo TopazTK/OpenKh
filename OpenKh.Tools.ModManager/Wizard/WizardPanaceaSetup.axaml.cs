@@ -30,11 +30,14 @@ namespace OpenKh.Tools.ModManager.Wizard
                 var _fetchConfig = message.currentConfig;
                 var _fetchPaths = _fetchConfig.Frontend.GamePath;
 
-                var _fetchSettings1525 = Path.Combine(_fetchPaths[0], "panacea_settings.txt");
-                var _fetchAssembly1525 = Path.Combine(_fetchPaths[0], OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+                var _fetchPath1525 = PathService.ResolvePath1525(_fetchConfig);
+                var _fetchPath28 = PathService.ResolvePath28(_fetchConfig);
 
-                var _fetchSettings28 = Path.Combine(_fetchPaths[1], "panacea_settings.txt");
-                var _fetchAssembly28 = Path.Combine(_fetchPaths[1], OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+                var _fetchSettings1525 = Path.Combine(_fetchPath1525, "panacea_settings.txt");
+                var _fetchAssembly1525 = Path.Combine(_fetchPath1525, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+
+                var _fetchSettings28 = Path.Combine(_fetchPath28, "panacea_settings.txt");
+                var _fetchAssembly28 = Path.Combine(_fetchPath28, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
 
                 var _isConfigValid1525 = false;
                 var _isConfigValid28 = false;
@@ -49,12 +52,14 @@ namespace OpenKh.Tools.ModManager.Wizard
                     if (_fetchPanaceaPath != null)
                     {
                         var _fetchMatch = _regexModPath.Match(_fetchPanaceaPath);
-                        var _fetchValue = Path.GetFullPath(_fetchMatch.Groups[1].Value);
+                        var _fetchValue = _fetchMatch.Groups[1].Value.Replace("\"", "");
+
+                        var _fetchConfigPath = Path.GetFullPath(_fetchValue);
 
                         var _fetchManagerPath = PathService.ResolveBuild(_fetchConfig, true);
                         var _comparisonRules = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
-                        if (String.Equals(_fetchValue, _fetchManagerPath, _comparisonRules))
+                        if (String.Equals(_fetchConfigPath, _fetchManagerPath, _comparisonRules))
                             _isConfigValid1525 = true;
                     }
                 }
@@ -67,24 +72,31 @@ namespace OpenKh.Tools.ModManager.Wizard
                     if (_fetchPanaceaPath != null)
                     {
                         var _fetchMatch = _regexModPath.Match(_fetchPanaceaPath);
-                        var _fetchValue = Path.GetFullPath(_fetchMatch.Groups[1].Value);
+                        var _fetchValue = _fetchMatch.Groups[1].Value.Replace("\"", "");
+
+                        var _fetchConfigPath = Path.GetFullPath(_fetchValue);
 
                         var _fetchManagerPath = PathService.ResolveBuild(_fetchConfig, true);
                         var _comparisonRules = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
-                        if (String.Equals(_fetchValue, _fetchManagerPath, _comparisonRules))
+                        if (String.Equals(_fetchConfigPath, _fetchManagerPath, _comparisonRules))
                             _isConfigValid28 = true;
                     }
                 }
 
-                _isConfigValid1525 = String.IsNullOrEmpty(_fetchPaths[0]) || _isConfigValid1525;
-                _isConfigValid28 = String.IsNullOrEmpty(_fetchPaths[1]) || _isConfigValid28;
+                _isConfigValid1525 = String.IsNullOrEmpty(_fetchPath1525) || _isConfigValid1525;
+                _isConfigValid28 = String.IsNullOrEmpty(_fetchPath28) || _isConfigValid28;
 
                 if (_isConfigValid1525 && _isConfigValid28)
                 {
+                    _fetchConfig.Frontend.ModBuildType = BuildType.PANACEA;
+
                     InstallPanel.IsVisible = true;
                     NotInstallPanel.IsVisible = false;
                 }
+
+                else
+                    _fetchConfig.Frontend.ModBuildType = BuildType.PATCH;
             });
         }
 
@@ -97,23 +109,28 @@ namespace OpenKh.Tools.ModManager.Wizard
             var _createPath = $"mod_path=\"{_fetchBuildPath}\"";
             var _fetchPanaceaPath = Path.Combine(AppContext.BaseDirectory, "resources/OpenKh.Research.Panacea.dll");
 
-            var _fetchTarget1525 = Path.Combine(_fetchConfig.GamePath[0], OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
-            var _fetchTarget28 = Path.Combine(_fetchConfig.GamePath[1], OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+            var _fetchPath1525 = PathService.ResolvePath1525(_fetchContext.CurrentConfig);
+            var _fetchPath28 = PathService.ResolvePath28(_fetchContext.CurrentConfig);
 
-            if (!String.IsNullOrEmpty(_fetchConfig.GamePath[0]))
+            var _fetchTarget1525 = Path.Combine(_fetchPath1525, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+            var _fetchTarget28 = Path.Combine(_fetchPath28, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+
+            if (!String.IsNullOrEmpty(_fetchPath1525))
             {
                 File.Copy(_fetchPanaceaPath, _fetchTarget1525);
-                File.WriteAllText(Path.Combine(_fetchConfig.GamePath[0], "panacea_settings.txt"), _createPath);
+                File.WriteAllText(Path.Combine(_fetchPath1525, "panacea_settings.txt"), _createPath);
             }
 
-            if (!String.IsNullOrEmpty(_fetchConfig.GamePath[1]))
+            if (!String.IsNullOrEmpty(_fetchPath28))
             {
                 File.Copy(_fetchPanaceaPath, _fetchTarget28);
-                File.WriteAllText(Path.Combine(_fetchConfig.GamePath[1], "panacea_settings.txt"), _createPath);
+                File.WriteAllText(Path.Combine(_fetchPath28, "panacea_settings.txt"), _createPath);
             }
 
             InstallPanel.IsVisible = true;
             NotInstallPanel.IsVisible = false;
+
+            _fetchConfig.ModBuildType = BuildType.PANACEA;
         }
 
         private void OnUninstallClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -121,23 +138,28 @@ namespace OpenKh.Tools.ModManager.Wizard
             var _fetchContext = DataContext as MainViewModel;
             var _fetchConfig = _fetchContext.CurrentConfig.Frontend;
 
-            var _fetchTarget1525 = Path.Combine(_fetchConfig.GamePath[0], OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
-            var _fetchTarget28 = Path.Combine(_fetchConfig.GamePath[1], OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+            var _fetchPath1525 = PathService.ResolvePath1525(_fetchContext.CurrentConfig);
+            var _fetchPath28 = PathService.ResolvePath28(_fetchContext.CurrentConfig);
 
-            if (!String.IsNullOrEmpty(_fetchConfig.GamePath[0]))
+            var _fetchTarget1525 = Path.Combine(_fetchPath1525, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+            var _fetchTarget28 = Path.Combine(_fetchPath28, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+
+            if (!String.IsNullOrEmpty(_fetchPath1525))
             {
                 File.Delete(_fetchTarget1525);
-                File.Delete(Path.Combine(_fetchConfig.GamePath[0], "panacea_settings.txt"));
+                File.Delete(Path.Combine(_fetchPath1525, "panacea_settings.txt"));
             }
 
-            if (!String.IsNullOrEmpty(_fetchConfig.GamePath[1]))
+            if (!String.IsNullOrEmpty(_fetchPath28))
             {
                 File.Delete(_fetchTarget28);
-                File.Delete(Path.Combine(_fetchConfig.GamePath[1], "panacea_settings.txt"));
+                File.Delete(Path.Combine(_fetchPath28, "panacea_settings.txt"));
             }
 
             InstallPanel.IsVisible = false;
             NotInstallPanel.IsVisible = true;
+
+            _fetchConfig.ModBuildType = BuildType.PATCH;
         }
     }
 }

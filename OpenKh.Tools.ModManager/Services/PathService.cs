@@ -58,6 +58,36 @@ namespace OpenKh.Tools.ModManager.Services
                 return Path.Combine(_fetchConfigPath, _fetchGameTarget);
         }
 
+        public static string ResolvePath1525(Config input)
+        {
+            var _fetchGamePath = input.Frontend.GamePath;
+
+            if (_fetchGamePath == null)
+                return "";
+
+            var _fetchTargetGame = _fetchGamePath[0];
+
+            if (String.IsNullOrEmpty(_fetchTargetGame))
+                return "";
+            
+            return Path.GetFullPath(_fetchTargetGame);
+        }
+
+        public static string ResolvePath28(Config input)
+        {
+            var _fetchGamePath = input.Frontend.GamePath;
+
+            if (_fetchGamePath == null)
+                return "";
+
+            var _fetchTargetGame = _fetchGamePath[1];
+
+            if (String.IsNullOrEmpty(_fetchTargetGame))
+                return "";
+            
+            return Path.GetFullPath(_fetchTargetGame);
+        }
+
         public static string? ResolveGame(Config input) => input.Frontend.TargetGame == Game.DREAM_DROP_DISTANCE ? input.Frontend.GamePath[1] : input.Frontend.GamePath[0];
     }
 }
