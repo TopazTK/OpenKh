@@ -6,7 +6,7 @@
              Width="500" Height="490"
              x:Class="OpenKh.Tools.ModManager.Wizard.WizardDirectLaunch">
     <StackPanel Margin="10">
-        <TextBlock FontWeight="Bold" Text="Allow Direct Launch [Optional]"/>
+        <TextBlock FontWeight="Bold" Text="Allow Direct Launch [Optional, Steam Only]"/>
         <TextBlock Text="Allow the Mod Manager to launch the games without the launcher." />
 
         <Separator Margin="-10, 10, -10, 10" Grid.Row="2" />

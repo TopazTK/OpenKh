@@ -187,7 +187,7 @@ namespace OpenKh.Tools.ModManager.Wizard
                 var _fetchPanacea28 = Path.Combine(_fetchPath28, "panacea_settings.txt");
                 var _fetchAssembly28 = Path.Combine(_fetchPath28, File.Exists(_fetchPanacea28) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
 
-                File.Copy(_fetchBackendPath, _fetchPanacea28);
+                File.Copy(_fetchBackendPath, _fetchAssembly28, true);
                 File.WriteAllLines(Path.Combine(_fetchPath28, "LuaBackend.toml"), _configLines);
             }
 

@@ -27,7 +27,7 @@
 
         <StackPanel Name="InstallPanel" IsVisible="False">
         <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
-            It seems that Panacea is <Bold>currently installed</Bold>.
+            It seems that LuaBackend is <Bold>currently installed</Bold>.
         </TextBlock>
             <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnUninstallClick" Content="Uninstall LuaBackend" />
         </StackPanel>

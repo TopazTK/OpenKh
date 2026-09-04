@@ -117,13 +117,13 @@ namespace OpenKh.Tools.ModManager.Wizard
 
             if (!String.IsNullOrEmpty(_fetchPath1525))
             {
-                File.Copy(_fetchPanaceaPath, _fetchTarget1525);
+                File.Copy(_fetchPanaceaPath, _fetchTarget1525, true);
                 File.WriteAllText(Path.Combine(_fetchPath1525, "panacea_settings.txt"), _createPath);
             }
 
             if (!String.IsNullOrEmpty(_fetchPath28))
             {
-                File.Copy(_fetchPanaceaPath, _fetchTarget28);
+                File.Copy(_fetchPanaceaPath, _fetchTarget28, true);
                 File.WriteAllText(Path.Combine(_fetchPath28, "panacea_settings.txt"), _createPath);
             }
 
