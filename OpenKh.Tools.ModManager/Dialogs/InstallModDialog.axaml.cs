@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using System.IO;
@@ -11,6 +12,12 @@ namespace OpenKh.Tools.ModManager.Dialogs
         public InstallModDialog()
         {
             InitializeComponent();
+            Loaded += OnViewLoaded;
+        }
+
+        private async void OnViewLoaded(object? sender, RoutedEventArgs e)
+        {
+            RepositoryName.Focus();
         }
 
         private void AcceptDialog(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Close(RepositoryName.Text);

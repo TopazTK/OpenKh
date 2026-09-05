@@ -8,7 +8,7 @@
         x:Class="OpenKh.Tools.ModManager.Dialogs.BuildProgressDialog"
         xmlns:model="using:OpenKh.Tools.ModManager.Models"
         xmlns:view="clr-namespace:OpenKh.Tools.ModManager.Views"
-        Title="Installing Mod...">
+        Title="Building Mods...">
     <StackPanel Margin="20" Spacing="5">
         <TextBlock Text="Building mods... Please be patient..." TextWrapping="Wrap" />
         <ProgressBar Name="ModProgress" Height="20" Maximum="100" Value="0" ShowProgressText="True" FontSize="12" ProgressTextFormat=""/>
