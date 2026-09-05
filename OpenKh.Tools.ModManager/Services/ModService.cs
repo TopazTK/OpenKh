@@ -605,13 +605,18 @@ namespace OpenKh.Tools.ModManager.Services
 
             var _fetchAPIFilePath = Path.Combine(_fetchGamePath, "steam_appid.txt");
 
-            var _fetchReMIXFilePath = Path.Combine(_fetchGamePath, "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe");
             var _fetchLauncherPath = Path.Combine(AppContext.BaseDirectory, "resources/OpenKh.Command.Launcher.exe");
             var _fetchTargetGamePath = Path.Combine(_fetchGamePath, Config.GameExecutable[_fetchTargetGame]);
 
             var _fetchAPIExists = _fetchTargetPlatform == Platform.STEAM ? File.Exists(_fetchAPIFilePath) : false;
 
             var _fetchSteamId = currentConfig.Frontend.TargetGame == Game.DREAM_DROP_DISTANCE ? 2552440 : 2552430;
+            var _fetchReMIXFilePath = currentConfig.Frontend.TargetGame == Game.DREAM_DROP_DISTANCE ? Path.Combine(_fetchGamePath, "KINGDOM HEARTS HD 2.8 Final Chapter Prologue.exe") : Path.Combine(_fetchGamePath, "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe");
+
+            var _fetchArguments = currentConfig.Frontend.LaunchArguments;
+
+            if (_fetchAPIExists)
+                _fetchArguments = $"{Config.GameShorthand[_fetchTargetGame]} {_fetchArguments}";
 
             Uri _fetchTargetUri = null;
             FileInfo _fetchTargetFile = null;
@@ -621,7 +626,7 @@ namespace OpenKh.Tools.ModManager.Services
                 switch (_fetchTargetPlatform)
                 {
                     case Platform.STEAM:
-                        _fetchTargetUri = new Uri($"steam://rungameid/{_fetchSteamId}" + (_fetchAPIExists ? $"//{ Config.GameShorthand[_fetchTargetGame] }" : ""));
+                        _fetchTargetUri = new Uri($"steam://rungameid/{_fetchSteamId}" + (!String.IsNullOrEmpty(_fetchArguments) ? $"//{ Uri.EscapeDataString(_fetchArguments) }" : ""));
                         break;
                     case Platform.EPIC_GAMES_STORE:
                         _fetchTargetUri = new Uri("com.epicgames.launcher://apps/4158b699dd70447a981fee752d970a3e%3A5aac304f0e8948268ddfd404334dbdc7%3A68c214c58f694ae88c2dab6f209b43e4?action=launch");
