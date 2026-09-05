@@ -79,10 +79,8 @@ public partial class MainView : Window
     {
         // Fetch the main ViewModel and serialize the config it has.
         var _fetchViewModel = DataContext as MainViewModel;
-        var _fetchSerialize = YamlSerializer.Serialize<Config>(_fetchViewModel.CurrentConfig);
 
-        // Overwrite the config file.
-        File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "config.yml"), _fetchSerialize);
+        _fetchViewModel.CurrentConfig.Commit();
 
         // We gotta still CLOSE the thing, no?
         base.OnClosing(e);
@@ -525,4 +523,15 @@ public partial class MainView : Window
     }
 
     private async void OnSetupRequested(object? sender, RoutedEventArgs e) => await new SetupWizardView().ShowDialog(this);
+    private async void OnArgumentsRequested(object? sender, RoutedEventArgs e)
+    {
+        var _fetchContext = DataContext as MainViewModel;
+        var _fetchConfig = _fetchContext.CurrentConfig;
+
+        var _fetchDialog = new LaunchArgsDialog();
+        var _fetchResult = await _fetchDialog.ShowDialog<string?>(this);
+
+        if (!String.IsNullOrEmpty(_fetchResult))
+            _fetchConfig.Frontend.LaunchArguments = _fetchResult;
+    }
 }

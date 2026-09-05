@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="375" d:DesignHeight="150"
+        MaxWidth="375" MaxHeight="150"
+        MinWidth="375" MinHeight="150"
+        x:Class="OpenKh.Tools.ModManager.Dialogs.LaunchArgsDialog"
+        Title="Enter Launch Arguments">
+    <StackPanel Margin="20" Spacing="10">
+        <TextBlock Text="Enter the launch arguments to use when launching on Steam." TextWrapping="Wrap" />
+        <TextBox Name="Arguments" PlaceholderText="Ex. -fastboot -noaspect" Text="{ReflectionBinding CurrentConfig.Frontend.LaunchArguments}"/>
+        <Button Content="Done" Click="OnCommitClick" HorizontalAlignment="Right" HorizontalContentAlignment="Center" HotKey="Enter"/>
+    </StackPanel>
+</Window>

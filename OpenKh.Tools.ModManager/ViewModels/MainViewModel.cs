@@ -108,7 +108,7 @@ public partial class MainViewModel : ViewModelBase
                 var _fetchConfigRAW = File.ReadAllText(_fetchConfigFile);
 
                 DoesConfigExist = true;
-                CurrentConfig = YamlSerializer.Deserialize<Config>(_fetchConfigRAW);
+                CurrentConfig = Config.Load();
             }
 
             else
@@ -134,79 +134,11 @@ public partial class MainViewModel : ViewModelBase
                     }
                 };
 
-                var _fetchSerialize = YamlSerializer.Serialize(CurrentConfig);
-                File.WriteAllText(_fetchConfigFile, _fetchSerialize);
+                CurrentConfig.Commit();
             }
         }
 
-
-        // Handle these if the platform is NOT set to PCSX2.
-
-        if (CurrentConfig.Frontend.TargetPlatform != Platform.PCSX2)
-        {
-            // Fetch the bare arguments we will use.
-            var _configFrontend = CurrentConfig.Frontend;
-            var _fetchTargetGame = _configFrontend.TargetGame;
-
-            // Check if the game is Dream Drop Distance and the second Game Path has been declared.
-            // Otherwise, check if the game is NOT Dream Drop Distance.
-            // If neither of these are true, the config isn't valid.
-
-            var _isDDDConfigValid = _fetchTargetGame != Game.DREAM_DROP_DISTANCE || (_fetchTargetGame == Game.DREAM_DROP_DISTANCE && _configFrontend.GamePath.Length < 2);
-
-            if (!_isDDDConfigValid)
-                ConfigurationValid = false;
-
-            else
-            {
-                // Fetch the second Game Path if the game is Dream Drop Distance, fetch the first one otherwise.
-                var _fetchGamePath = _fetchTargetGame == Game.DREAM_DROP_DISTANCE ? PathService.ResolvePath28(CurrentConfig) : PathService.ResolvePath1525(CurrentConfig);
-
-                if (String.IsNullOrEmpty(_fetchGamePath))
-                    ConfigurationValid = false;
-
-                else
-                {
-                    // Construct the paths for the game executable and Panacea.
-                    var _fetchExePath = Path.Combine(_fetchGamePath, Config.GameExecutable[_configFrontend.TargetGame]);
-                    var _fetchSettingsPath = Path.Combine(_fetchGamePath, "panacea_settings.txt");
-                    var _fetchPanaceaPath = Path.Combine(_fetchGamePath, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
-
-                    // Verify the game executable and directory exists as configured. If the build type is PANACEA, also verify Panacea's existence.
-                    var _isGameConfigValid = Directory.Exists(_fetchGamePath) && File.Exists(_fetchExePath);
-                    var _isPanaceaConfigValid = (_configFrontend.ModBuildType == BuildType.PANACEA && File.Exists(_fetchPanaceaPath)) || _configFrontend.ModBuildType == BuildType.PATCH;
-
-                    if (_isPanaceaConfigValid && _configFrontend.ModBuildType == BuildType.PANACEA)
-                    {
-                        var _regexModPath = new Regex("mod_path=(.*)");
-
-                        if (File.Exists(_fetchPanaceaPath) && File.Exists(_fetchSettingsPath))
-                        {
-                            var _fetchSettingsRAW = File.ReadAllLines(_fetchSettingsPath);
-                            var _fetchConfigPath = _fetchSettingsRAW.FirstOrDefault(x => _regexModPath.IsMatch(x));
-
-                            if (_fetchConfigPath != null)
-                            {
-                                var _fetchMatch = _regexModPath.Match(_fetchConfigPath);
-                                var _fetchValue = _fetchMatch.Groups[1].Value.Replace("\"", "");
-
-                                var _fetchConfigValue = Path.GetFullPath(_fetchValue);
-
-                                var _fetchManagerPath = PathService.ResolveBuild(CurrentConfig, true);
-                                var _comparisonRules = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-
-                                if (!String.Equals(_fetchConfigValue, _fetchManagerPath, _comparisonRules))
-                                    _isPanaceaConfigValid = false;
-                            }
-                        }
-                    }
-
-                    // If either are not valid, mark the config as faulty.
-                    if (!_isGameConfigValid || !_isPanaceaConfigValid)
-                        ConfigurationValid = false;
-                }
-            }
-        }
+        ConfigurationValid = CurrentConfig.IsValid();
 
         // === Mod Parsing and Verification === //
 
@@ -214,7 +146,7 @@ public partial class MainViewModel : ViewModelBase
 
         var _fetchMods = new ObservableCollection<ModModel>();
         var _fetchModsPath = PathService.ResolveMod(CurrentConfig);
-
+        
         // For each directory that exists in the mod folder:
 
         foreach (var _fetchDirectory in Directory.EnumerateDirectories(_fetchModsPath))
