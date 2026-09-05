@@ -7,6 +7,7 @@ using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Win32;
 using OpenKh.Tools.ModManager.Classes;
+using OpenKh.Tools.ModManager.Services;
 using OpenKh.Tools.ModManager.ViewModels;
 using OpenKh.Tools.ModManager.Views;
 using System;
@@ -162,10 +163,13 @@ namespace OpenKh.Tools.ModManager.Wizard
                 });
 
 
-                PathCollectionFirst.Text = !String.IsNullOrEmpty(_fetchPath1525) ? _fetchPath1525 : PathCollectionFirst.Text;
-                PathCollectionFirst.BorderBrush = !String.IsNullOrEmpty(_fetchPath1525) ? _successBrush : _failBrush;
+                _fetchConfig.Frontend.GamePath[0] = !String.IsNullOrEmpty(_fetchPath1525) ? _fetchPath1525 : "";
+                _fetchConfig.Frontend.GamePath[1] = !String.IsNullOrEmpty(_fetchPath28) ? _fetchPath28 : "";
 
-                PathCollectionSecond.Text = !String.IsNullOrEmpty(_fetchPath28) ? _fetchPath28 : PathCollectionSecond.Text;
+                PathCollectionFirst.Text = _fetchConfig.Frontend.GamePath[0];
+                PathCollectionSecond.Text = _fetchConfig.Frontend.GamePath[1];
+
+                PathCollectionFirst.BorderBrush = !String.IsNullOrEmpty(_fetchPath1525) ? _successBrush : _failBrush;
                 PathCollectionSecond.BorderBrush = !String.IsNullOrEmpty(_fetchPath28) ? _successBrush : _failBrush;
             }
 
@@ -229,8 +233,26 @@ namespace OpenKh.Tools.ModManager.Wizard
                 else
                 {
                     PathCollectionFirst.BorderBrush = _failBrush;
-                    PathCollectionSecond.BorderBrush =  _failBrush;
+                    PathCollectionSecond.BorderBrush = _failBrush;
                 }
+            }
+        }
+
+        private void OnPathChanged(object? sender, TextChangedEventArgs e)
+        {
+            if (PlatformBox.SelectedItem != null)
+            {
+                var _fetchPath1525 = PathCollectionFirst.Text;
+                var _fetchPath28 = PathCollectionSecond.Text;
+
+                var _isValid1525 = !String.IsNullOrEmpty(_fetchPath1525) && File.Exists(Path.Combine(_fetchPath1525, "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe"));
+                var _isValid28 = !String.IsNullOrEmpty(_fetchPath28) && File.Exists(Path.Combine(_fetchPath28, "KINGDOM HEARTS HD 2.8 Final Chapter Prologue.exe"));
+
+                if (!_isValid1525 && !_isValid28)
+                    WeakReferenceMessenger.Default.Send(new BlockNextRequest());
+
+                else
+                    WeakReferenceMessenger.Default.Send(new UnblockNextRequest());
             }
         }
     }

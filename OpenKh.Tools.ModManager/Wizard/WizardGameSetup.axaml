@@ -61,7 +61,7 @@
                 <TextBox Grid.Column="0" Name="PathCollectionFirst"
                     Text="{ReflectionBinding CurrentConfig.Frontend.GamePath[0]}"
                     HorizontalAlignment="Stretch" PlaceholderText="Path goes here..."
-                    Margin="0, 0, 10, 0" />
+                    Margin="0, 0, 10, 0" TextChanged="OnPathChanged" />
                 <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32"
                     Background="Transparent" VerticalAlignment="Stretch"  Click="OnFolderClickFirst">
                     <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />
@@ -78,7 +78,7 @@
                 <TextBox Grid.Column="0" Name="PathCollectionSecond"
                     Text="{ReflectionBinding CurrentConfig.Frontend.GamePath[1]}"
                     HorizontalAlignment="Stretch" PlaceholderText="Path goes here..."
-                    Margin="0, 0, 10, 0" />
+                    Margin="0, 0, 10, 0" TextChanged="OnPathChanged"/>
                 <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32"
                     Background="Transparent" VerticalAlignment="Stretch" Click="OnFolderClickSecond">
                     <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />

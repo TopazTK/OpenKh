@@ -53,8 +53,12 @@ namespace OpenKh.Tools.ModManager.Wizard
             ExtractStartButton.IsVisible = true;
             ExtractStopButton.IsVisible = false;
 
+            WeakReferenceMessenger.Default.Send(new UnblockNextRequest());
+
             if (_fetchResult != 0x00)
             {
+                currentConfig.Frontend.DataPath = null;
+
                 ProgressExtract.Value = 0;
                 ProgressExtract.Maximum = 100;
 
@@ -81,6 +85,7 @@ namespace OpenKh.Tools.ModManager.Wizard
                 ExtractDDD.IsChecked.Value,
             };
 
+            WeakReferenceMessenger.Default.Send(new BlockNextRequest());
             ExtractTask(_fetchExtractList, _fetchContext.CurrentConfig);
         }
 

@@ -21,6 +21,9 @@ using static OpenKh.Tools.ModManager.Wizard.WizardPanaceaSetup;
 
 namespace OpenKh.Tools.ModManager.Views
 {
+    public record BlockNextRequest();
+    public record UnblockNextRequest();
+
     public class PageRequestMessage : RequestMessage<bool>
     {
         public object Self { get; }
@@ -67,6 +70,22 @@ namespace OpenKh.Tools.ModManager.Views
 
             var _fetchContext = _fetchMainView.DataContext as MainViewModel;
             DataContext = _fetchContext;
+
+            WeakReferenceMessenger.Default.Register<BlockNextRequest>(this, (registrar, message) =>
+            {
+                if (_rootModel.FutureWizardPages.Count > 0)
+                    NextButton.IsEnabled = false;
+
+                FinishButton.IsEnabled = false;
+            });
+
+            WeakReferenceMessenger.Default.Register<UnblockNextRequest>(this, (registrar, message) =>
+            {
+                if (_rootModel.FutureWizardPages.Count > 0)
+                    NextButton.IsEnabled = true;
+
+                FinishButton.IsEnabled = true;
+            });
 
             InitializeComponent();
         }

@@ -670,6 +670,16 @@ namespace OpenKh.Tools.ModManager.Services
     
         public static async Task<byte> Extract(List<bool> extractGames, Config currentConfig, bool isPlatformPC, Func<int, int, bool>? reportProgress = null)
         {
+            // Reset the cancel token if it was called prior.
+
+            if (CancelToken.IsCancellationRequested)
+            {
+                CancelTokenSource.Dispose();
+
+                CancelTokenSource = new CancellationTokenSource();
+                CancelToken = CancelTokenSource.Token;
+            }
+
             if (isPlatformPC)
             {
                 var _fetchExtractList = new List<string>()
