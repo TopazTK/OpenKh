@@ -66,8 +66,8 @@
                 </Button>
             </Grid>
             <ProgressBar Name="ProgressExtract" Height="30"/>
-            <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Start Extracting" />
-            <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Stop Extracting" IsVisible="false" />
+            <Button Name="ExtractStartButton" Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Start Extracting" Click="OnExtractStart"/>
+            <Button Name="ExtractStopButton" Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Stop Extracting" Click="OnExtractStop" IsVisible="false" />
         </StackPanel>
     </StackPanel>
 </ContentPage>

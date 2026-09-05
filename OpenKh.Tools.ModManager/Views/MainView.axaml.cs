@@ -207,40 +207,47 @@ public partial class MainView : Window
             var _progressDialog = new ModProgressDialog();
             _progressDialog.ShowDialog(this);
 
-            var _gitProcessHandler = new TransferProgressHandler((progress) =>
-            {
-                Dispatcher.UIThread.Post(() =>
-                {
-                    _progressDialog.InstallProgress.Maximum = progress.TotalObjects;
-                    _progressDialog.InstallProgress.Value = progress.ReceivedObjects;
-                });
-
-                if (ModService.CancelToken.IsCancellationRequested)
-                    return false;
-
-                return true;
-            });
-
-            bool _localProcessHandler(int processed, int total)
-            {
-                Dispatcher.UIThread.Post(() =>
-                {
-                    _progressDialog.InstallProgress.Maximum = total;
-                    _progressDialog.InstallProgress.Value = processed;
-                });
-
-                if (ModService.CancelToken.IsCancellationRequested)
-                    return false;
-
-                return true;
-            }
-            ;
-
             if (File.Exists(_fetchResult))
-                _fetchInstallResult = await ModService.InstallLocal(_fetchModPath, _fetchResult, _localProcessHandler);
+                _fetchInstallResult = 
+                    await ModService.InstallLocal
+                    (
+                        _fetchModPath, 
+                        _fetchResult, 
+                        (int processed, int total) =>
+                        {
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                _progressDialog.InstallProgress.Maximum = total;
+                                _progressDialog.InstallProgress.Value = processed;
+                            });
+
+                            if (ModService.CancelToken.IsCancellationRequested)
+                                return false;
+
+                            return true;
+                        }
+                    );
 
             else
-                _fetchInstallResult = await ModService.InstallGit(_fetchModPath, _fetchResult, _gitProcessHandler);
+                _fetchInstallResult = 
+                    await ModService.InstallGit
+                    (
+                        _fetchModPath, 
+                        _fetchResult, 
+                        new TransferProgressHandler((progress) =>
+                        {
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                _progressDialog.InstallProgress.Maximum = progress.TotalObjects;
+                                _progressDialog.InstallProgress.Value = progress.ReceivedObjects;
+                            });
+
+                            if (ModService.CancelToken.IsCancellationRequested)
+                                return false;
+
+                            return true;
+                        }
+                    ));
 
             _progressDialog.Close(true);
 

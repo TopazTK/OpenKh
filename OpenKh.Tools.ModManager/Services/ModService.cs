@@ -3,6 +3,9 @@ using Avalonia.Threading;
 using LibGit2Sharp;
 using LibGit2Sharp.Handlers;
 using OpenKh.Bbs;
+using OpenKh.Common;
+using OpenKh.Common.Archives;
+using OpenKh.Egs;
 using OpenKh.Kh2;
 using OpenKh.Patcher;
 using OpenKh.Tools.ModManager.Classes;
@@ -663,6 +666,144 @@ namespace OpenKh.Tools.ModManager.Services
             }
 
             return true;
+        }
+    
+        public static async Task<byte> Extract(List<bool> extractGames, Config currentConfig, bool isPlatformPC, Func<int, int, bool>? reportProgress = null)
+        {
+            if (isPlatformPC)
+            {
+                var _fetchExtractList = new List<string>()
+                {
+                    extractGames[0] ? "kh1" : "",
+                    extractGames[1] ? "kh2" : "",
+                    extractGames[2] ? "Recom" : "",
+                    extractGames[3] ? "bbs" : "",
+                    extractGames[4] ? "kh3d" : ""
+                }.Where(x => !String.IsNullOrEmpty(x));
+
+                var _fetchShortDictionary = new Dictionary<string, string>
+                {
+                    { "kh1", "kh1" },
+                    { "kh2", "kh2" },
+                    { "Recom", "com" },
+                    { "bbs", "bbs" },
+                    { "kh3d", "ddd" },
+                };
+
+                var _fetchFilesCurrent = 0;
+                var _fetchFilesTotal = 0;
+
+                await Task.Run(async () =>
+                {
+                    var _fetchDataPath = PathService.ResolveData(currentConfig, true);
+
+                    if (String.IsNullOrEmpty(_fetchDataPath))
+                    {
+                        currentConfig.Frontend.DataPath = Path.Combine(AppContext.BaseDirectory, "extract");
+                        _fetchDataPath = PathService.ResolveData(currentConfig, true);
+                    }
+
+                    foreach (var _fetchExtractGame in _fetchExtractList)
+                    {
+                        var _fetchGamePath = _fetchExtractGame == "kh3d" ? PathService.ResolvePath28(currentConfig) : PathService.ResolvePath1525(currentConfig);
+
+                        var _fetchPackagePath = Path.Combine(_fetchGamePath, "Image", currentConfig.Frontend.TargetPlatform == Platform.STEAM ? "dt" : "en");
+                        var _fetchHeaderFiles = Directory.GetFiles(_fetchPackagePath).Where(x => x.Contains(_fetchExtractGame) && x.EndsWith(".hed"));
+
+                        foreach (var _fetchHeader in _fetchHeaderFiles)
+                        {
+                            using (var _fetchHedStream = new FileStream(_fetchHeader, FileMode.Open))
+                            {
+                                var _fetchFiles = Hed.Read(_fetchHedStream);
+                                _fetchFilesTotal += _fetchFiles.Count();
+                            }
+                        }
+                    }
+
+                    Parallel.ForEach(_fetchExtractList.AsParallel(), (_fetchExtractGame, _fetchStateGame) =>
+                    {
+                        var _fetchDataPath = PathService.ResolveData(currentConfig, true);
+
+                        if (String.IsNullOrEmpty(_fetchDataPath))
+                        {
+                            currentConfig.Frontend.DataPath = Path.Combine(AppContext.BaseDirectory, "extract");
+                            _fetchDataPath = PathService.ResolveData(currentConfig, true);
+                        }
+
+                        var _fetchGamePath = _fetchExtractGame == "kh3d" ? PathService.ResolvePath28(currentConfig) : PathService.ResolvePath1525(currentConfig);
+
+                        var _fetchPackagePath = Path.Combine(_fetchGamePath, "Image", currentConfig.Frontend.TargetPlatform == Platform.STEAM ? "dt" : "en");
+                        var _fetchHeaderFiles = Directory.GetFiles(_fetchPackagePath).Where(x => x.Contains(_fetchExtractGame) && x.EndsWith(".hed"));
+
+                        Parallel.ForEach(_fetchHeaderFiles.AsParallel(), (_fetchHeader, _fetchStateHeader) =>
+                        {
+                            var _fetchPackage = Path.ChangeExtension(_fetchHeader, ".pkg");
+
+                            using (var _fetchHedStream = new FileStream(_fetchHeader, FileMode.Open))
+                            {
+                                var _fetchFiles = Hed.Read(_fetchHedStream);
+
+                                Parallel.ForEach(_fetchFiles.AsParallel(), (_fetchFile, _fetchStateFile) =>
+                                {
+                                    using (var _fetchPkgStream = new FileStream(_fetchPackage, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    {
+                                        _fetchFilesCurrent++;
+
+                                        var _fetchHashText = Convert.ToHexString(_fetchFile.MD5);
+                                        var _fetchNameValue = EgsTools.Names.FirstOrDefault(x => x.Key == _fetchHashText).Value;
+
+                                        var _fetchFileName = String.IsNullOrEmpty(_fetchNameValue) ? $"{_fetchHashText}.dat" : _fetchNameValue;
+
+                                        var _fetchFilePath = Path.Combine(_fetchDataPath, _fetchShortDictionary[_fetchExtractGame], _fetchFileName);
+                                        var _fetchFileDir = Path.GetDirectoryName(_fetchFilePath);
+
+                                        _fetchPkgStream.SetPosition(_fetchFile.Offset);
+                                        var _fetchData = new EgsHdAsset(_fetchPkgStream);
+
+                                        if (!Directory.Exists(_fetchFileDir))
+                                            Directory.CreateDirectory(_fetchFileDir);
+
+                                        File.Create(_fetchFilePath).Using(_fetchStr => _fetchStr.Write(_fetchData.OriginalData));
+
+                                        if (_fetchData.Assets.Count() != 0x00)
+                                        {
+                                            var _fetchRemasterPath = Path.Combine(_fetchDataPath, _fetchShortDictionary[_fetchExtractGame], "remastered", _fetchFileName);
+
+                                            Parallel.ForEach(_fetchData.Assets.AsParallel(), (_fetchAsset, _fetchStateAsset) =>
+                                            {
+                                                var _fetchAssetPath = Path.Combine(_fetchRemasterPath, _fetchAsset);
+                                                var _fetchAssetDir = Path.GetDirectoryName(_fetchAssetPath);
+
+                                                if (!Directory.Exists(_fetchAssetDir))
+                                                    Directory.CreateDirectory(_fetchAssetDir);
+
+                                                var _fetchAssetData = _fetchData.RemasteredAssetsDecompressedData[_fetchAsset];
+                                                File.Create(_fetchAssetPath).Using(_fetchStr => _fetchStr.Write(_fetchAssetData));
+                                            });
+                                        }
+
+                                        var _fetchProgress = reportProgress(_fetchFilesCurrent, _fetchFilesTotal);
+
+                                        if (!_fetchProgress || CancelToken.IsCancellationRequested)
+                                            _fetchStateFile.Stop();
+                                    }
+                                });
+                            }
+
+                            if (CancelToken.IsCancellationRequested)
+                                _fetchStateHeader.Stop();
+                        });
+
+                        if (CancelToken.IsCancellationRequested)
+                            _fetchStateGame.Stop();
+                    });
+                });
+
+                if (CancelToken.IsCancellationRequested)
+                    return 0x03;
+            }
+
+            return 0x00;
         }
     }
 }
