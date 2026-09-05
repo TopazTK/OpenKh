@@ -4,9 +4,11 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Win32;
 using OpenKh.Tools.ModManager.Classes;
 using OpenKh.Tools.ModManager.ViewModels;
+using OpenKh.Tools.ModManager.Views;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,6 +26,14 @@ namespace OpenKh.Tools.ModManager.Wizard
         public WizardGameSetup()
         {
             InitializeComponent();
+
+            WeakReferenceMessenger.Default.Register<PageRequestMessage>(this, (registrar, message) =>
+            {
+                if (message.Self != this)
+                    return;
+
+                message.Reply(true);
+            });
         }
 
         private async void OnFolderClickFirst(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

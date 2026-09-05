@@ -38,52 +38,93 @@ namespace OpenKh.Tools.ModManager.Wizard
 
             WeakReferenceMessenger.Default.Register<PageRequestMessage>(this, (registrar, message) =>
             {
-                if (message.self != this)
+                if (message.Self != this)
                     return;
 
-                InstallPanel.IsVisible = false;
-                NotInstallPanel.IsVisible = true;
+                var _fetchFrontend = message.CurrentConfig.Frontend;
 
-                var _fetchConfig = message.currentConfig;
+                if (_fetchFrontend.TargetPlatform == Platform.PCSX2)
+                    message.Reply(false);
 
-                var _fetchPath1525 = PathService.ResolvePath1525(_fetchConfig);
-                var _fetchPath28 = PathService.ResolvePath28(_fetchConfig);
-
-                var _fetchPanacea1525 = Path.Combine(_fetchPath1525, "panacea_settings.txt");
-                var _fetchPanacea28 = Path.Combine(_fetchPath28, "panacea_settings.txt");
-
-                var _fetchSettings1525 = Path.Combine(_fetchPath1525, "LuaBackend.toml");
-                var _fetchAssembly1525 = Path.Combine(_fetchPath1525, File.Exists(_fetchPanacea1525) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
-
-                var _fetchSettings28 = Path.Combine(_fetchPath28, "LuaBackend.toml");
-                var _fetchAssembly28 = Path.Combine(_fetchPath28, File.Exists(_fetchPanacea28) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
-
-                var _isConfigValid1525 = false;
-                var _isConfigValid28 = false;
-
-                if (File.Exists(_fetchAssembly1525) && File.Exists(_fetchSettings1525))
+                else
                 {
-                    var _fetchSettingsRAW = File.ReadAllText(_fetchSettings1525);
-                    var _fetchSettingsSerial = TomlSerializer.Deserialize<TomlTable>(_fetchSettingsRAW);
+                    InstallPanel.IsVisible = false;
+                    NotInstallPanel.IsVisible = true;
 
-                    var _fetchTruthTable = new bool[4];
+                    var _fetchConfig = message.CurrentConfig;
 
-                    for  (var i = 0; i < _fetchTruthTable.Length; i++)
+                    var _fetchPath1525 = PathService.ResolvePath1525(_fetchConfig);
+                    var _fetchPath28 = PathService.ResolvePath28(_fetchConfig);
+
+                    var _fetchPanacea1525 = Path.Combine(_fetchPath1525, "panacea_settings.txt");
+                    var _fetchPanacea28 = Path.Combine(_fetchPath28, "panacea_settings.txt");
+
+                    var _fetchSettings1525 = Path.Combine(_fetchPath1525, "LuaBackend.toml");
+                    var _fetchAssembly1525 = Path.Combine(_fetchPath1525, File.Exists(_fetchPanacea1525) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
+
+                    var _fetchSettings28 = Path.Combine(_fetchPath28, "LuaBackend.toml");
+                    var _fetchAssembly28 = Path.Combine(_fetchPath28, File.Exists(_fetchPanacea28) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
+
+                    var _isConfigValid1525 = false;
+                    var _isConfigValid28 = false;
+
+                    if (File.Exists(_fetchAssembly1525) && File.Exists(_fetchSettings1525))
                     {
-                        var _fetchGame = (Game)i;
-                        var _fetchLuaGameID = GameIds[_fetchGame];
-                        var _fetchManagerGameID = Config.GameShorthand[_fetchGame];
+                        var _fetchSettingsRAW = File.ReadAllText(_fetchSettings1525);
+                        var _fetchSettingsSerial = TomlSerializer.Deserialize<TomlTable>(_fetchSettingsRAW);
+
+                        var _fetchTruthTable = new bool[4];
+
+                        for (var i = 0; i < _fetchTruthTable.Length; i++)
+                        {
+                            var _fetchGame = (Game)i;
+                            var _fetchLuaGameID = GameIds[_fetchGame];
+                            var _fetchManagerGameID = Config.GameShorthand[_fetchGame];
+
+                            var _fetchGameBuildPath = PathService.ResolveBuild(_fetchConfig, true);
+                            var _fetchGameScriptPath = Path.Combine(_fetchGameBuildPath, _fetchManagerGameID, "scripts");
+
+                            var _fetchTableRoot = _fetchSettingsSerial[_fetchLuaGameID] as TomlTable;
+                            var _fetchTableScript = _fetchTableRoot["scripts"] as TomlArray;
+
+                            foreach (TomlTable _fetchScript in _fetchTableScript)
+                            {
+                                var _fetchPath = (string)_fetchScript["path"];
+                                var _fetchIsRelative = (bool)_fetchScript["relative"];
+
+                                if (_fetchIsRelative || String.IsNullOrEmpty(_fetchPath))
+                                    continue;
+
+                                var _fetchFullPath = Path.GetFullPath(_fetchPath);
+                                var _comparisonRules = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+                                if (String.Equals(_fetchGameScriptPath, _fetchFullPath, _comparisonRules))
+                                {
+                                    _fetchTruthTable[i] = true;
+                                    break;
+                                }
+                            }
+                        }
+                        ;
+
+                        _isConfigValid1525 = _fetchTruthTable.All(x => x == true);
+                    }
+
+                    if (File.Exists(_fetchAssembly28) && File.Exists(_fetchSettings28))
+                    {
+                        var _fetchSettingsRAW = File.ReadAllText(_fetchSettings28);
+                        var _fetchSettingsSerial = TomlSerializer.Deserialize<TomlTable>(_fetchSettingsRAW);
 
                         var _fetchGameBuildPath = PathService.ResolveBuild(_fetchConfig, true);
-                        var _fetchGameScriptPath = Path.Combine(_fetchGameBuildPath, _fetchManagerGameID, "scripts");
+                        var _fetchGameScriptPath = Path.Combine(_fetchGameBuildPath, "ddd", "scripts");
 
-                        var _fetchTableRoot = _fetchSettingsSerial[_fetchLuaGameID] as TomlTable;
+                        var _fetchTableRoot = _fetchSettingsSerial["kh3d"] as TomlTable;
                         var _fetchTableScript = _fetchTableRoot["scripts"] as TomlArray;
 
                         foreach (TomlTable _fetchScript in _fetchTableScript)
                         {
-                            var _fetchPath = (string) _fetchScript["path"];
-                            var _fetchIsRelative = (bool) _fetchScript["relative"];
+                            var _fetchPath = (string)_fetchScript["path"];
+                            var _fetchIsRelative = (bool)_fetchScript["relative"];
 
                             if (_fetchIsRelative || String.IsNullOrEmpty(_fetchPath))
                                 continue;
@@ -93,52 +134,23 @@ namespace OpenKh.Tools.ModManager.Wizard
 
                             if (String.Equals(_fetchGameScriptPath, _fetchFullPath, _comparisonRules))
                             {
-                                _fetchTruthTable[i] = true;
+                                _isConfigValid28 = true;
                                 break;
                             }
                         }
-                    };
-
-                    _isConfigValid1525 = _fetchTruthTable.All(x => x == true);
-                }
-
-                if (File.Exists(_fetchAssembly28) && File.Exists(_fetchSettings28))
-                {
-                    var _fetchSettingsRAW = File.ReadAllText(_fetchSettings28);
-                    var _fetchSettingsSerial = TomlSerializer.Deserialize<TomlTable>(_fetchSettingsRAW);
-
-                    var _fetchGameBuildPath = PathService.ResolveBuild(_fetchConfig, true);
-                    var _fetchGameScriptPath = Path.Combine(_fetchGameBuildPath, "ddd", "scripts");
-
-                    var _fetchTableRoot = _fetchSettingsSerial["kh3d"] as TomlTable;
-                    var _fetchTableScript = _fetchTableRoot["scripts"] as TomlTableArray;
-
-                    foreach (TomlTable _fetchScript in _fetchTableScript)
-                    {
-                        var _fetchPath = (string)_fetchScript["path"];
-                        var _fetchIsRelative = (bool)_fetchScript["relative"];
-
-                        if (_fetchIsRelative || String.IsNullOrEmpty(_fetchPath))
-                            continue;
-
-                        var _fetchFullPath = Path.GetFullPath(_fetchPath);
-                        var _comparisonRules = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-
-                        if (String.Equals(_fetchGameScriptPath, _fetchFullPath, _comparisonRules))
-                        {
-                            _isConfigValid28 = true;
-                            break;
-                        }
                     }
-                };
+                    ;
 
-                _isConfigValid1525 = String.IsNullOrEmpty(_fetchPath1525) || _isConfigValid1525;
-                _isConfigValid28 = String.IsNullOrEmpty(_fetchPath28) || _isConfigValid28;
+                    _isConfigValid1525 = String.IsNullOrEmpty(_fetchPath1525) || _isConfigValid1525;
+                    _isConfigValid28 = String.IsNullOrEmpty(_fetchPath28) || _isConfigValid28;
 
-                if (_isConfigValid1525 && _isConfigValid28)
-                {
-                    InstallPanel.IsVisible = true;
-                    NotInstallPanel.IsVisible = false;
+                    if (_isConfigValid1525 && _isConfigValid28)
+                    {
+                        InstallPanel.IsVisible = true;
+                        NotInstallPanel.IsVisible = false;
+                    }
+
+                    message.Reply(true);
                 }
             });
         }

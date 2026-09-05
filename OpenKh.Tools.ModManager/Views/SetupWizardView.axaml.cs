@@ -5,6 +5,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using OpenKh.Tools.ModManager.Classes;
 using OpenKh.Tools.ModManager.Services;
 using OpenKh.Tools.ModManager.ViewModels;
@@ -20,7 +21,17 @@ using static OpenKh.Tools.ModManager.Wizard.WizardPanaceaSetup;
 
 namespace OpenKh.Tools.ModManager.Views
 {
-    public record PageRequestMessage(object self, Config currentConfig);
+    public class PageRequestMessage : RequestMessage<bool>
+    {
+        public object Self { get; }
+        public Config CurrentConfig { get; }
+
+        public PageRequestMessage(object self, Config currentConfig)
+        {
+            Self = self;
+            CurrentConfig = currentConfig;
+        }
+    }
 
     public partial class SetupWizardView : Window
     {
@@ -63,15 +74,35 @@ namespace OpenKh.Tools.ModManager.Views
         private void OnNextPage(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             var _fetchContext = DataContext as MainViewModel;
+            var _fetchConfig = _fetchContext.CurrentConfig;
 
             var _fetchBackList = _rootModel.PastWizardPages;
             var _fetchNextList = _rootModel.FutureWizardPages;
 
-            var _fetchNextPage = _fetchNextList.First();
-            _fetchNextList.Remove(_fetchNextPage);
+            var _fetchNextPage = _fetchNextList.FirstOrDefault();
 
-            _fetchBackList.Add(_rootModel.CurrentWizardPage);
-            _rootModel.CurrentWizardPage = _fetchNextPage;
+            while (_fetchNextPage != null)
+            {
+                _fetchNextList.Remove(_fetchNextPage);
+                _fetchBackList.Add(_rootModel.CurrentWizardPage);
+
+                _rootModel.CurrentWizardPage = _fetchNextPage;
+
+                var _fetchMessage = new PageRequestMessage(_rootModel.CurrentWizardPage, _fetchConfig);
+                WeakReferenceMessenger.Default.Send(_fetchMessage);
+
+                if (_fetchMessage.HasReceivedResponse)
+                {
+                    if (!_fetchMessage.Response)
+                        _fetchNextPage = _fetchNextList.FirstOrDefault();
+
+                    else
+                        break;
+                }
+            }
+
+            if (_fetchNextPage == null)
+                OnSubmitClick(sender, e);
 
             if (_fetchNextList.Count == 0)
             {
@@ -81,23 +112,41 @@ namespace OpenKh.Tools.ModManager.Views
                 CancelButton.IsVisible = false;
             }
 
-            WeakReferenceMessenger.Default.Send(new PageRequestMessage(_rootModel.CurrentWizardPage, _fetchContext.CurrentConfig));
-
             BackButton.IsEnabled = true;
         }
 
         private void OnBackPage(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             var _fetchContext = DataContext as MainViewModel;
+            var _fetchConfig = _fetchContext.CurrentConfig;
 
             var _fetchBackList = _rootModel.PastWizardPages;
             var _fetchNextList = _rootModel.FutureWizardPages;
 
-            var _fetchBackPage = _fetchBackList.Last();
-            _fetchBackList.Remove(_fetchBackPage);
+            var _fetchBackPage = _fetchBackList.LastOrDefault();
 
-            _fetchNextList.Insert(0, _rootModel.CurrentWizardPage);
-            _rootModel.CurrentWizardPage = _fetchBackPage;
+            while (_fetchBackPage != null)
+            {
+                _fetchBackList.Remove(_fetchBackPage);
+                _fetchNextList.Insert(0, _rootModel.CurrentWizardPage);
+
+                _rootModel.CurrentWizardPage = _fetchBackPage;
+
+                var _fetchMessage = new PageRequestMessage(_rootModel.CurrentWizardPage, _fetchConfig);
+                WeakReferenceMessenger.Default.Send(_fetchMessage);
+
+                if (_fetchMessage.HasReceivedResponse)
+                {
+                    if (!_fetchMessage.Response)
+                        _fetchBackPage = _fetchBackList.LastOrDefault();
+
+                    else
+                        break;
+                }
+            }
+
+            if (_fetchBackPage == null)
+                OnSubmitClick(sender, e);
 
             if (_fetchBackList.Count == 0)
                 BackButton.IsEnabled = false;
@@ -105,84 +154,16 @@ namespace OpenKh.Tools.ModManager.Views
             FinishButton.IsVisible = false;
             CancelButton.IsVisible = true;
 
-            WeakReferenceMessenger.Default.Send(new PageRequestMessage(_rootModel.CurrentWizardPage, _fetchContext.CurrentConfig));
-
             NextButton.IsEnabled = true;
         }
 
         private void OnSubmitClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             var _fetchContext = DataContext as MainViewModel;
-            var _fetchPathYAML = Path.Combine(AppContext.BaseDirectory, "config.yml");
+            var _fetchConfig = _fetchContext.CurrentConfig;
 
-            // Fetch the bare arguments we will use.
-            var _configFrontend = _fetchContext.CurrentConfig.Frontend;
-            var _fetchTargetGame = _configFrontend.TargetGame;
-
-            // Check if the game is Dream Drop Distance and the second Game Path has been declared.
-            // Otherwise, check if the game is NOT Dream Drop Distance.
-            // If neither of these are true, the config isn't valid.
-
-            var _isDDDConfigValid = _fetchTargetGame != Game.DREAM_DROP_DISTANCE || (_fetchTargetGame == Game.DREAM_DROP_DISTANCE && _configFrontend.GamePath.Length < 2);
-
-            if (!_isDDDConfigValid)
-                _fetchContext.ConfigurationValid = false;
-
-            else
-            {
-                // Fetch the second Game Path if the game is Dream Drop Distance, fetch the first one otherwise.
-                var _fetchGamePath = _fetchTargetGame == Game.DREAM_DROP_DISTANCE ? PathService.ResolvePath28(_fetchContext.CurrentConfig) : PathService.ResolvePath1525(_fetchContext.CurrentConfig);
-
-                if (String.IsNullOrEmpty(_fetchGamePath))
-                    _fetchContext.ConfigurationValid = false;
-
-                else
-                {
-                    // Construct the paths for the game executable and Panacea.
-                    var _fetchExePath = Path.Combine(_fetchGamePath, Config.GameExecutable[_configFrontend.TargetGame]);
-                    var _fetchSettingsPath = Path.Combine(_fetchGamePath, "panacea_settings.txt");
-                    var _fetchPanaceaPath = Path.Combine(_fetchGamePath, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
-
-                    // Verify the game executable and directory exists as configured. If the build type is PANACEA, also verify Panacea's existence.
-                    var _isGameConfigValid = Directory.Exists(_fetchGamePath) && File.Exists(_fetchExePath);
-                    var _isPanaceaConfigValid = (_configFrontend.ModBuildType == BuildType.PANACEA && File.Exists(_fetchPanaceaPath)) || _configFrontend.ModBuildType == BuildType.PATCH;
-
-                    if (_isPanaceaConfigValid && _configFrontend.ModBuildType == BuildType.PANACEA)
-                    {
-                        var _regexModPath = new Regex("mod_path=(.*)");
-
-                        if (File.Exists(_fetchPanaceaPath) && File.Exists(_fetchSettingsPath))
-                        {
-                            var _fetchSettingsRAW = File.ReadAllLines(_fetchSettingsPath);
-                            var _fetchConfigPath = _fetchSettingsRAW.FirstOrDefault(x => _regexModPath.IsMatch(x));
-
-                            if (_fetchConfigPath != null)
-                            {
-                                var _fetchMatch = _regexModPath.Match(_fetchConfigPath);
-                                var _fetchValue = _fetchMatch.Groups[1].Value.Replace("\"", "");
-
-                                var _fetchConfigValue = Path.GetFullPath(_fetchValue);
-
-                                var _fetchManagerPath = PathService.ResolveBuild(_fetchContext.CurrentConfig, true);
-                                var _comparisonRules = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-
-                                if (!String.Equals(_fetchConfigValue, _fetchManagerPath, _comparisonRules))
-                                    _isPanaceaConfigValid = false;
-                            }
-                        }
-                    }
-
-                    // If either are not valid, mark the config as faulty.
-                    if (!_isGameConfigValid || !_isPanaceaConfigValid)
-                        _fetchContext.ConfigurationValid = false;
-
-                    else
-                        _fetchContext.ConfigurationValid = true;
-                }
-            }
-
-            var _fetchSerialize = YamlSerializer.Serialize(_fetchContext.CurrentConfig);
-            File.WriteAllText(_fetchPathYAML, _fetchSerialize);
+            _fetchContext.ConfigurationValid = _fetchConfig.IsValid();
+            _fetchConfig.Commit();
 
             Close();
         }

@@ -21,82 +21,92 @@ namespace OpenKh.Tools.ModManager.Wizard
 
             WeakReferenceMessenger.Default.Register<PageRequestMessage>(this, (registrar, message) =>
             {
-                if (message.self != this)
+                if (message.Self != this)
                     return;
+                
+                var _fetchFrontend = message.CurrentConfig.Frontend;
 
-                InstallPanel.IsVisible = false;
-                NotInstallPanel.IsVisible = true;
-
-                var _fetchConfig = message.currentConfig;
-                var _fetchPaths = _fetchConfig.Frontend.GamePath;
-
-                var _fetchPath1525 = PathService.ResolvePath1525(_fetchConfig);
-                var _fetchPath28 = PathService.ResolvePath28(_fetchConfig);
-
-                var _fetchSettings1525 = Path.Combine(_fetchPath1525, "panacea_settings.txt");
-                var _fetchAssembly1525 = Path.Combine(_fetchPath1525, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
-
-                var _fetchSettings28 = Path.Combine(_fetchPath28, "panacea_settings.txt");
-                var _fetchAssembly28 = Path.Combine(_fetchPath28, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
-
-                var _isConfigValid1525 = false;
-                var _isConfigValid28 = false;
-
-                var _regexModPath = new Regex("mod_path=(.*)");
-
-                if (File.Exists(_fetchAssembly1525) && File.Exists(_fetchSettings1525))
-                {
-                    var _fetchSettingsRAW = File.ReadAllLines(_fetchSettings1525);
-                    var _fetchPanaceaPath = _fetchSettingsRAW.FirstOrDefault(x => _regexModPath.IsMatch(x));
-
-                    if (_fetchPanaceaPath != null)
-                    {
-                        var _fetchMatch = _regexModPath.Match(_fetchPanaceaPath);
-                        var _fetchValue = _fetchMatch.Groups[1].Value.Replace("\"", "");
-
-                        var _fetchConfigPath = Path.GetFullPath(_fetchValue);
-
-                        var _fetchManagerPath = PathService.ResolveBuild(_fetchConfig, true);
-                        var _comparisonRules = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-
-                        if (String.Equals(_fetchConfigPath, _fetchManagerPath, _comparisonRules))
-                            _isConfigValid1525 = true;
-                    }
-                }
-
-                if (File.Exists(_fetchAssembly28) && File.Exists(_fetchSettings28))
-                {
-                    var _fetchSettingsRAW = File.ReadAllLines(_fetchSettings28);
-                    var _fetchPanaceaPath = _fetchSettingsRAW.FirstOrDefault(x => _regexModPath.IsMatch(x));
-
-                    if (_fetchPanaceaPath != null)
-                    {
-                        var _fetchMatch = _regexModPath.Match(_fetchPanaceaPath);
-                        var _fetchValue = _fetchMatch.Groups[1].Value.Replace("\"", "");
-
-                        var _fetchConfigPath = Path.GetFullPath(_fetchValue);
-
-                        var _fetchManagerPath = PathService.ResolveBuild(_fetchConfig, true);
-                        var _comparisonRules = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-
-                        if (String.Equals(_fetchConfigPath, _fetchManagerPath, _comparisonRules))
-                            _isConfigValid28 = true;
-                    }
-                }
-
-                _isConfigValid1525 = String.IsNullOrEmpty(_fetchPath1525) || _isConfigValid1525;
-                _isConfigValid28 = String.IsNullOrEmpty(_fetchPath28) || _isConfigValid28;
-
-                if (_isConfigValid1525 && _isConfigValid28)
-                {
-                    _fetchConfig.Frontend.ModBuildType = BuildType.PANACEA;
-
-                    InstallPanel.IsVisible = true;
-                    NotInstallPanel.IsVisible = false;
-                }
+                if (_fetchFrontend.TargetPlatform == Platform.PCSX2)
+                    message.Reply(false);
 
                 else
-                    _fetchConfig.Frontend.ModBuildType = BuildType.PATCH;
+                {
+                    InstallPanel.IsVisible = false;
+                    NotInstallPanel.IsVisible = true;
+
+                    var _fetchConfig = message.CurrentConfig;
+                    var _fetchPaths = _fetchConfig.Frontend.GamePath;
+
+                    var _fetchPath1525 = PathService.ResolvePath1525(_fetchConfig);
+                    var _fetchPath28 = PathService.ResolvePath28(_fetchConfig);
+
+                    var _fetchSettings1525 = Path.Combine(_fetchPath1525, "panacea_settings.txt");
+                    var _fetchAssembly1525 = Path.Combine(_fetchPath1525, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+
+                    var _fetchSettings28 = Path.Combine(_fetchPath28, "panacea_settings.txt");
+                    var _fetchAssembly28 = Path.Combine(_fetchPath28, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+
+                    var _isConfigValid1525 = false;
+                    var _isConfigValid28 = false;
+
+                    var _regexModPath = new Regex("mod_path=(.*)");
+
+                    if (File.Exists(_fetchAssembly1525) && File.Exists(_fetchSettings1525))
+                    {
+                        var _fetchSettingsRAW = File.ReadAllLines(_fetchSettings1525);
+                        var _fetchPanaceaPath = _fetchSettingsRAW.FirstOrDefault(x => _regexModPath.IsMatch(x));
+
+                        if (_fetchPanaceaPath != null)
+                        {
+                            var _fetchMatch = _regexModPath.Match(_fetchPanaceaPath);
+                            var _fetchValue = _fetchMatch.Groups[1].Value;
+
+                            var _fetchConfigPath = Path.GetFullPath(_fetchValue);
+
+                            var _fetchManagerPath = PathService.ResolveBuild(_fetchConfig, true);
+                            var _comparisonRules = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+                            if (String.Equals(_fetchConfigPath, _fetchManagerPath, _comparisonRules))
+                                _isConfigValid1525 = true;
+                        }
+                    }
+
+                    if (File.Exists(_fetchAssembly28) && File.Exists(_fetchSettings28))
+                    {
+                        var _fetchSettingsRAW = File.ReadAllLines(_fetchSettings28);
+                        var _fetchPanaceaPath = _fetchSettingsRAW.FirstOrDefault(x => _regexModPath.IsMatch(x));
+
+                        if (_fetchPanaceaPath != null)
+                        {
+                            var _fetchMatch = _regexModPath.Match(_fetchPanaceaPath);
+                            var _fetchValue = _fetchMatch.Groups[1].Value;
+
+                            var _fetchConfigPath = Path.GetFullPath(_fetchValue);
+
+                            var _fetchManagerPath = PathService.ResolveBuild(_fetchConfig, true);
+                            var _comparisonRules = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+                            if (String.Equals(_fetchConfigPath, _fetchManagerPath, _comparisonRules))
+                                _isConfigValid28 = true;
+                        }
+                    }
+
+                    _isConfigValid1525 = String.IsNullOrEmpty(_fetchPath1525) || _isConfigValid1525;
+                    _isConfigValid28 = String.IsNullOrEmpty(_fetchPath28) || _isConfigValid28;
+
+                    if (_isConfigValid1525 && _isConfigValid28)
+                    {
+                        _fetchConfig.Frontend.ModBuildType = BuildType.PANACEA;
+
+                        InstallPanel.IsVisible = true;
+                        NotInstallPanel.IsVisible = false;
+                    }
+
+                    else
+                        _fetchConfig.Frontend.ModBuildType = BuildType.PATCH;
+
+                    message.Reply(true);
+                }
             });
         }
 
@@ -106,7 +116,7 @@ namespace OpenKh.Tools.ModManager.Wizard
             var _fetchConfig = _fetchContext.CurrentConfig.Frontend;
             var _fetchBuildPath = PathService.ResolveBuild(_fetchContext.CurrentConfig, true);
 
-            var _createPath = $"mod_path=\"{_fetchBuildPath}\"";
+            var _createPath = $"mod_path={_fetchBuildPath}";
             var _fetchPanaceaPath = Path.Combine(AppContext.BaseDirectory, "resources/OpenKh.Research.Panacea.dll");
 
             var _fetchPath1525 = PathService.ResolvePath1525(_fetchContext.CurrentConfig);

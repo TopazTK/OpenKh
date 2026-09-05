@@ -29,14 +29,27 @@
         <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
             It seems that direct launching is <Bold>currently not allowed</Bold>.
         </TextBlock>
-            <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Allow Direct Launching" />
+            <Button Margin="0, 5, 0, 5" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnInstallClick" Content="Allow Direct Launching" />
         </StackPanel>
 
         <StackPanel Name="InstallPanel" IsVisible="False">
         <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
             It seems that direct launching is <Bold>currently allowed</Bold>.
         </TextBlock>
-            <Button Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Disallow Direct Launching" />
+            <Button Margin="0, 5, 0, 5" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnUninstallClick" Content="Disallow Direct Launching" />
         </StackPanel>
+
+        <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
+            You can also declare the Launch Arguments the game should use when
+            launching through the Mod Manager, as launching this way does <Bold>NOT</Bold>
+            carry over the arguments set on Steam.
+        </TextBlock>
+
+        <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 5">
+            Do note that if you are on Linux, depending on how your DLL Overrides
+            are set, <Bold>declaring them here may be required.</Bold>
+        </TextBlock>
+
+        <TextBox Margin="0, 5, 0, 5" PlaceholderText="Ex. -fastboot -noaspect" Text="{ReflectionBinding CurrentConfig.Frontend.LaunchArguments}"></TextBox>
     </StackPanel>
 </ContentPage>
