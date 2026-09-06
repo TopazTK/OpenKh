@@ -73,21 +73,25 @@ namespace OpenKh.Tools.ModManager.Wizard
         private async void OnExtractStart(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             var _fetchContext = DataContext as MainViewModel;
+            var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-            ExtractStartButton.IsVisible = false;
-            ExtractStopButton.IsVisible = true;
-
-            var _fetchExtractList = new List<bool>()
+            if (_fetchConfig != null)
             {
-                ExtractKH1.IsChecked.Value,
-                ExtractKH2.IsChecked.Value,
-                ExtractCOM.IsChecked.Value,
-                ExtractBBS.IsChecked.Value,
-                ExtractDDD.IsChecked.Value,
-            };
+                ExtractStartButton.IsVisible = false;
+                ExtractStopButton.IsVisible = true;
 
-            WeakReferenceMessenger.Default.Send(new BlockNextRequest());
-            ExtractTask(_fetchExtractList, _fetchContext.CurrentConfig);
+                var _fetchExtractList = new List<bool>()
+                {
+                    ExtractKH1.IsChecked.HasValue ? ExtractKH1.IsChecked.Value : false,
+                    ExtractKH2.IsChecked.HasValue ? ExtractKH2.IsChecked.Value : false,
+                    ExtractCOM.IsChecked.HasValue ? ExtractCOM.IsChecked.Value : false,
+                    ExtractBBS.IsChecked.HasValue ? ExtractBBS.IsChecked.Value : false,
+                    ExtractDDD.IsChecked.HasValue ? ExtractDDD.IsChecked.Value : false
+                };
+
+                WeakReferenceMessenger.Default.Send(new BlockNextRequest());
+                ExtractTask(_fetchExtractList, _fetchConfig);
+            }
         }
 
         private async void OnExtractStop(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ModService.CancelTokenSource.Cancel();
@@ -95,15 +99,19 @@ namespace OpenKh.Tools.ModManager.Wizard
         private async void OnExtractPathClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             var _fetchTopLevel = TopLevel.GetTopLevel(this);
+            var _storageProvider = _fetchTopLevel != null ? _fetchTopLevel.StorageProvider : null;
 
-            var _fetchFolder = await _fetchTopLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            if (_storageProvider != null)
             {
-                Title = "Select a Folder for Game Data...",
-                AllowMultiple = false
-            });
+                var _fetchFolder = await _storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+                {
+                    Title = "Select a Folder for Game Data...",
+                    AllowMultiple = false
+                });
 
-            if (_fetchFolder.Count >= 1)
-                PathExtractData.Text = _fetchFolder[0].Path.LocalPath;
+                if (_fetchFolder.Count >= 1)
+                    PathExtractData.Text = _fetchFolder[0].Path.LocalPath;
+            }
         }
     }
 }
