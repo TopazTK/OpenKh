@@ -183,7 +183,7 @@ namespace OpenKh.Tools.ModManager.Wizard
                 _configLines.AddRange(_formatTemplate.Split('\n'));
             }
 
-            var _fetchBackendPath = Path.Combine(AppContext.BaseDirectory, "resources/LuaBackend.dll");
+            var _fetchBackendPath = Path.Combine(AppContext.BaseDirectory, "assembly", "LuaBackend.dll");
 
             if (!String.IsNullOrEmpty(_fetchPath1525))
             {

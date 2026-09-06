@@ -8,7 +8,7 @@
         Width="500" Height="575"
         x:Class="OpenKh.Tools.ModManager.Views.SetupWizardView"
         x:Name="Root"
-        Title="SetupWizardView">
+        Title="OpenKH - Mod Manager | Setup Wizard">
 
     <Window.Resources>
         <convert:IsListNotEmptyConverter x:Key="CheckEmptyList" />

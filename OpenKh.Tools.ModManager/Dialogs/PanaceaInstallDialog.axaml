@@ -2,13 +2,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="350" d:DesignHeight="125"
-        MaxWidth="350" MaxHeight="125"
-        MinWidth="350" MinHeight="125"
-        x:Class="OpenKh.Tools.ModManager.Dialogs.InvalidYamlError"
-        Title="Not a valid Mod!">
+        mc:Ignorable="d" d:DesignWidth="350" d:DesignHeight="115"
+        MaxWidth="350" MaxHeight="115"
+        MinWidth="350" MinHeight="115"
+        x:Class="OpenKh.Tools.ModManager.Dialogs.PanaceaInstallDialog"
+        Title="Panacea Installed">
     <StackPanel Margin="20" Spacing="15">
-        <TextBlock Text="This is not a valid (or compliant) Mod Manager Mod. Please make sure the mod exists and is valid." TextWrapping="Wrap" />
+        <TextBlock Name="MainText" Text="Panacea has been installed according to your current configuration!" TextWrapping="Wrap" />
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
             <Button Content="OK" Click="AcceptDialog" HorizontalContentAlignment="Center" Width="50" HotKey="Enter"/>
         </StackPanel>

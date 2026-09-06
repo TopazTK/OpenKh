@@ -117,7 +117,8 @@ namespace OpenKh.Tools.ModManager.Wizard
             var _fetchBuildPath = PathService.ResolveBuild(_fetchContext.CurrentConfig, true);
 
             var _createPath = $"mod_path={_fetchBuildPath}";
-            var _fetchPanaceaPath = Path.Combine(AppContext.BaseDirectory, "resources/OpenKh.Research.Panacea.dll");
+            var _fetchPanaceaPath = Path.Combine(AppContext.BaseDirectory, "assembly", "OpenKh.Research.Panacea.dll");
+            var _fetchDependenciesPath = Path.Combine(AppContext.BaseDirectory, "assembly", "dependencies");
 
             var _fetchPath1525 = PathService.ResolvePath1525(_fetchContext.CurrentConfig);
             var _fetchPath28 = PathService.ResolvePath28(_fetchContext.CurrentConfig);
@@ -127,12 +128,38 @@ namespace OpenKh.Tools.ModManager.Wizard
 
             if (!String.IsNullOrEmpty(_fetchPath1525))
             {
+                var _fetchDependencyDir = Path.Combine(_fetchPath1525, "dependencies");
+
+                if (!Directory.Exists(_fetchDependencyDir))
+                    Directory.CreateDirectory(_fetchDependencyDir);
+
+                var _fetchDependencyFiles = Directory.GetFiles(_fetchDependenciesPath);
+
+                foreach (var _file in _fetchDependencyFiles)
+                {
+                    var _fetchTargetPath = Path.Combine(_fetchDependencyDir, Path.GetFileName(_file));
+                    File.Copy(_file, _fetchTargetPath);
+                }
+
                 File.Copy(_fetchPanaceaPath, _fetchTarget1525, true);
                 File.WriteAllText(Path.Combine(_fetchPath1525, "panacea_settings.txt"), _createPath);
             }
 
             if (!String.IsNullOrEmpty(_fetchPath28))
             {
+                var _fetchDependencyDir = Path.Combine(_fetchPath28, "dependencies");
+
+                if (!Directory.Exists(_fetchDependencyDir))
+                    Directory.CreateDirectory(_fetchDependencyDir);
+
+                var _fetchDependencyFiles = Directory.GetFiles(_fetchDependenciesPath);
+
+                foreach (var _file in _fetchDependencyFiles)
+                {
+                    var _fetchTargetPath = Path.Combine(_fetchDependencyDir, Path.GetFileName(_file));
+                    File.Copy(_file, _fetchTargetPath);
+                }
+
                 File.Copy(_fetchPanaceaPath, _fetchTarget28, true);
                 File.WriteAllText(Path.Combine(_fetchPath28, "panacea_settings.txt"), _createPath);
             }
@@ -156,12 +183,22 @@ namespace OpenKh.Tools.ModManager.Wizard
 
             if (!String.IsNullOrEmpty(_fetchPath1525))
             {
+                var _fetchDependencyDir = Path.Combine(_fetchPath1525, "dependencies");
+
+                if (!Directory.Exists(_fetchDependencyDir))
+                    Directory.Delete(_fetchDependencyDir, true);
+
                 File.Delete(_fetchTarget1525);
                 File.Delete(Path.Combine(_fetchPath1525, "panacea_settings.txt"));
             }
 
             if (!String.IsNullOrEmpty(_fetchPath28))
             {
+                var _fetchDependencyDir = Path.Combine(_fetchPath28, "dependencies");
+
+                if (!Directory.Exists(_fetchDependencyDir))
+                    Directory.Delete(_fetchDependencyDir, true);
+
                 File.Delete(_fetchTarget28);
                 File.Delete(Path.Combine(_fetchPath28, "panacea_settings.txt"));
             }

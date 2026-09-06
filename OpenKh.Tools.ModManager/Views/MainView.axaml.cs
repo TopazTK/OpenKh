@@ -541,4 +541,129 @@ public partial class MainView : Window
         if (!String.IsNullOrEmpty(_fetchResult))
             _fetchConfig.Frontend.LaunchArguments = _fetchResult;
     }
+
+    private async void OnPanaceaClicked(object? sender, RoutedEventArgs e)
+    {
+        var _fetchContext = DataContext as MainViewModel;
+        var _fetchConfig = _fetchContext.CurrentConfig.Frontend;
+        var _fetchBuildPath = PathService.ResolveBuild(_fetchContext.CurrentConfig, true);
+
+        var _createPath = $"mod_path={_fetchBuildPath}";
+        var _fetchPanaceaPath = Path.Combine(AppContext.BaseDirectory, "assembly", "OpenKh.Research.Panacea.dll");
+        var _fetchDependenciesPath = Path.Combine(AppContext.BaseDirectory, "assembly", "dependencies");
+
+        var _fetchPath1525 = PathService.ResolvePath1525(_fetchContext.CurrentConfig);
+        var _fetchPath28 = PathService.ResolvePath28(_fetchContext.CurrentConfig);
+
+        var _fetchTarget1525 = Path.Combine(_fetchPath1525, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+        var _fetchTarget28 = Path.Combine(_fetchPath28, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
+
+        if (!String.IsNullOrEmpty(_fetchPath1525))
+        {
+            var _fetchDependencyDir = Path.Combine(_fetchPath1525, "dependencies");
+
+            if (!Directory.Exists(_fetchDependencyDir))
+                Directory.CreateDirectory(_fetchDependencyDir);
+
+            var _fetchDependencyFiles = Directory.GetFiles(_fetchDependenciesPath);
+
+            foreach (var _file in _fetchDependencyFiles)
+            {
+                var _fetchTargetPath = Path.Combine(_fetchDependencyDir, Path.GetFileName(_file));
+                File.Copy(_file, _fetchTargetPath);
+            }
+
+            File.Copy(_fetchPanaceaPath, _fetchTarget1525, true);
+            File.WriteAllText(Path.Combine(_fetchPath1525, "panacea_settings.txt"), _createPath);
+        }
+
+        if (!String.IsNullOrEmpty(_fetchPath28))
+        {
+            var _fetchDependencyDir = Path.Combine(_fetchPath28, "dependencies");
+
+            if (!Directory.Exists(_fetchDependencyDir))
+                Directory.CreateDirectory(_fetchDependencyDir);
+
+            var _fetchDependencyFiles = Directory.GetFiles(_fetchDependenciesPath);
+
+            foreach (var _file in _fetchDependencyFiles)
+            {
+                var _fetchTargetPath = Path.Combine(_fetchDependencyDir, Path.GetFileName(_file));
+                File.Copy(_file, _fetchTargetPath);
+            }
+
+            File.Copy(_fetchPanaceaPath, _fetchTarget28, true);
+            File.WriteAllText(Path.Combine(_fetchPath28, "panacea_settings.txt"), _createPath);
+        }
+
+        _fetchConfig.ModBuildType = BuildType.PANACEA;
+        _fetchContext.ConfigurationValid = _fetchContext.CurrentConfig.IsValid();
+
+        await new PanaceaInstallDialog().ShowDialog(this);
+    }
+
+    private async void OnBackendClicked(object? sender, RoutedEventArgs e)
+    {
+        string _templateConfig = "[{0}]\n" +
+                                 "scripts = [{{ path = \"{1}\", relative = false }}]\n" +
+                                 "exe = \"{2}\"\n" +
+                                 "game_docs = \"{3}\"\n";
+
+        Dictionary<Game, string> GameIds = new Dictionary<Game, string>()
+        {
+            { Game.KINGDOM_HEARTS, "kh1" },
+            { Game.KINGDOM_HEARTS_II, "kh2" },
+            { Game.CHAIN_OF_MEMORIES, "recom" },
+            { Game.BIRTH_BY_SLEEP, "bbs" },
+            { Game.DREAM_DROP_DISTANCE, "kh3d" },
+        };
+
+        var _fetchContext = DataContext as MainViewModel;
+        var _fetchConfig = _fetchContext.CurrentConfig.Frontend;
+
+        var _fetchPath1525 = PathService.ResolvePath1525(_fetchContext.CurrentConfig);
+        var _fetchPath28 = PathService.ResolvePath28(_fetchContext.CurrentConfig);
+
+        var _configLines = new List<string>();
+
+        for (int i = 0x00; i < GameIds.Count(); i++)
+        {
+            var _fetchGame = (Game)i;
+            var _fetchLuaGameID = GameIds[_fetchGame];
+            var _fetchExecutable = Config.GameExecutable[_fetchGame];
+            var _fetchManagerGameID = Config.GameShorthand[_fetchGame];
+
+            var _fetchGamePath = _fetchGame == Game.DREAM_DROP_DISTANCE ? "KINGDOM HEARTS HD 2.8 Final Chapter Prologue" : "KINGDOM HEARTS HD 1.5+2.5 ReMIX";
+            var _fetchFolderBuild = PathService.ResolveBuild(_fetchContext.CurrentConfig, true);
+
+            var _fetchFolderScripts = Path.Combine(_fetchFolderBuild, _fetchManagerGameID, "scripts");
+            var _fetchFolderDocs = Path.Combine(_fetchConfig.TargetPlatform == Platform.STEAM ? "My Games" : "", _fetchGamePath);
+
+            var _formatTemplate = String.Format(_templateConfig, _fetchLuaGameID, _fetchFolderScripts, _fetchExecutable, _fetchFolderDocs).Replace("\\", "/");
+
+            _configLines.AddRange(_formatTemplate.Split('\n'));
+        }
+
+        var _fetchBackendPath = Path.Combine(AppContext.BaseDirectory, "assembly", "LuaBackend.dll");
+
+        if (!String.IsNullOrEmpty(_fetchPath1525))
+        {
+            var _fetchPanacea1525 = Path.Combine(_fetchPath1525, "panacea_settings.txt");
+            var _fetchAssembly1525 = Path.Combine(_fetchPath1525, File.Exists(_fetchPanacea1525) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
+
+            File.Copy(_fetchBackendPath, _fetchAssembly1525, true);
+            File.WriteAllLines(Path.Combine(_fetchPath1525, "LuaBackend.toml"), _configLines);
+        }
+
+        if (!String.IsNullOrEmpty(_fetchPath28))
+        {
+            var _fetchPanacea28 = Path.Combine(_fetchPath28, "panacea_settings.txt");
+            var _fetchAssembly28 = Path.Combine(_fetchPath28, File.Exists(_fetchPanacea28) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
+
+            File.Copy(_fetchBackendPath, _fetchAssembly28, true);
+            File.WriteAllLines(Path.Combine(_fetchPath28, "LuaBackend.toml"), _configLines);
+        }
+
+        await new BackendInstallDialog().ShowDialog(this);
+    }
 }

@@ -641,7 +641,7 @@ namespace OpenKh.Tools.ModManager.Services
 
             var _fetchAPIFilePath = Path.Combine(_fetchGamePath, "steam_appid.txt");
 
-            var _fetchLauncherPath = Path.Combine(AppContext.BaseDirectory, "resources/OpenKh.Command.Launcher.exe");
+            var _fetchLauncherPath = Path.Combine(AppContext.BaseDirectory, "assembly", "OpenKh.Command.Launcher.exe");
             var _fetchTargetGamePath = Path.Combine(_fetchGamePath, Config.GameExecutable[_fetchTargetGame]);
 
             var _fetchAPIExists = _fetchTargetPlatform == Platform.STEAM ? File.Exists(_fetchAPIFilePath) : false;
