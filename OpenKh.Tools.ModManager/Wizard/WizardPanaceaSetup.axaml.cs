@@ -138,7 +138,7 @@ namespace OpenKh.Tools.ModManager.Wizard
                 foreach (var _file in _fetchDependencyFiles)
                 {
                     var _fetchTargetPath = Path.Combine(_fetchDependencyDir, Path.GetFileName(_file));
-                    File.Copy(_file, _fetchTargetPath);
+                    File.Copy(_file, _fetchTargetPath, true);
                 }
 
                 File.Copy(_fetchPanaceaPath, _fetchTarget1525, true);
@@ -157,7 +157,7 @@ namespace OpenKh.Tools.ModManager.Wizard
                 foreach (var _file in _fetchDependencyFiles)
                 {
                     var _fetchTargetPath = Path.Combine(_fetchDependencyDir, Path.GetFileName(_file));
-                    File.Copy(_file, _fetchTargetPath);
+                    File.Copy(_file, _fetchTargetPath, true);
                 }
 
                 File.Copy(_fetchPanaceaPath, _fetchTarget28, true);
