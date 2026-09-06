@@ -104,7 +104,7 @@ namespace OpenKh.Tools.ModManager.Wizard
                     return;
 
                 var _fetchLibraryConfig = File.ReadAllLines(_fetchConfigPath);
-                var _pathRegex = new Regex("path[^\"]*\"\\s*\"([^\"]*)\"");
+                var _pathRegex = new Regex("path[^\"]*\"\\s*\"([^\"]*)\"", RegexOptions.None, TimeSpan.FromMilliseconds(500));
 
                 var _fetchPath1525 = "";
                 var _fetchPath28 = "";
@@ -125,7 +125,7 @@ namespace OpenKh.Tools.ModManager.Wizard
                     var _manifestPath1525 = Path.Combine(_fetchFolder, "steamapps", "appmanifest_2552430.acf");
                     var _manifestPath28 = Path.Combine(_fetchFolder, "steamapps", "appmanifest_2552440.acf");
 
-                    var _installDirRegex = new Regex("installdir[^\"]*\"\\s*\"([^\"]*)\"");
+                    var _installDirRegex = new Regex("installdir[^\"]*\"\\s*\"([^\"]*)\"", RegexOptions.None, TimeSpan.FromMilliseconds(500));
 
                     if (File.Exists(_manifestPath1525))
                     {
@@ -190,8 +190,8 @@ namespace OpenKh.Tools.ModManager.Wizard
                         if (Path.GetExtension(_fetchFile) == ".item")
                         {
                             var _fetchFileRAW = File.ReadAllLines(_fetchFile);
-                            var _catalogRegex = new Regex("\"CatalogNamespace\":\\s+\"([^\"]*)\"");
-                            var _installDirRegex = new Regex("\"InstallLocation\":\\s+\"([^\"]*)\"");
+                            var _catalogRegex = new Regex("\"CatalogNamespace\":\\s+\"([^\"]*)\"", RegexOptions.None, TimeSpan.FromMilliseconds(500));
+                            var _installDirRegex = new Regex("\"InstallLocation\":\\s+\"([^\"]*)\"", RegexOptions.None, TimeSpan.FromMilliseconds(500));
 
                             var _isManifest1525 = false;
                             var _isManifest28 = false;

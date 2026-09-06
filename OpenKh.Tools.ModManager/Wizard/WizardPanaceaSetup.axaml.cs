@@ -49,7 +49,7 @@ namespace OpenKh.Tools.ModManager.Wizard
                     var _isConfigValid1525 = false;
                     var _isConfigValid28 = false;
 
-                    var _regexModPath = new Regex("mod_path=(.*)");
+                    var _regexModPath = new Regex("mod_path=(.*)", RegexOptions.None, TimeSpan.FromMilliseconds(500));
 
                     if (File.Exists(_fetchAssembly1525) && File.Exists(_fetchSettings1525))
                     {
