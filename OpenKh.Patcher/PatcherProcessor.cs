@@ -112,6 +112,11 @@ namespace OpenKh.Patcher
 
             try
             {
+                var _colorRed = "\x1b[91m";
+                var _colorGreen = "\x1b[92m";
+                var _colorYellow = "\x1b[93m";
+                var _colorCyan = "\x1b[96m";
+
                 var _fetchContext = new Context(modMetadata, extractDataPath, modFilesPath, buildOutputPath);
 
                 if (!_isExtraction && targetPlatform == 0x00)
@@ -236,6 +241,7 @@ namespace OpenKh.Patcher
 
                             else
                             {
+
                                 var _fetchDataPath = Path.Combine(gameFilesPath, "Image", targetPlatform == 0x01 ? "dt" : "en");
                                 var _fetchHeaderFiles = Directory.GetFiles(_fetchDataPath).Where(x => x.Contains(_fetchGameId) && x.EndsWith(".hed"));
 
@@ -273,7 +279,71 @@ namespace OpenKh.Patcher
                             }
 
                             using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
+                            {
+                                Console.WriteLine($"{_colorGreen}[{_colorCyan}{modMetadata.Title}{_colorGreen}] {_colorYellow}Processing file: \"{_fetchName}\"");
                                 PatchFile(_fetchContext, _fetchAsset, _fileStream, _fetchAssetData);
+                            }
+                        }
+
+                        else
+                        {
+                            if (_fetchAssetPath != null)
+                            {
+                                if ((_fetchAsset.Method != "copy" && _fetchAsset.Method != "imd") || _fetchAsset.Source[0].Type == "internal")
+                                {
+                                    if (targetPlatform != 0x00)
+                                    {
+                                        Console.WriteLine($"{_colorGreen}[{_colorCyan}{modMetadata.Title}{_colorGreen}] {_colorRed}File {_colorYellow}\"{_fetchName}\" {_colorRed}doesn't exist in extraction. Fetching from game data...");
+
+                                        byte[] _fetchAssetData = null;
+
+                                        var _fetchDataPath = Path.Combine(gameFilesPath, "Image", targetPlatform == 0x01 ? "dt" : "en");
+                                        var _fetchHeaderFiles = Directory.GetFiles(_fetchDataPath).Where(x => x.Contains(_fetchGameId) && x.EndsWith(".hed"));
+
+                                        _fetchHeaderFiles.AsParallel().ForAll(_fetchHeader =>
+                                        {
+                                            var _fetchPackageFile = Path.ChangeExtension(_fetchHeader, "pkg");
+                                            var _fetchRegularName = _fetchName;
+
+                                            if (_isFileRAW)
+                                                _fetchRegularName = _fetchName.Replace("raw/", "");
+
+                                            if (_isFileRemastered)
+                                                _fetchRegularName = _fetchName.Replace("remastered/", "");
+
+                                            using (var _fetchHeaderStream = File.OpenRead(_fetchHeader))
+                                            {
+                                                var _fetchEntries = Hed.Read(_fetchHeaderStream);
+                                                var _fetchTargetEntry = _fetchEntries.FirstOrDefault(x => Egs.Helpers.ToString(x.MD5) == Egs.Helpers.CreateMD5(_fetchRegularName));
+
+                                                if (_fetchTargetEntry != null)
+                                                {
+                                                    using (var _fetchPackageStream = File.OpenRead(_fetchPackageFile))
+                                                    {
+                                                        if (!_isFileRemastered)
+                                                        {
+                                                            var _fetchTargetAsset = new EgsHdAsset(_fetchPackageStream.SetPosition(_fetchTargetEntry.Offset));
+                                                            _fetchAssetData = _fetchTargetAsset.OriginalData;
+
+                                                            File.WriteAllBytes(_fetchOutputPath, _fetchAssetData);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        });
+
+                                        using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
+                                        {
+                                            Console.WriteLine($"{_colorGreen}[{_colorCyan}{modMetadata.Title}{_colorGreen}] {_colorYellow}Processing file: \"{_fetchName}\"");
+                                            PatchFile(_fetchContext, _fetchAsset, _fileStream, _fetchAssetData);
+                                        }
+                                    }
+
+                                    else
+                                        Console.WriteLine($"{_colorGreen}[{_colorCyan}{modMetadata.Title}{_colorGreen}] {_colorRed}File {_colorYellow}\"{_fetchName}\" {_colorRed}doesn't exist in extraction. Skipping...");
+                                }
+                            }
+
                         }
                     }
 

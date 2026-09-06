@@ -20,6 +20,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -32,6 +33,21 @@ namespace OpenKh.Tools.ModManager.Services
         // We need a cancellation token to interrupt what we are doing should the user not want to do that anymore.
         public static CancellationTokenSource CancelTokenSource = new CancellationTokenSource();
         public static CancellationToken CancelToken = CancelTokenSource.Token;
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool FreeConsole();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool AllocConsole();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr GetStdHandle(int nStdHandle);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
 
         public static string ResolveMD5(ModModel currentMod, Config currentConfig)
         {
@@ -514,11 +530,23 @@ namespace OpenKh.Tools.ModManager.Services
 
             var _fetchPKGMapPath = Path.Combine(_fetchBuildPath, "patch-package-map.txt");
 
+            AllocConsole();
+
+            var _consoleHandle = GetStdHandle(-11);
+
+            if (GetConsoleMode(_consoleHandle, out uint _fetchMode))
+            {
+                _fetchMode |= 0x0004;
+                SetConsoleMode(_consoleHandle, _fetchMode);
+            }
+
             if (!Directory.Exists(_fetchBuildPath))
                 Directory.CreateDirectory(_fetchBuildPath);
 
             else
             {
+                Console.WriteLine("Clearing build path before building...");
+
                 Directory.Delete(_fetchBuildPath, true);
                 Directory.CreateDirectory(_fetchBuildPath);
             }
@@ -582,13 +610,18 @@ namespace OpenKh.Tools.ModManager.Services
 
             if (CancelToken.IsCancellationRequested)
             {
+                FreeConsole();
+
                 Directory.Delete(_fetchBuildPath, true);
                 return 0x03;
             }
 
+            Console.WriteLine($"Committing the package map...");
+
             using (var _writePackageMap = new StreamWriter(_fetchPKGMapPath))
                 foreach (var _mapEntry in _fetchPackageMap)
                     _writePackageMap.WriteLine(_mapEntry.Key + " $$$$ " + _mapEntry.Value);
+
 
             return 0x00;
         }
