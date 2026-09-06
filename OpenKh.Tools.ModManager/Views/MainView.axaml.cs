@@ -113,16 +113,22 @@ public partial class MainView : Window
     {
         // Fetch the context, the mod list, and the current index.
         var _fetchContext = DataContext as MainViewModel;
-        var _fetchModList = _fetchContext.InstalledMods;
-        var _fetchCurrentIndex = ModList.MainList.SelectedIndex;
 
-        // If the mod is already super-hot-fire number one, we don't need to do nothin'.
-        if (_fetchCurrentIndex == 0)
-            return;
+        var _fetchModList = _fetchContext != null ? _fetchContext.InstalledMods : null;
+        var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-        // Make the move, select the mod.
-        _fetchModList.Move(_fetchCurrentIndex, _fetchCurrentIndex - 1);
-        _fetchContext.CurrentMod = _fetchModList[_fetchCurrentIndex - 1];
+        if (_fetchConfig != null && _fetchModList != null)
+        {
+            var _fetchCurrentIndex = ModList.MainList.SelectedIndex;
+
+            // If the mod is already super-hot-fire number one, we don't need to do nothin'.
+            if (_fetchCurrentIndex == 0)
+                return;
+
+            // Make the move, select the mod.
+            _fetchModList.Move(_fetchCurrentIndex, _fetchCurrentIndex - 1);
+            _fetchContext.CurrentMod = _fetchModList[_fetchCurrentIndex - 1];
+        }
     }
 
     // This executes if the move up button is clicked.
@@ -130,213 +136,224 @@ public partial class MainView : Window
     private void OnDownPriorityClicked(object? sender, RoutedEventArgs e)
     {
         // Same shit as OnUpPriorityClicked, but reversed.
-
         var _fetchContext = DataContext as MainViewModel;
-        var _fetchModList = _fetchContext.InstalledMods;
-        var _fetchCurrentIndex = ModList.MainList.SelectedIndex;
 
-        if (_fetchCurrentIndex == ModList.MainList.ItemCount - 1)
-            return;
+        var _fetchModList = _fetchContext != null ? _fetchContext.InstalledMods : null;
+        var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-        if (!_fetchModList[_fetchCurrentIndex + 1].ModValid)
-            return;
+        if (_fetchConfig != null && _fetchModList != null)
+        {
+            var _fetchCurrentIndex = ModList.MainList.SelectedIndex;
 
-        _fetchModList.Move(_fetchCurrentIndex, _fetchCurrentIndex + 1);
-        _fetchContext.CurrentMod = _fetchModList[_fetchCurrentIndex + 1];
+            if (_fetchCurrentIndex == ModList.MainList.ItemCount - 1)
+                return;
+
+            if (!_fetchModList[_fetchCurrentIndex + 1].ModValid)
+                return;
+
+            _fetchModList.Move(_fetchCurrentIndex, _fetchCurrentIndex + 1);
+            _fetchContext.CurrentMod = _fetchModList[_fetchCurrentIndex + 1];
+        }
     }
 
     // This executes when we click the remove mod button.
     private async void OnRemoveClicked(object? sender, RoutedEventArgs e)
     {
-        // Ask the user if they *really* want to remove said mod.
+        var _fetchContext = DataContext as MainViewModel;
 
-        var _removeDialog = new RemoveModDialog();
-        bool? _fetchResult = await _removeDialog.ShowDialog<bool?>(this);
+        var _fetchModList = _fetchContext != null ? _fetchContext.InstalledMods : null;
+        var _fetchCurrentMod = _fetchContext != null ? _fetchContext.CurrentMod : null;
 
-        // If they indeed do:
-
-        if (_fetchResult == true)
+        if (_fetchModList != null)
         {
-            // Fetch the context, the mod list, and the current mod.
-            var _fetchContext = DataContext as MainViewModel;
-            var _fetchModList = _fetchContext.InstalledMods;
-            var _fetchCurrentMod = _fetchContext.CurrentMod;
+            // Ask the user if they *really* want to remove said mod.
 
-            // Fetch the path too we kinda need it.
-            var _fetchModPath = _fetchCurrentMod.ModPath;
+            var _removeDialog = new RemoveModDialog();
+            bool? _fetchResult = await _removeDialog.ShowDialog<bool?>(this);
 
-            // Remove the mod from the list.
-            _fetchModList.Remove(_fetchCurrentMod);
+            // If they indeed do:
 
-            // If we still have mods, select one.
-            if (_fetchModList.Count > 0)
-                _fetchContext.CurrentMod = _fetchModList.First();
-
-            // If we do not, nullify selection.
-            else
+            if (_fetchResult == true)
             {
-                _fetchContext.HasModsInstalled = false;
-                _fetchContext.CurrentMod = null;
+                // Fetch the path too we kinda need it.
+                var _fetchModPath = _fetchCurrentMod.ModPath;
+
+                // Remove the mod from the list.
+                _fetchModList.Remove(_fetchCurrentMod);
+
+                // If we still have mods, select one.
+                if (_fetchModList.Count > 0)
+                    _fetchCurrentMod = _fetchModList.First();
+
+                // If we do not, nullify selection.
+                else
+                {
+                    _fetchContext.HasModsInstalled = false;
+                    _fetchCurrentMod = null;
+                }
+
+                // Remove the mod directory.
+                // This is a task for a reason. This isn't being awaited for a reason. Do not listen to IntelliSense on this one.
+                Task.Run(() =>
+                {
+                    if (Directory.Exists(_fetchModPath))
+                        Directory.Delete(_fetchModPath, true);
+                });
             }
-
-            // Remove the mod directory.
-            // This is a task for a reason. This isn't being awaited for a reason. Do not listen to IntelliSense on this one.
-            Task.Run(() =>
-            {
-                if (Directory.Exists(_fetchModPath))
-                    Directory.Delete(_fetchModPath, true);
-            });
         }
     }
 
     private async void OnInstallClicked(object? sender, RoutedEventArgs e)
     {
-        var _installDialog = new InstallModDialog();
-        string? _fetchResult = await _installDialog.ShowDialog<string?>(this);
-
         var _fetchContext = DataContext as MainViewModel;
-        var _fetchModsList = _fetchContext.InstalledMods;
-        var _fetchConfig = _fetchContext.CurrentConfig;
 
-        var _fetchModPath = PathService.ResolveMod(_fetchConfig);
+        var _fetchModsList = _fetchContext != null ? _fetchContext.InstalledMods : null;
+        var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-        var _fetchInstallResult = 0x00;
-
-        if (_fetchResult != null && !string.IsNullOrEmpty(_fetchResult))
+        if (_fetchConfig != null)
         {
-            var _progressDialog = new ModProgressDialog();
-            _progressDialog.ShowDialog(this);
+            var _installDialog = new InstallModDialog();
+            string? _fetchResult = await _installDialog.ShowDialog<string?>(this);
 
-            if (File.Exists(_fetchResult))
-                _fetchInstallResult = 
-                    await ModService.InstallLocal
-                    (
-                        _fetchModPath, 
-                        _fetchResult, 
-                        (int processed, int total) =>
-                        {
-                            Dispatcher.UIThread.Post(() =>
-                            {
-                                _progressDialog.InstallProgress.Maximum = total;
-                                _progressDialog.InstallProgress.Value = processed;
-                            });
+            var _fetchModPath = PathService.ResolveMod(_fetchConfig);
+            var _fetchInstallResult = 0x00;
 
-                            if (ModService.CancelToken.IsCancellationRequested)
-                                return false;
-
-                            return true;
-                        }
-                    );
-
-            else
-                _fetchInstallResult = 
-                    await ModService.InstallGit
-                    (
-                        _fetchModPath, 
-                        _fetchResult, 
-                        new TransferProgressHandler((progress) =>
-                        {
-                            Dispatcher.UIThread.Post(() =>
-                            {
-                                _progressDialog.InstallProgress.Maximum = progress.TotalObjects;
-                                _progressDialog.InstallProgress.Value = progress.ReceivedObjects;
-                            });
-
-                            if (ModService.CancelToken.IsCancellationRequested)
-                                return false;
-
-                            return true;
-                        }
-                    ));
-
-            _progressDialog.Close(true);
-
-            if (_fetchInstallResult == 0x01)
+            if (_fetchResult != null && !string.IsNullOrEmpty(_fetchResult))
             {
-                var _errorDialog = new InvalidYamlError();
-                await _errorDialog.ShowDialog(this);
-            }
+                var _progressDialog = new ModProgressDialog();
+                _progressDialog.ShowDialog(this);
 
-            else if (_fetchInstallResult == 0x00)
-            {
-                var _fetchLatestMod = new DirectoryInfo(_fetchModPath).GetDirectories()
-                                                                      .OrderByDescending(d => d.LastWriteTimeUtc)
-                                                                      .First();
-
-                var _fetchPathGit = Path.Combine(_fetchLatestMod.FullName, ".git");
-                var _fetchYamlName = Path.Combine(_fetchLatestMod.FullName, "mod.yml");
-                var _fetchPathIcon = Path.Combine(_fetchLatestMod.FullName, "icon.png");
-
-                var _fetchMetadata = Metadata.Read(_fetchYamlName);
-
-                if (_fetchMetadata.IsValid)
-                {
-                    var _modModel = new ModModel
-                    {
-                        ModTitle = _fetchMetadata.Title,
-                        ModAuthor = _fetchMetadata.OriginalAuthor,
-                        ModDescription = _fetchMetadata.Description,
-                        ModPath = _fetchLatestMod.FullName,
-                        ModFilesList = _fetchMetadata.Assets.Select(x => x.Name).ToArray(),
-                        ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
-                        ModActive = true,
-                        ModValid = true
-                    };
-
-                    if (Directory.Exists(_fetchPathGit))
-                    {
-                        if (Repository.IsValid(_fetchPathGit))
-                        {
-                            var _fetchGit = new Repository(_fetchPathGit);
-
-                            if (!_fetchGit.Info.IsHeadDetached)
+                if (File.Exists(_fetchResult))
+                    _fetchInstallResult =
+                        await ModService.InstallLocal
+                        (
+                            _fetchModPath,
+                            _fetchResult,
+                            (int processed, int total) =>
                             {
-                                var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+                                Dispatcher.UIThread.Post(() =>
+                                {
+                                    _progressDialog.InstallProgress.Maximum = total;
+                                    _progressDialog.InstallProgress.Value = processed;
+                                });
 
-                                _modModel.ModSource = new Uri(_fetchRemote.Url);
-                                _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+                                if (ModService.CancelToken.IsCancellationRequested)
+                                    return false;
 
-                                _modModel.ModPlatform = _modModel.ModSource.Host;
-
-                                Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
-
-                                var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
-                                _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
+                                return true;
                             }
-
-                            _fetchGit.Dispose();
-
-                            var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
-
-                            foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                                if (_fetchFile.Exists)
-                                    _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
-                        }
-                    }
-
-                    var _fetchFirstInvalid = _fetchModsList.FirstOrDefault(x => !x.ModValid);
-                    var _fetchModIndex = _fetchFirstInvalid != null ? _fetchModsList.IndexOf(_fetchFirstInvalid) : _fetchModsList.Count;
-
-                    _fetchModsList.Insert(_fetchModIndex, _modModel);
-                    _fetchContext.HasModsInstalled = true;
-                }
+                        );
 
                 else
+                    _fetchInstallResult =
+                        await ModService.InstallGit
+                        (
+                            _fetchModPath,
+                            _fetchResult,
+                            new TransferProgressHandler((progress) =>
+                            {
+                                Dispatcher.UIThread.Post(() =>
+                                {
+                                    _progressDialog.InstallProgress.Maximum = progress.TotalObjects;
+                                    _progressDialog.InstallProgress.Value = progress.ReceivedObjects;
+                                });
+
+                                if (ModService.CancelToken.IsCancellationRequested)
+                                    return false;
+
+                                return true;
+                            }
+                        ));
+
+                _progressDialog.Close(true);
+
+                if (_fetchInstallResult == 0x01)
                 {
-                    var uri = new Uri("avares://OpenKh.Tools.ModManager/Assets/invalid_mod.png");
+                    var _errorDialog = new InvalidYamlError();
+                    await _errorDialog.ShowDialog(this);
+                }
 
-                    var _modModel = new ModModel
+                else if (_fetchInstallResult == 0x00)
+                {
+                    var _fetchLatestMod = new DirectoryInfo(_fetchModPath).GetDirectories()
+                                                                          .OrderByDescending(d => d.LastWriteTimeUtc)
+                                                                          .First();
+
+                    var _fetchPathGit = Path.Combine(_fetchLatestMod.FullName, ".git");
+                    var _fetchYamlName = Path.Combine(_fetchLatestMod.FullName, "mod.yml");
+                    var _fetchPathIcon = Path.Combine(_fetchLatestMod.FullName, "icon.png");
+
+                    var _fetchMetadata = Metadata.Read(_fetchYamlName);
+
+                    if (_fetchMetadata.IsValid)
                     {
-                        ModTitle = _fetchMetadata.Title,
-                        ModAuthor = "This mod is invalid!",
-                        ModDescription = "This mod contains errors within its YAML file. Please check the formatting!",
-                        ModIcon = new Bitmap(AssetLoader.Open(uri)),
-                        ModPath = _fetchLatestMod.FullName,
-                        ModActive = false,
-                        ModValid = false
-                    };
+                        var _modModel = new ModModel
+                        {
+                            ModTitle = _fetchMetadata.Title,
+                            ModAuthor = _fetchMetadata.OriginalAuthor,
+                            ModDescription = _fetchMetadata.Description,
+                            ModPath = _fetchLatestMod.FullName,
+                            ModFilesList = _fetchMetadata.Assets.Select(x => x.Name).ToArray(),
+                            ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
+                            ModActive = true,
+                            ModValid = true
+                        };
 
-                    _fetchModsList.Add(_modModel);
+                        if (Directory.Exists(_fetchPathGit))
+                        {
+                            if (Repository.IsValid(_fetchPathGit))
+                            {
+                                var _fetchGit = new Repository(_fetchPathGit);
+
+                                if (!_fetchGit.Info.IsHeadDetached)
+                                {
+                                    var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+
+                                    _modModel.ModSource = new Uri(_fetchRemote.Url);
+                                    _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+
+                                    _modModel.ModPlatform = _modModel.ModSource.Host;
+
+                                    Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
+
+                                    var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
+                                    _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
+                                }
+
+                                _fetchGit.Dispose();
+
+                                var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
+
+                                foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
+                                    if (_fetchFile.Exists)
+                                        _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                            }
+                        }
+
+                        var _fetchFirstInvalid = _fetchModsList.FirstOrDefault(x => !x.ModValid);
+                        var _fetchModIndex = _fetchFirstInvalid != null ? _fetchModsList.IndexOf(_fetchFirstInvalid) : _fetchModsList.Count;
+
+                        _fetchModsList.Insert(_fetchModIndex, _modModel);
+                        _fetchContext.HasModsInstalled = true;
+                    }
+
+                    else
+                    {
+                        var uri = new Uri("avares://OpenKh.Tools.ModManager/Assets/invalid_mod.png");
+
+                        var _modModel = new ModModel
+                        {
+                            ModTitle = _fetchMetadata.Title,
+                            ModAuthor = "This mod is invalid!",
+                            ModDescription = "This mod contains errors within its YAML file. Please check the formatting!",
+                            ModIcon = new Bitmap(AssetLoader.Open(uri)),
+                            ModPath = _fetchLatestMod.FullName,
+                            ModActive = false,
+                            ModValid = false
+                        };
+
+                        _fetchModsList.Add(_modModel);
+                    }
                 }
             }
         }
@@ -345,59 +362,65 @@ public partial class MainView : Window
     private async void OnOpenFolderClicked(object? sender, RoutedEventArgs e)
     {
         var _fetchContext = DataContext as MainViewModel;
-        var _fetchCurrentMod = _fetchContext.CurrentMod;
+        var _fetchCurrentMod = _fetchContext != null ? _fetchContext.CurrentMod : null;
 
-        var _fetchTopLevel = GetTopLevel(this);
-        var _fetchDirectoryInfo = new DirectoryInfo(_fetchCurrentMod.ModPath);
+        if (_fetchCurrentMod != null)
+        {
+            var _fetchTopLevel = GetTopLevel(this);
+            var _fetchDirectoryInfo = new DirectoryInfo(_fetchCurrentMod.ModPath);
 
-        if (_fetchTopLevel?.Launcher != null)
-            await _fetchTopLevel.Launcher.LaunchDirectoryInfoAsync(_fetchDirectoryInfo);
+            if (_fetchTopLevel?.Launcher != null)
+                await _fetchTopLevel.Launcher.LaunchDirectoryInfoAsync(_fetchDirectoryInfo);
+        }
     }
 
     private void OnModActiveChanged(object? sender, ModListView.ModActiveChangedEventArgs e)
     {
         var _fetchContext = DataContext as MainViewModel;
-        var _fetchModList = _fetchContext.InstalledMods;
-        var _fetchConfig = _fetchContext.CurrentConfig;
+        var _fetchModList = _fetchContext != null ? _fetchContext.InstalledMods : null;
+        var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-        var _fetchMemoryPath = Path.Combine(PathService.ResolveMod(_fetchConfig), "mod_memory.yml");
-
-        var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
-        var _fetchMemory = YamlSerializer.Deserialize<ObservableCollection<MemoryModel>>(_fetchMemoryRAW);
-
-        var _fetchSenderHash = ModService.ResolveMD5(e.TargetMod, _fetchConfig);
-        var _fetchMemoryItem = _fetchMemory.FirstOrDefault(x => x.ModHash == _fetchSenderHash);
-
-        if (_fetchMemoryItem == null)
+        if (_fetchConfig != null)
         {
-            _fetchMemoryItem = new MemoryModel
+            var _fetchMemoryPath = Path.Combine(PathService.ResolveMod(_fetchConfig), "mod_memory.yml");
+
+            var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
+            var _fetchMemory = YamlSerializer.Deserialize<ObservableCollection<MemoryModel>>(_fetchMemoryRAW);
+
+            var _fetchSenderHash = ModService.ResolveMD5(e.TargetMod, _fetchConfig);
+            var _fetchMemoryItem = _fetchMemory.FirstOrDefault(x => x.ModHash == _fetchSenderHash);
+
+            if (_fetchMemoryItem == null)
             {
-                ModHash = _fetchSenderHash,
-                ModActive = e.IsChecked,
-                ModIndex = _fetchModList.IndexOf(e.TargetMod)
-            };
+                _fetchMemoryItem = new MemoryModel
+                {
+                    ModHash = _fetchSenderHash,
+                    ModActive = e.IsChecked,
+                    ModIndex = _fetchModList.IndexOf(e.TargetMod)
+                };
 
-            _fetchMemory.Add(_fetchMemoryItem);
+                _fetchMemory.Add(_fetchMemoryItem);
+            }
+
+            else
+            {
+                var _fetchMemoryIndex = _fetchMemory.IndexOf(_fetchMemoryItem);
+                _fetchMemory[_fetchMemoryIndex].ModActive = e.IsChecked;
+            }
+
+            var _fetchSerial = YamlSerializer.Serialize(_fetchMemory);
+            File.WriteAllText(_fetchMemoryPath, _fetchSerial);
         }
-
-        else
-        {
-            var _fetchMemoryIndex = _fetchMemory.IndexOf(_fetchMemoryItem);
-            _fetchMemory[_fetchMemoryIndex].ModActive = e.IsChecked;
-        }
-
-        var _fetchSerial = YamlSerializer.Serialize(_fetchMemory);
-        File.WriteAllText(_fetchMemoryPath, _fetchSerial);
     }
 
     private async void OnRunRequested(object? sender, RoutedEventArgs e)
     {
         var _fetchContext = DataContext as MainViewModel;
-        var _fetchConfig = _fetchContext.CurrentConfig;
+        var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-        await ModService.Run(_fetchConfig, GetTopLevel(this));
+        if (_fetchConfig != null)
+            await ModService.Run(_fetchConfig, GetTopLevel(this));
     }
-
 
     private async void OnBuildRequested(object? sender, RoutedEventArgs e)
     {
@@ -462,208 +485,117 @@ public partial class MainView : Window
 
     private async void OnBuildRunRequested(object? sender, RoutedEventArgs e)
     {
-        var _progressDialog = new BuildProgressDialog();
-        _progressDialog.ShowDialog(this);
-
-        int _assetProcessed = 0;
-        int _assetTotal = 0;
-        string _currentModName = "N/A";
-
         var _fetchContext = DataContext as MainViewModel;
+        var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-        var _fetchConfig = _fetchContext.CurrentConfig;
-        var _fetchFrontConfig = _fetchConfig.Frontend;
+        if (_fetchConfig != null)
+        {
+            var _progressDialog = new BuildProgressDialog();
+            _progressDialog.ShowDialog(this);
 
-        var _buildResult =
-            await ModService.Build
-            (
-                _fetchContext.InstalledMods,
-                _fetchConfig,
+            int _assetProcessed = 0;
+            int _assetTotal = 0;
+            string _currentModName = "N/A";
 
-                (string currModName, int procMod, int totalMod) =>
-                {
-                    Dispatcher.UIThread.Post(() =>
+            var _fetchFrontConfig = _fetchConfig.Frontend;
+
+            var _buildResult =
+                await ModService.Build
+                (
+                    _fetchContext.InstalledMods,
+                    _fetchConfig,
+
+                    (string currModName, int procMod, int totalMod) =>
                     {
-                        _currentModName = currModName;
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            _currentModName = currModName;
 
-                        _progressDialog.ModProgress.Maximum = totalMod;
-                        _progressDialog.ModProgress.Value = procMod;
-                        _progressDialog.ModProgress.ProgressTextFormat = $"Currently Building: {currModName}";
+                            _progressDialog.ModProgress.Maximum = totalMod;
+                            _progressDialog.ModProgress.Value = procMod;
+                            _progressDialog.ModProgress.ProgressTextFormat = $"Currently Building: {currModName}";
 
-                        _progressDialog.AssetProgress.Maximum = _assetTotal;
-                        _progressDialog.AssetProgress.Value = _assetProcessed;
+                            _progressDialog.AssetProgress.Maximum = _assetTotal;
+                            _progressDialog.AssetProgress.Value = _assetProcessed;
+                        });
+
+                        if (ModService.CancelToken.IsCancellationRequested)
+                            return false;
+
+                        return true;
+                    },
+
+                    (int processed, int total) =>
+                    {
+                        _assetProcessed = processed;
+                        _assetTotal = total;
+
+                        if (ModService.CancelToken.IsCancellationRequested)
+                            return false;
+
+                        return true;
                     });
 
-                    if (ModService.CancelToken.IsCancellationRequested)
-                        return false;
+            _progressDialog.Close(true);
 
-                    return true;
-                },
-
-                (int processed, int total) =>
-                {
-                    _assetProcessed = processed;
-                    _assetTotal = total;
-
-                    if (ModService.CancelToken.IsCancellationRequested)
-                        return false;
-
-                    return true;
-                });
-
-        _progressDialog.Close(true);
-
-        switch (_buildResult)
-        {
-            case 0:
-                await ModService.Run(_fetchConfig, GetTopLevel(this));
-                break;
-
-            case 1:
+            switch (_buildResult)
             {
-                var _errorDialog = new BuildModError();
-                _errorDialog.MainText.Text = string.Format(_errorDialog.MainText.Text, _currentModName);
-                await _errorDialog.ShowDialog(this);
+                case 0:
+                    await ModService.Run(_fetchConfig, GetTopLevel(this));
+                    break;
+
+                case 1:
+                {
+                    var _errorDialog = new BuildModError();
+                    _errorDialog.MainText.Text = string.Format(_errorDialog.MainText.Text, _currentModName);
+                    await _errorDialog.ShowDialog(this);
+                }
+                break;
             }
-            break;
         }
     }
 
     private async void OnSetupRequested(object? sender, RoutedEventArgs e) => await new SetupWizardView().ShowDialog(this);
+   
     private async void OnArgumentsRequested(object? sender, RoutedEventArgs e)
     {
         var _fetchContext = DataContext as MainViewModel;
-        var _fetchConfig = _fetchContext.CurrentConfig;
+        var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-        var _fetchDialog = new LaunchArgsDialog();
-        var _fetchResult = await _fetchDialog.ShowDialog<string?>(this);
+        if (_fetchConfig != null)
+        {
+            var _fetchDialog = new LaunchArgsDialog();
+            var _fetchResult = await _fetchDialog.ShowDialog<string?>(this);
 
-        if (!String.IsNullOrEmpty(_fetchResult))
-            _fetchConfig.Frontend.LaunchArguments = _fetchResult;
+            if (!String.IsNullOrEmpty(_fetchResult))
+                _fetchConfig.Frontend.LaunchArguments = _fetchResult;
+        }
     }
 
     private async void OnPanaceaClicked(object? sender, RoutedEventArgs e)
     {
         var _fetchContext = DataContext as MainViewModel;
-        var _fetchConfig = _fetchContext.CurrentConfig.Frontend;
-        var _fetchBuildPath = PathService.ResolveBuild(_fetchContext.CurrentConfig, true);
+        var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-        var _createPath = $"mod_path={_fetchBuildPath}";
-        var _fetchPanaceaPath = Path.Combine(AppContext.BaseDirectory, "assembly", "OpenKh.Research.Panacea.dll");
-        var _fetchDependenciesPath = Path.Combine(AppContext.BaseDirectory, "assembly", "dependencies");
-
-        var _fetchPath1525 = PathService.ResolvePath1525(_fetchContext.CurrentConfig);
-        var _fetchPath28 = PathService.ResolvePath28(_fetchContext.CurrentConfig);
-
-        var _fetchTarget1525 = Path.Combine(_fetchPath1525, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
-        var _fetchTarget28 = Path.Combine(_fetchPath28, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
-
-        if (!String.IsNullOrEmpty(_fetchPath1525))
+        if (_fetchConfig != null)
         {
-            var _fetchDependencyDir = Path.Combine(_fetchPath1525, "dependencies");
+            PackageService.InstallPanacea(_fetchConfig);
+            _fetchContext.ConfigurationValid = _fetchConfig.IsValid();
 
-            if (!Directory.Exists(_fetchDependencyDir))
-                Directory.CreateDirectory(_fetchDependencyDir);
-
-            var _fetchDependencyFiles = Directory.GetFiles(_fetchDependenciesPath);
-
-            foreach (var _file in _fetchDependencyFiles)
-            {
-                var _fetchTargetPath = Path.Combine(_fetchDependencyDir, Path.GetFileName(_file));
-                File.Copy(_file, _fetchTargetPath, true);
-            }
-
-            File.Copy(_fetchPanaceaPath, _fetchTarget1525, true);
-            File.WriteAllText(Path.Combine(_fetchPath1525, "panacea_settings.txt"), _createPath);
+            await new PanaceaInstallDialog().ShowDialog(this);
         }
-
-        if (!String.IsNullOrEmpty(_fetchPath28))
-        {
-            var _fetchDependencyDir = Path.Combine(_fetchPath28, "dependencies");
-
-            if (!Directory.Exists(_fetchDependencyDir))
-                Directory.CreateDirectory(_fetchDependencyDir);
-
-            var _fetchDependencyFiles = Directory.GetFiles(_fetchDependenciesPath);
-
-            foreach (var _file in _fetchDependencyFiles)
-            {
-                var _fetchTargetPath = Path.Combine(_fetchDependencyDir, Path.GetFileName(_file));
-                File.Copy(_file, _fetchTargetPath, true);
-            }
-
-            File.Copy(_fetchPanaceaPath, _fetchTarget28, true);
-            File.WriteAllText(Path.Combine(_fetchPath28, "panacea_settings.txt"), _createPath);
-        }
-
-        _fetchConfig.ModBuildType = BuildType.PANACEA;
-        _fetchContext.ConfigurationValid = _fetchContext.CurrentConfig.IsValid();
-
-        await new PanaceaInstallDialog().ShowDialog(this);
     }
 
     private async void OnBackendClicked(object? sender, RoutedEventArgs e)
     {
-        string _templateConfig = "[{0}]\n" +
-                                 "scripts = [{{ path = \"{1}\", relative = false }}]\n" +
-                                 "exe = \"{2}\"\n" +
-                                 "game_docs = \"{3}\"\n";
-
-        Dictionary<Game, string> GameIds = new Dictionary<Game, string>()
-        {
-            { Game.KINGDOM_HEARTS, "kh1" },
-            { Game.KINGDOM_HEARTS_II, "kh2" },
-            { Game.CHAIN_OF_MEMORIES, "recom" },
-            { Game.BIRTH_BY_SLEEP, "bbs" },
-            { Game.DREAM_DROP_DISTANCE, "kh3d" },
-        };
-
         var _fetchContext = DataContext as MainViewModel;
-        var _fetchConfig = _fetchContext.CurrentConfig.Frontend;
+        var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-        var _fetchPath1525 = PathService.ResolvePath1525(_fetchContext.CurrentConfig);
-        var _fetchPath28 = PathService.ResolvePath28(_fetchContext.CurrentConfig);
-
-        var _configLines = new List<string>();
-
-        for (int i = 0x00; i < GameIds.Count(); i++)
+        if (_fetchConfig != null)
         {
-            var _fetchGame = (Game)i;
-            var _fetchLuaGameID = GameIds[_fetchGame];
-            var _fetchExecutable = Config.GameExecutable[_fetchGame];
-            var _fetchManagerGameID = Config.GameShorthand[_fetchGame];
+            PackageService.InstallBackend(_fetchConfig);
 
-            var _fetchGamePath = _fetchGame == Game.DREAM_DROP_DISTANCE ? "KINGDOM HEARTS HD 2.8 Final Chapter Prologue" : "KINGDOM HEARTS HD 1.5+2.5 ReMIX";
-            var _fetchFolderBuild = PathService.ResolveBuild(_fetchContext.CurrentConfig, true);
-
-            var _fetchFolderScripts = Path.Combine(_fetchFolderBuild, _fetchManagerGameID, "scripts");
-            var _fetchFolderDocs = Path.Combine(_fetchConfig.TargetPlatform == Platform.STEAM ? "My Games" : "", _fetchGamePath);
-
-            var _formatTemplate = String.Format(_templateConfig, _fetchLuaGameID, _fetchFolderScripts, _fetchExecutable, _fetchFolderDocs).Replace("\\", "/");
-
-            _configLines.AddRange(_formatTemplate.Split('\n'));
+            await new BackendInstallDialog().ShowDialog(this);
         }
-
-        var _fetchBackendPath = Path.Combine(AppContext.BaseDirectory, "assembly", "LuaBackend.dll");
-
-        if (!String.IsNullOrEmpty(_fetchPath1525))
-        {
-            var _fetchPanacea1525 = Path.Combine(_fetchPath1525, "panacea_settings.txt");
-            var _fetchAssembly1525 = Path.Combine(_fetchPath1525, File.Exists(_fetchPanacea1525) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
-
-            File.Copy(_fetchBackendPath, _fetchAssembly1525, true);
-            File.WriteAllLines(Path.Combine(_fetchPath1525, "LuaBackend.toml"), _configLines);
-        }
-
-        if (!String.IsNullOrEmpty(_fetchPath28))
-        {
-            var _fetchPanacea28 = Path.Combine(_fetchPath28, "panacea_settings.txt");
-            var _fetchAssembly28 = Path.Combine(_fetchPath28, File.Exists(_fetchPanacea28) ? "LuaBackend.dll" : (OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll"));
-
-            File.Copy(_fetchBackendPath, _fetchAssembly28, true);
-            File.WriteAllLines(Path.Combine(_fetchPath28, "LuaBackend.toml"), _configLines);
-        }
-
-        await new BackendInstallDialog().ShowDialog(this);
     }
 }

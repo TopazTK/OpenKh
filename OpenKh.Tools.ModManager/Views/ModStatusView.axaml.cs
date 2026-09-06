@@ -63,6 +63,7 @@ namespace OpenKh.Tools.ModManager.Views
         }
 
         private void OnProcessBuildRun(object? sender, RoutedEventArgs e) => OnBuildRunRequested();
+
         private void OnProcessRun(object? sender, RoutedEventArgs e) => OnRunRequested();
 
         private void OnSetupRequested(object? sender, RoutedEventArgs e) => OnSetupRequested();

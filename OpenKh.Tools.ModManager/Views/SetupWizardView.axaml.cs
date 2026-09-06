@@ -22,6 +22,7 @@ using static OpenKh.Tools.ModManager.Wizard.WizardPanaceaSetup;
 namespace OpenKh.Tools.ModManager.Views
 {
     public record BlockNextRequest();
+
     public record UnblockNextRequest();
 
     public class PageRequestMessage : RequestMessage<bool>
@@ -93,98 +94,107 @@ namespace OpenKh.Tools.ModManager.Views
         private void OnNextPage(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             var _fetchContext = DataContext as MainViewModel;
-            var _fetchConfig = _fetchContext.CurrentConfig;
+            var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-            var _fetchBackList = _rootModel.PastWizardPages;
-            var _fetchNextList = _rootModel.FutureWizardPages;
-
-            var _fetchNextPage = _fetchNextList.FirstOrDefault();
-
-            while (_fetchNextPage != null)
+            if (_fetchConfig != null)
             {
-                _fetchNextList.Remove(_fetchNextPage);
-                _fetchBackList.Add(_rootModel.CurrentWizardPage);
+                var _fetchBackList = _rootModel.PastWizardPages;
+                var _fetchNextList = _rootModel.FutureWizardPages;
 
-                _rootModel.CurrentWizardPage = _fetchNextPage;
+                var _fetchNextPage = _fetchNextList.FirstOrDefault();
 
-                var _fetchMessage = new PageRequestMessage(_rootModel.CurrentWizardPage, _fetchConfig);
-                WeakReferenceMessenger.Default.Send(_fetchMessage);
-
-                if (_fetchMessage.HasReceivedResponse)
+                while (_fetchNextPage != null)
                 {
-                    if (!_fetchMessage.Response)
-                        _fetchNextPage = _fetchNextList.FirstOrDefault();
+                    _fetchNextList.Remove(_fetchNextPage);
+                    _fetchBackList.Add(_rootModel.CurrentWizardPage);
 
-                    else
-                        break;
+                    _rootModel.CurrentWizardPage = _fetchNextPage;
+
+                    var _fetchMessage = new PageRequestMessage(_rootModel.CurrentWizardPage, _fetchConfig);
+                    WeakReferenceMessenger.Default.Send(_fetchMessage);
+
+                    if (_fetchMessage.HasReceivedResponse)
+                    {
+                        if (!_fetchMessage.Response)
+                            _fetchNextPage = _fetchNextList.FirstOrDefault();
+
+                        else
+                            break;
+                    }
                 }
+
+                if (_fetchNextPage == null)
+                    OnSubmitClick(sender, e);
+
+                if (_fetchNextList.Count == 0)
+                {
+                    NextButton.IsEnabled = false;
+
+                    FinishButton.IsVisible = true;
+                    CancelButton.IsVisible = false;
+                }
+
+                BackButton.IsEnabled = true;
             }
-
-            if (_fetchNextPage == null)
-                OnSubmitClick(sender, e);
-
-            if (_fetchNextList.Count == 0)
-            {
-                NextButton.IsEnabled = false;
-
-                FinishButton.IsVisible = true;
-                CancelButton.IsVisible = false;
-            }
-
-            BackButton.IsEnabled = true;
         }
 
         private void OnBackPage(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             var _fetchContext = DataContext as MainViewModel;
-            var _fetchConfig = _fetchContext.CurrentConfig;
+            var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-            var _fetchBackList = _rootModel.PastWizardPages;
-            var _fetchNextList = _rootModel.FutureWizardPages;
-
-            var _fetchBackPage = _fetchBackList.LastOrDefault();
-
-            while (_fetchBackPage != null)
+            if (_fetchConfig != null)
             {
-                _fetchBackList.Remove(_fetchBackPage);
-                _fetchNextList.Insert(0, _rootModel.CurrentWizardPage);
+                var _fetchBackList = _rootModel.PastWizardPages;
+                var _fetchNextList = _rootModel.FutureWizardPages;
 
-                _rootModel.CurrentWizardPage = _fetchBackPage;
+                var _fetchBackPage = _fetchBackList.LastOrDefault();
 
-                var _fetchMessage = new PageRequestMessage(_rootModel.CurrentWizardPage, _fetchConfig);
-                WeakReferenceMessenger.Default.Send(_fetchMessage);
-
-                if (_fetchMessage.HasReceivedResponse)
+                while (_fetchBackPage != null)
                 {
-                    if (!_fetchMessage.Response)
-                        _fetchBackPage = _fetchBackList.LastOrDefault();
+                    _fetchBackList.Remove(_fetchBackPage);
+                    _fetchNextList.Insert(0, _rootModel.CurrentWizardPage);
 
-                    else
-                        break;
+                    _rootModel.CurrentWizardPage = _fetchBackPage;
+
+                    var _fetchMessage = new PageRequestMessage(_rootModel.CurrentWizardPage, _fetchConfig);
+                    WeakReferenceMessenger.Default.Send(_fetchMessage);
+
+                    if (_fetchMessage.HasReceivedResponse)
+                    {
+                        if (!_fetchMessage.Response)
+                            _fetchBackPage = _fetchBackList.LastOrDefault();
+
+                        else
+                            break;
+                    }
                 }
+
+                if (_fetchBackPage == null)
+                    OnSubmitClick(sender, e);
+
+                if (_fetchBackList.Count == 0)
+                    BackButton.IsEnabled = false;
+
+                FinishButton.IsVisible = false;
+                CancelButton.IsVisible = true;
+
+                NextButton.IsEnabled = true;
             }
-
-            if (_fetchBackPage == null)
-                OnSubmitClick(sender, e);
-
-            if (_fetchBackList.Count == 0)
-                BackButton.IsEnabled = false;
-
-            FinishButton.IsVisible = false;
-            CancelButton.IsVisible = true;
-
-            NextButton.IsEnabled = true;
         }
-
         private void OnSubmitClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             var _fetchContext = DataContext as MainViewModel;
-            var _fetchConfig = _fetchContext.CurrentConfig;
+            var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-            _fetchContext.ConfigurationValid = _fetchConfig.IsValid();
-            _fetchConfig.Commit();
+            if (_fetchConfig != null)
+            {
 
-            Close();
+                _fetchContext.ConfigurationValid = _fetchConfig.IsValid();
+                _fetchConfig.Commit();
+
+                Close();
+            }
         }
     }
 }
