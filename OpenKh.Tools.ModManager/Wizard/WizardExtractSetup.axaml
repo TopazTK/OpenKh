@@ -61,7 +61,7 @@
                     HorizontalAlignment="Stretch" PlaceholderText="Path goes here..."
                     Margin="0, 0, 10, 0" />
                 <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32"
-                    Background="Transparent" VerticalAlignment="Stretch">
+                    Background="Transparent" VerticalAlignment="Stretch" Click="OnExtractPathClicked">
                     <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />
                 </Button>
             </Grid>

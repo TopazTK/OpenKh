@@ -1,15 +1,16 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Threading;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Messaging;
+using OpenKh.Tools.ModManager.Classes;
 using OpenKh.Tools.ModManager.Services;
 using OpenKh.Tools.ModManager.ViewModels;
 using OpenKh.Tools.ModManager.Views;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using OpenKh.Tools.ModManager.Classes;
 
 namespace OpenKh.Tools.ModManager.Wizard
 {
@@ -90,5 +91,19 @@ namespace OpenKh.Tools.ModManager.Wizard
         }
 
         private async void OnExtractStop(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ModService.CancelTokenSource.Cancel();
+
+        private async void OnExtractPathClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            var _fetchTopLevel = TopLevel.GetTopLevel(this);
+
+            var _fetchFolder = await _fetchTopLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Select a Folder for Game Data...",
+                AllowMultiple = false
+            });
+
+            if (_fetchFolder.Count >= 1)
+                PathExtractData.Text = _fetchFolder[0].Path.LocalPath;
+        }
     }
 }
