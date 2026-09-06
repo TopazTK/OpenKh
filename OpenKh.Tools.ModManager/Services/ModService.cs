@@ -33,22 +33,6 @@ namespace OpenKh.Tools.ModManager.Services
         // We need a cancellation token to interrupt what we are doing should the user not want to do that anymore.
         public static CancellationTokenSource CancelTokenSource = new CancellationTokenSource();
         public static CancellationToken CancelToken = CancelTokenSource.Token;
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        static extern bool FreeConsole();
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        static extern bool AllocConsole();
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern IntPtr GetStdHandle(int nStdHandle);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
-
         public static string ResolveMD5(ModModel currentMod, Config currentConfig)
         {
             var _fetchRelativePath = Path.GetRelativePath(PathService.ResolveMod(currentConfig), currentMod.ModPath);
@@ -530,16 +514,6 @@ namespace OpenKh.Tools.ModManager.Services
 
             var _fetchPKGMapPath = Path.Combine(_fetchBuildPath, "patch-package-map.txt");
 
-            AllocConsole();
-
-            var _consoleHandle = GetStdHandle(-11);
-
-            if (GetConsoleMode(_consoleHandle, out uint _fetchMode))
-            {
-                _fetchMode |= 0x0004;
-                SetConsoleMode(_consoleHandle, _fetchMode);
-            }
-
             if (!Directory.Exists(_fetchBuildPath))
                 Directory.CreateDirectory(_fetchBuildPath);
 
@@ -610,8 +584,6 @@ namespace OpenKh.Tools.ModManager.Services
 
             if (CancelToken.IsCancellationRequested)
             {
-                FreeConsole();
-
                 Directory.Delete(_fetchBuildPath, true);
                 return 0x03;
             }
@@ -621,7 +593,6 @@ namespace OpenKh.Tools.ModManager.Services
             using (var _writePackageMap = new StreamWriter(_fetchPKGMapPath))
                 foreach (var _mapEntry in _fetchPackageMap)
                     _writePackageMap.WriteLine(_mapEntry.Key + " $$$$ " + _mapEntry.Value);
-
 
             return 0x00;
         }

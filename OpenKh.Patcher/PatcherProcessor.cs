@@ -146,7 +146,7 @@ namespace OpenKh.Patcher
 
                     var _fetchFileNames = new List<string>() { _fetchAsset.Name };
                     var _fetchMultiNames = _fetchAsset.Multi != null ? _fetchAsset.Multi.Select(x => x.Name)
-                                                                                        .Where(x => !string.IsNullOrEmpty(x))  : null;
+                                                                                        .Where(x => !string.IsNullOrEmpty(x)) : null;
 
                     if (_fetchMultiNames != null)
                         _fetchFileNames.AddRange(_fetchMultiNames);
@@ -166,10 +166,7 @@ namespace OpenKh.Patcher
                         var _fetchFileParent = _fetchName.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]).FirstOrDefault();
 
                         if (Path.IsPathRooted(_fetchName) && !Path.GetPathRoot(_fetchName).Equals(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal))
-                        {
-                            Console.WriteLine($"File Path \"" + _fetchName + "\" cannot be copied as it is rooted and can cause instability! Aborting...");
                             throw new PatcherException(modMetadata, new InvalidOperationException("Root Copy Detected!"));
-                        }
 
                         var _fetchOutputPath = Path.Combine(buildOutputPath, _fetchName);
                         var _fetchOutputDir = Path.GetDirectoryName(_fetchOutputPath);
@@ -237,7 +234,7 @@ namespace OpenKh.Patcher
                             {
                                 if (!File.Exists(_fetchOutputPath) && File.Exists(_fetchAssetPath))
                                     File.Copy(_fetchAssetPath, _fetchOutputPath);
-                            } 
+                            }
 
                             else
                             {
@@ -279,10 +276,7 @@ namespace OpenKh.Patcher
                             }
 
                             using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
-                            {
-                                Console.WriteLine($"{_colorGreen}[{_colorCyan}{modMetadata.Title}{_colorGreen}] {_colorYellow}Processing file: \"{_fetchName}\"");
                                 PatchFile(_fetchContext, _fetchAsset, _fileStream, _fetchAssetData);
-                            }
                         }
 
                         else
@@ -293,8 +287,6 @@ namespace OpenKh.Patcher
                                 {
                                     if (targetPlatform != 0x00)
                                     {
-                                        Console.WriteLine($"{_colorGreen}[{_colorCyan}{modMetadata.Title}{_colorGreen}] {_colorRed}File {_colorYellow}\"{_fetchName}\" {_colorRed}doesn't exist in extraction. Fetching from game data...");
-
                                         byte[] _fetchAssetData = null;
 
                                         var _fetchDataPath = Path.Combine(gameFilesPath, "Image", targetPlatform == 0x01 ? "dt" : "en");
@@ -333,14 +325,8 @@ namespace OpenKh.Patcher
                                         });
 
                                         using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
-                                        {
-                                            Console.WriteLine($"{_colorGreen}[{_colorCyan}{modMetadata.Title}{_colorGreen}] {_colorYellow}Processing file: \"{_fetchName}\"");
                                             PatchFile(_fetchContext, _fetchAsset, _fileStream, _fetchAssetData);
-                                        }
                                     }
-
-                                    else
-                                        Console.WriteLine($"{_colorGreen}[{_colorCyan}{modMetadata.Title}{_colorGreen}] {_colorRed}File {_colorYellow}\"{_fetchName}\" {_colorRed}doesn't exist in extraction. Skipping...");
                                 }
                             }
 
@@ -361,7 +347,6 @@ namespace OpenKh.Patcher
 
             catch (Exception ex)
             {
-                Console.WriteLine($"Patcher failed: {ex.Message}");
                 throw new PatcherException(modMetadata, ex);
             }
         }
