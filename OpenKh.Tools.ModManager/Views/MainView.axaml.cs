@@ -99,13 +99,15 @@ public partial class MainView : Window
     // This executes if the utmost button is clicked.
     private void OnUtmostClicked(object? sender, RoutedEventArgs e)
     {
-        // Fetch the context and the mod list.
         var _fetchContext = DataContext as MainViewModel;
-        var _fetchModList = _fetchContext.InstalledMods;
+        var _fetchModList = _fetchContext != null ? _fetchContext.InstalledMods : null;
 
-        // Make the move, select the mod.
-        _fetchModList.Move(ModList.MainList.SelectedIndex, 0);
-        _fetchContext.CurrentMod = _fetchModList[0];
+        if (_fetchModList != null)
+        {
+            // Make the move, select the mod.
+            _fetchModList.Move(ModList.MainList.SelectedIndex, 0);
+            _fetchContext.CurrentMod = _fetchModList[0];
+        }
     }
 
     // This executes if the move up button is clicked.
@@ -113,11 +115,9 @@ public partial class MainView : Window
     {
         // Fetch the context, the mod list, and the current index.
         var _fetchContext = DataContext as MainViewModel;
-
         var _fetchModList = _fetchContext != null ? _fetchContext.InstalledMods : null;
-        var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-        if (_fetchConfig != null && _fetchModList != null)
+        if (_fetchModList != null)
         {
             var _fetchCurrentIndex = ModList.MainList.SelectedIndex;
 
@@ -137,11 +137,9 @@ public partial class MainView : Window
     {
         // Same shit as OnUpPriorityClicked, but reversed.
         var _fetchContext = DataContext as MainViewModel;
-
         var _fetchModList = _fetchContext != null ? _fetchContext.InstalledMods : null;
-        var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
-        if (_fetchConfig != null && _fetchModList != null)
+        if (_fetchModList != null)
         {
             var _fetchCurrentIndex = ModList.MainList.SelectedIndex;
 

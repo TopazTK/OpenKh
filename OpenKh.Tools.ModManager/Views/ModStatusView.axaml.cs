@@ -14,39 +14,37 @@ namespace OpenKh.Tools.ModManager.Views
         #region Custom Events
 
         public static readonly RoutedEvent<RoutedEventArgs> SetupRequestedEvent = RoutedEvent.Register<ModDetailsView, RoutedEventArgs>(nameof(SetupRequested), RoutingStrategies.Direct);
+        public static readonly RoutedEvent<RoutedEventArgs> RunRequestedEvent = RoutedEvent.Register<ModDetailsView, RoutedEventArgs>(nameof(RunRequested), RoutingStrategies.Direct);
+        public static readonly RoutedEvent<RoutedEventArgs> BuildRunRequestedEvent = RoutedEvent.Register<ModDetailsView, RoutedEventArgs>(nameof(BuildRunRequested), RoutingStrategies.Direct);
 
         public event EventHandler<RoutedEventArgs> SetupRequested
         {
             add => AddHandler(SetupRequestedEvent, value);
             remove => RemoveHandler(SetupRequestedEvent, value);
         }
-
+        
+        public event EventHandler<RoutedEventArgs> RunRequested
+        {
+            add => AddHandler(RunRequestedEvent, value);
+            remove => RemoveHandler(RunRequestedEvent, value);
+        }
+       
+        public event EventHandler<RoutedEventArgs> BuildRunRequested
+        {
+            add => AddHandler(BuildRunRequestedEvent, value);
+            remove => RemoveHandler(BuildRunRequestedEvent, value);
+        }
+       
         protected virtual void OnSetupRequested()
         {
             RoutedEventArgs args = new RoutedEventArgs(SetupRequestedEvent);
             RaiseEvent(args);
         }
 
-        public static readonly RoutedEvent<RoutedEventArgs> RunRequestedEvent = RoutedEvent.Register<ModDetailsView, RoutedEventArgs>(nameof(RunRequested), RoutingStrategies.Direct);
-
-        public event EventHandler<RoutedEventArgs> RunRequested
-        {
-            add => AddHandler(RunRequestedEvent, value);
-            remove => RemoveHandler(RunRequestedEvent, value);
-        }
-
         protected virtual void OnRunRequested()
         {
             RoutedEventArgs args = new RoutedEventArgs(RunRequestedEvent);
             RaiseEvent(args);
-        }
-
-        public static readonly RoutedEvent<RoutedEventArgs> BuildRunRequestedEvent = RoutedEvent.Register<ModDetailsView, RoutedEventArgs>(nameof(BuildRunRequested), RoutingStrategies.Direct);
-
-        public event EventHandler<RoutedEventArgs> BuildRunRequested
-        {
-            add => AddHandler(BuildRunRequestedEvent, value);
-            remove => RemoveHandler(BuildRunRequestedEvent, value);
         }
 
         protected virtual void OnBuildRunRequested()

@@ -182,6 +182,7 @@ namespace OpenKh.Tools.ModManager.Views
                 NextButton.IsEnabled = true;
             }
         }
+
         private void OnSubmitClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             var _fetchContext = DataContext as MainViewModel;
@@ -189,7 +190,6 @@ namespace OpenKh.Tools.ModManager.Views
 
             if (_fetchConfig != null)
             {
-
                 _fetchContext.ConfigurationValid = _fetchConfig.IsValid();
                 _fetchConfig.Commit();
 

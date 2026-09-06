@@ -70,6 +70,24 @@ namespace OpenKh.Tools.ModManager.Wizard
                 return true;
         }
 
+        private async void OnExtractPathClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            var _fetchTopLevel = TopLevel.GetTopLevel(this);
+            var _storageProvider = _fetchTopLevel != null ? _fetchTopLevel.StorageProvider : null;
+
+            if (_storageProvider != null)
+            {
+                var _fetchFolder = await _storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+                {
+                    Title = "Select a Folder for Game Data...",
+                    AllowMultiple = false
+                });
+
+                if (_fetchFolder.Count >= 1)
+                    PathExtractData.Text = _fetchFolder[0].Path.LocalPath;
+            }
+        }
+
         private async void OnExtractStart(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             var _fetchContext = DataContext as MainViewModel;
@@ -95,23 +113,5 @@ namespace OpenKh.Tools.ModManager.Wizard
         }
 
         private async void OnExtractStop(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ModService.CancelTokenSource.Cancel();
-
-        private async void OnExtractPathClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-        {
-            var _fetchTopLevel = TopLevel.GetTopLevel(this);
-            var _storageProvider = _fetchTopLevel != null ? _fetchTopLevel.StorageProvider : null;
-
-            if (_storageProvider != null)
-            {
-                var _fetchFolder = await _storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-                {
-                    Title = "Select a Folder for Game Data...",
-                    AllowMultiple = false
-                });
-
-                if (_fetchFolder.Count >= 1)
-                    PathExtractData.Text = _fetchFolder[0].Path.LocalPath;
-            }
-        }
     }
 }
