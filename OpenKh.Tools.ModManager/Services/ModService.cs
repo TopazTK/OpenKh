@@ -387,7 +387,7 @@ namespace OpenKh.Tools.ModManager.Services
                 }
 
                 var _yamlPath = Path.Combine(_fetchCurrentModDir, "mod.yml");
-                await File.WriteAllTextAsync(_yamlPath, _createMetadata.ToString());
+                await File.WriteAllTextAsync(_yamlPath, _createMetadata.ToString(), CancellationToken.None);
             }
 
             // If the file is ANY PCPatch Package, handle it.
@@ -477,7 +477,7 @@ namespace OpenKh.Tools.ModManager.Services
                     }
 
                     var _yamlPath = Path.Combine(_fetchCurrentModDir, "mod.yml");
-                    await File.WriteAllTextAsync(_yamlPath, _fetchMetadata.ToString());
+                    await File.WriteAllTextAsync(_yamlPath, _fetchMetadata.ToString(), CancellationToken.None);
                 }
             }
 
@@ -583,7 +583,7 @@ namespace OpenKh.Tools.ModManager.Services
                     if (CancelToken.IsCancellationRequested)
                         break;
                 }
-            });
+            }, CancelToken);
 
             if (CancelToken.IsCancellationRequested)
             {
