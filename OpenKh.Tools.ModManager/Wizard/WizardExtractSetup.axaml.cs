@@ -112,6 +112,6 @@ namespace OpenKh.Tools.ModManager.Wizard
             }
         }
 
-        private async void OnExtractStop(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => await ModService.CancelTokenSource.CancelAsync();
+        private void OnExtractStop(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ModService.CancelTokenSource.Cancel();
     }
 }
