@@ -33,6 +33,8 @@ namespace OpenKh.Tools.ModManager.Services
         // We need a cancellation token to interrupt what we are doing should the user not want to do that anymore.
         public static CancellationTokenSource CancelTokenSource = new CancellationTokenSource();
         public static CancellationToken CancelToken = CancelTokenSource.Token;
+
+        #pragma warning disable S4790
         public static string ResolveMD5(ModModel currentMod, Config currentConfig)
         {
             var _fetchRelativePath = Path.GetRelativePath(PathService.ResolveMod(currentConfig), currentMod.ModPath);
@@ -41,6 +43,7 @@ namespace OpenKh.Tools.ModManager.Services
 
             return Convert.ToHexString(_fetchHash);
         }
+        #pragma warning restore S4790
 
         /// <summary>
         /// Installs a mod from any Git repository.
@@ -141,7 +144,7 @@ namespace OpenKh.Tools.ModManager.Services
                 // Make an HTTP client and use GitHub's RAW API to see if the mod.yml exists.
                 // This is the fastest way to handle this, otherwise I sadly have to fetch the mod FIRST and then check it.
                 using var _makeClient = new HttpClient();
-                using var _fetchResponse = await _makeClient.GetAsync($"https://raw.githubusercontent.com/{repoName}/{_branchString}/mod.yml", HttpCompletionOption.ResponseHeadersRead);
+                using var _fetchResponse = await _makeClient.GetAsync($"https://raw.githubusercontent.com/{repoName}/{_branchString}/mod.yml", HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
 
                 // If the file doesn't exist, abort.
                 if (_fetchResponse.StatusCode != HttpStatusCode.OK)
@@ -157,7 +160,7 @@ namespace OpenKh.Tools.ModManager.Services
                 {
                     try { Repository.Clone(_fetchRelativeUri.ToString(), _fetchCurrentModDir, _cloneOptions); }
                     catch (LibGit2SharpException) { }
-                });
+                }, CancelToken);
 
                 // After the task finishes/aborts, if we requested cancellation, abort.
                 if (CancelToken.IsCancellationRequested)
@@ -186,7 +189,7 @@ namespace OpenKh.Tools.ModManager.Services
                     try
                     { Repository.Clone(_fetchRelativeUri.ToString(), _fetchCurrentModDir, _cloneOptions); }
                     catch (LibGit2SharpException) { }
-                });
+                }, CancelToken);
 
                 // Fetch the Git directory and fix all permissions before moving on.
                 // Again, may not be necessary here. Again, not risking it.
@@ -313,7 +316,7 @@ namespace OpenKh.Tools.ModManager.Services
                             else if (CancelToken.IsCancellationRequested)
                                 break;
                         }
-                    });
+                    }, CancelToken);
 
                     // If the task ended/aborted and cancellation was requested, abort.
                     if (CancelToken.IsCancellationRequested)
@@ -357,7 +360,7 @@ namespace OpenKh.Tools.ModManager.Services
                 {
                     while (!_strReader.EndOfStream)
                     {
-                        string _fetchLine = _strReader.ReadLine();
+                        string _fetchLine = await _strReader.ReadLineAsync();
 
                         if (_fetchLine.Contains("LUAGUI"))
                         {
@@ -384,7 +387,7 @@ namespace OpenKh.Tools.ModManager.Services
                 }
 
                 var _yamlPath = Path.Combine(_fetchCurrentModDir, "mod.yml");
-                File.WriteAllText(_yamlPath, _createMetadata.ToString());
+                await File.WriteAllTextAsync(_yamlPath, _createMetadata.ToString());
             }
 
             // If the file is ANY PCPatch Package, handle it.
@@ -426,7 +429,7 @@ namespace OpenKh.Tools.ModManager.Services
                             if (!_fetchProgress)
                                 break;
                         }
-                    });
+                    }, CancelToken);
 
                     if (CancelToken.IsCancellationRequested)
                     {
@@ -465,7 +468,7 @@ namespace OpenKh.Tools.ModManager.Services
                             if (CancelToken.IsCancellationRequested)
                                 break;
                         }
-                    });
+                    }, CancelToken);
 
                     if (CancelToken.IsCancellationRequested)
                     {
@@ -474,7 +477,7 @@ namespace OpenKh.Tools.ModManager.Services
                     }
 
                     var _yamlPath = Path.Combine(_fetchCurrentModDir, "mod.yml");
-                    File.WriteAllText(_yamlPath, _fetchMetadata.ToString());
+                    await File.WriteAllTextAsync(_yamlPath, _fetchMetadata.ToString());
                 }
             }
 
@@ -542,7 +545,7 @@ namespace OpenKh.Tools.ModManager.Services
 
                         await Task.Delay(TimeSpan.FromMilliseconds(10), CancelToken);
                     }
-                });
+                }, CancelToken);
             }
 
             await Task.Run(async () =>
@@ -575,7 +578,7 @@ namespace OpenKh.Tools.ModManager.Services
                             _fetchPackageMap,
                             reportProgress: reportAssetProgress
                         );
-                    });
+                    }, CancelToken);
 
                     if (CancelToken.IsCancellationRequested)
                         break;
@@ -592,7 +595,7 @@ namespace OpenKh.Tools.ModManager.Services
 
             using (var _writePackageMap = new StreamWriter(_fetchPKGMapPath))
                 foreach (var _mapEntry in _fetchPackageMap)
-                    _writePackageMap.WriteLine(_mapEntry.Key + " $$$$ " + _mapEntry.Value);
+                    await _writePackageMap.WriteLineAsync(_mapEntry.Key + " $$$$ " + _mapEntry.Value);
 
             return 0x00;
         }
@@ -811,7 +814,7 @@ namespace OpenKh.Tools.ModManager.Services
                         if (CancelToken.IsCancellationRequested)
                             _fetchStateGame.Stop();
                     });
-                });
+                }, CancelToken);
 
                 if (CancelToken.IsCancellationRequested)
                     return 0x03;

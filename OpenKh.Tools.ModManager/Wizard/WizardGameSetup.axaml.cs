@@ -113,7 +113,7 @@ namespace OpenKh.Tools.ModManager.Wizard
                     if (String.IsNullOrEmpty(_fetchConfigPath))
                         return;
 
-                    var _fetchLibraryConfig = File.ReadAllLines(_fetchConfigPath);
+                    var _fetchLibraryConfig = await File.ReadAllLinesAsync(_fetchConfigPath);
                     var _pathRegex = new Regex("path[^\"]*\"\\s*\"([^\"]*)\"", RegexOptions.None, TimeSpan.FromMilliseconds(500));
 
                     var _fetchPath1525 = "";

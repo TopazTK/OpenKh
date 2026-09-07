@@ -146,7 +146,7 @@ namespace OpenKh.Tools.ModManager.Classes
 
                         if (_isPanaceaConfigValid && Frontend.ModBuildType == BuildType.PANACEA)
                         {
-                            var _regexModPath = new Regex("mod_path=(.*)");
+                            var _regexModPath = new Regex("mod_path=(.*)", RegexOptions.None, TimeSpan.FromMilliseconds(500));
 
                             if (File.Exists(_fetchPanaceaPath) && File.Exists(_fetchSettingsPath))
                             {

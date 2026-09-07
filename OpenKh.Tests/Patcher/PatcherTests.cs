@@ -4239,10 +4239,10 @@ namespace OpenKh.Tests.Patcher
             }, ModOutputDir, "tw01.ard");
         }
 
+        /* TODO: Rewrite this.
         [Fact]
         public void Kh1ArdResourceReadsTheReplacementsFromItsSourceFileTest()
         {
-            /* TODO: Rewrite this.
             var yml =
                 "title: source file test\n" +
                 "assets:\n" +
@@ -4262,8 +4262,9 @@ namespace OpenKh.Tests.Patcher
 
             AssertArdResources(new[] { "a.mdls", "xa_al_9999.mset", "b.moa", "b.moa.mset" },
                 ModOutputDir, "tw01.ard");
-            */
+           
         }
+        */
 
         [Fact]
         public void Kh1ArdResourceReplaceOfReplacedFileTest()

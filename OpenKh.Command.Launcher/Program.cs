@@ -16,16 +16,10 @@ namespace OpenKh.Command.Launcher
 
         public static void Main(string[] args)
         {
-            var _fetchArguments = String.Join(" ", args.Skip(1));
+            var _fetchArguments = KEY_LAUNCH.FirstOrDefault(x => x.Key == args[0]).Key == "" ? String.Join(" ", args.Skip(1)) : String.Join(" ", args);
+            var _launchPath = args.Length == 0 || !KEY_LAUNCH.ContainsKey(args[0]) ? Path.Combine(AppContext.BaseDirectory, MAIN_LAUNCH) : Path.Combine(AppContext.BaseDirectory, KEY_LAUNCH[args[0]]);
 
-            if (args.Length == 0)
-                Process.Start(MAIN_LAUNCH, _fetchArguments);
-
-            else if (!KEY_LAUNCH.ContainsKey(args[0]))
-                Process.Start(MAIN_LAUNCH, _fetchArguments);
-
-            else
-                Process.Start(KEY_LAUNCH[args[0]], _fetchArguments);
+            Process.Start(_launchPath, _fetchArguments);
         }
     }
 }

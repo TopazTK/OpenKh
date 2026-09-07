@@ -59,7 +59,7 @@ namespace OpenKh.Patcher
                 Debug.WriteLine($"Error deserializing YAML: {ex.Message}");
 
                 var _fetchTitle = string.Empty;
-                var _fetchMatch = Regex.Match(_fetchYamlRaw, @"(?<=title:).*");
+                var _fetchMatch = Regex.Match(_fetchYamlRaw, @"(?<=title:).*", RegexOptions.None, TimeSpan.FromMilliseconds(500));
 
                 if (_fetchMatch.Success)
                     _fetchTitle = _fetchMatch.Value.Trim();
