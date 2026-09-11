@@ -212,17 +212,17 @@ public partial class MainView : Window
                 var _fetchTopLevel = TopLevel.GetTopLevel(inputParent);
 
                 var _fetchFiles = await _fetchTopLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-                                                                                     {
-                                                                                        Title = "Select an Archive or Script File...",
-                                                                                        AllowMultiple = false,
-                                                                                        FileTypeFilter =
-                                                                                        [
-                                                                                            new FilePickerFileType("OpenKH Mod Archive") { Patterns = ["*.zip"] },
-                                                                                            new FilePickerFileType("PCPatch Package") { Patterns = ["*.kh1pcpatch", "*.kh2pcpatch", "*.bbspcpatch", "*.compcpatch", "*.dddpcpatch"] },
-                                                                                            new FilePickerFileType("LuaBackend Script") { Patterns = ["*.lua"] },
-                                                                                            new FilePickerFileType("All Files") { Patterns = ["*"] },
-                                                                                        ]
-                                                                                     });
+                                                                                           {
+                                                                                               Title = "Select an Archive or Script File...",
+                                                                                               AllowMultiple = false,
+                                                                                               FileTypeFilter =
+                                                                                               [
+                                                                                                   new FilePickerFileType("OpenKH Mod Archive") { Patterns = ["*.zip"] },
+                                                                                                   new FilePickerFileType("PCPatch Package") { Patterns = ["*.kh1pcpatch", "*.kh2pcpatch", "*.bbspcpatch", "*.compcpatch", "*.dddpcpatch"] },
+                                                                                                   new FilePickerFileType("LuaBackend Script") { Patterns = ["*.lua"] },
+                                                                                                   new FilePickerFileType("All Files") { Patterns = ["*"] },
+                                                                                               ]
+                                                                                           });
 
                 if (_fetchFiles.Count >= 1)
                     return _fetchFiles[0].Path.AbsolutePath;
