@@ -97,6 +97,7 @@ namespace OpenKh.Patcher
             string gameFilesPath = null,
             int targetPlatform = 0x00,            
             int targetGame = 0x01,
+            bool isJapanese = false,
             IDictionary<string, string> packageMap = null,
             Dictionary<string, bool> collectionOptionalEnabledMods = null,
             Func<int, int, bool> reportProgress = null,
@@ -112,11 +113,6 @@ namespace OpenKh.Patcher
 
             try
             {
-                var _colorRed = "\x1b[91m";
-                var _colorGreen = "\x1b[92m";
-                var _colorYellow = "\x1b[93m";
-                var _colorCyan = "\x1b[96m";
-
                 var _fetchContext = new Context(modMetadata, extractDataPath, modFilesPath, buildOutputPath);
 
                 if (!_isExtraction && targetPlatform == 0x00)
@@ -141,6 +137,9 @@ namespace OpenKh.Patcher
                     if (_fetchAsset.Game != null && _fetchAsset.Game != _fetchGameId)
                         return;
 
+                    if ((targetPlatform != 0x00 && _fetchAsset.Platform == "ps2") || (targetPlatform == 0x00 && _fetchAsset.Platform == "pc"))
+                        return;
+
                     if (_fetchAsset.CollectionOptional == true && (!_fetchCollectionMods.ContainsKey(_fetchAsset.Name) || !_fetchCollectionMods[_fetchAsset.Name]))
                         return;
 
@@ -153,6 +152,9 @@ namespace OpenKh.Patcher
 
                     foreach (var _fetchName in _fetchFileNames)
                     {
+                        if (targetPlatform != 0x00 && _fetchName.Contains(".a.fm"))
+                            continue;
+
                         var _fetchAssetPath = _isExtraction ? Path.Combine(extractDataPath, _fetchName) : null;
 
                         var _fetchPackage = _fetchAsset.Package != null ? _fetchAsset.Package : $"{_fetchGameId}_first";
@@ -226,6 +228,8 @@ namespace OpenKh.Patcher
                                               ((_fetchAsset.Method == "copy" || _fetchAsset.Method == "imd") && (_fetchSourceAssetPath != null && File.Exists(_fetchSourceAssetPath)) || _multiExists) ||
                                               Tests;
 
+                        var _doesRegionMatch = (!isJapanese && !_fetchName.Contains(".a.jp") && !_fetchName.Contains("/jp/")) || (isJapanese && (_fetchName.Contains(".a.jp") || _fetchName.Contains("/jp/")));
+
                         if (_shouldCopyFile)
                         {
                             byte[] _fetchAssetData = null;
@@ -238,20 +242,13 @@ namespace OpenKh.Patcher
 
                             else
                             {
-
-                                var _fetchDataPath = Path.Combine(gameFilesPath, "Image", targetPlatform == 0x01 ? "dt" : "en");
+                                var _fetchDataPath = Path.Combine(gameFilesPath, "Image", targetPlatform == 0x01 ? "dt" : (isJapanese ? "jp" : "en"));
                                 var _fetchHeaderFiles = Directory.GetFiles(_fetchDataPath).Where(x => x.Contains(_fetchGameId) && x.EndsWith(".hed"));
 
                                 _fetchHeaderFiles.AsParallel().ForAll(_fetchHeader =>
                                 {
                                     var _fetchPackageFile = Path.ChangeExtension(_fetchHeader, "pkg");
                                     var _fetchRegularName = _fetchName;
-
-                                    if (_isFileRAW)
-                                        _fetchRegularName = _fetchName.Replace("raw/", "");
-
-                                    if (_isFileRemastered)
-                                        _fetchRegularName = _fetchName.Replace("remastered/", "");
 
                                     using (var _fetchHeaderStream = File.OpenRead(_fetchHeader))
                                     {
@@ -275,13 +272,16 @@ namespace OpenKh.Patcher
                                 });
                             }
 
-                            using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
-                                PatchFile(_fetchContext, _fetchAsset, _fileStream, _fetchAssetData);
+                            if (File.Exists(_fetchOutputPath))
+                            {
+                                using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
+                                    PatchFile(_fetchContext, _fetchAsset, _fileStream, _fetchAssetData);
+                            }
                         }
 
                         else
                         {
-                            if (_fetchAssetPath != null)
+                            if (_fetchAssetPath != null && _doesRegionMatch)
                             {
                                 if ((_fetchAsset.Method != "copy" && _fetchAsset.Method != "imd") || _fetchAsset.Source[0].Type == "internal")
                                 {
@@ -289,19 +289,13 @@ namespace OpenKh.Patcher
                                     {
                                         byte[] _fetchAssetData = null;
 
-                                        var _fetchDataPath = Path.Combine(gameFilesPath, "Image", targetPlatform == 0x01 ? "dt" : "en");
+                                        var _fetchDataPath = Path.Combine(gameFilesPath, "Image", targetPlatform == 0x01 ? "dt" : (isJapanese ? "jp" : "en"));
                                         var _fetchHeaderFiles = Directory.GetFiles(_fetchDataPath).Where(x => x.Contains(_fetchGameId) && x.EndsWith(".hed"));
 
                                         _fetchHeaderFiles.AsParallel().ForAll(_fetchHeader =>
                                         {
                                             var _fetchPackageFile = Path.ChangeExtension(_fetchHeader, "pkg");
                                             var _fetchRegularName = _fetchName;
-
-                                            if (_isFileRAW)
-                                                _fetchRegularName = _fetchName.Replace("raw/", "");
-
-                                            if (_isFileRemastered)
-                                                _fetchRegularName = _fetchName.Replace("remastered/", "");
 
                                             using (var _fetchHeaderStream = File.OpenRead(_fetchHeader))
                                             {
@@ -324,8 +318,11 @@ namespace OpenKh.Patcher
                                             }
                                         });
 
-                                        using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
-                                            PatchFile(_fetchContext, _fetchAsset, _fileStream, _fetchAssetData);
+                                        if (File.Exists(_fetchOutputPath))
+                                        {
+                                            using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
+                                                PatchFile(_fetchContext, _fetchAsset, _fileStream, _fetchAssetData);
+                                        }
                                     }
                                 }
                             }
@@ -413,7 +410,6 @@ namespace OpenKh.Patcher
         {
             if (assetFile.Source == null || assetFile.Source.Count == 0)
                 throw new Exception($"File '{assetFile.Name}' does not contain any source");
-
 
             if (assetFile.Source[0].Type == "internal")
             {

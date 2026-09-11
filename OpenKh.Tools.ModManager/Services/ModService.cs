@@ -560,6 +560,8 @@ namespace OpenKh.Tools.ModManager.Services
                     var _fetchYamlPath = Path.Combine(_fetchMod.ModPath, "mod.yml");
                     var _fetchMetadata = Metadata.Read(_fetchYamlPath);
 
+                    var _fetchJapanese = PathService.ResolveRegionJP(currentConfig);
+
                     await Task.Run(() =>
                     {
                         _fetchPatcher.Patch
@@ -571,6 +573,7 @@ namespace OpenKh.Tools.ModManager.Services
                             _fetchGamePath,
                             (int)currentConfig.Frontend.TargetPlatform,
                             (int)currentConfig.Frontend.TargetGame,
+                            _fetchJapanese.Value,
                             _fetchPackageMap,
                             reportProgress: reportAssetProgress
                         );
