@@ -258,7 +258,7 @@ namespace OpenKh.Tools.ModManager.Services
             var _fetchCurrentModDir = Path.Combine(modPath, Path.GetFileNameWithoutExtension(fileName));
 
             // If the file is a ZIP Archive:
-            if (_fetchExtension == ".zip")
+            if (_fetchExtension.Contains("zip"))
             {
                 // I hate that I have to use streams to use a file class.
                 // Just have the stream internally, kappa.
@@ -330,7 +330,7 @@ namespace OpenKh.Tools.ModManager.Services
             // If the file is a LUA Script, handle it.
             // This is code that was YANKED from the old mod manager, cleaned up and brought up to standard.
             // I am not commenting this yet.
-            else if (_fetchExtension == ".lua")
+            else if (_fetchExtension.Contains("lua"))
             {
                 var _fetchCurrentLuaName = Path.Combine(_fetchCurrentModDir, Path.GetFileName(fileName));
 

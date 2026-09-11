@@ -225,7 +225,7 @@ public partial class MainView : Window
                                                                                            });
 
                 if (_fetchFiles.Count >= 1)
-                    return _fetchFiles[0].Path.AbsolutePath;
+                    return _fetchFiles[0].Path.LocalPath;
 
                 else
                     return null;
@@ -239,7 +239,9 @@ public partial class MainView : Window
                 var _progressDialog = new ModProgressDialog();
                 _progressDialog.ShowDialog(this);
 
-                if (File.Exists(_fetchResult))
+                var _fetchFileInfo = new FileInfo(@$"{_fetchResult}");
+
+                if (_fetchFileInfo.Exists)
                     _fetchInstallResult =
                         await ModService.InstallLocal
                         (
