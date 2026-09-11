@@ -255,6 +255,7 @@ namespace OpenKh.Patcher
                             }
                         }
 
+                        var _fetchBuildPath = _fetchAsset.Method != "copy" && _fetchAsset.Method != "imd" && _fetchAsset.Source[0].Type != "internal" ? Path.Combine(buildOutputPath, _fetchName) : null;
                         var _fetchSourcePath = (_fetchAsset.Method == "copy" || _fetchAsset.Method == "imd") && (_fetchAsset.Source[0].Type != "internal" && _fetchAsset.Source[0].Name != null) ? Path.Combine(modFilesPath, _fetchAsset.Source[0].Name) : null;
 
                         var _shouldCopySource = (_fetchAsset.Method != "copy" && _fetchAsset.Method != "imd" && ((_fetchAssetPath != null && File.Exists(_fetchAssetPath)) || _multiExists || !_isExtraction)) ||
@@ -265,7 +266,13 @@ namespace OpenKh.Patcher
 
                         if (_shouldCopySource || _fetchAsset.Source[0].Type == "internal")
                         {
-                            if (_fetchAssetPath != null)
+                            if (_fetchBuildPath != null && File.Exists(_fetchBuildPath))
+                            {
+                                using (var _fileStream = File.Open(_fetchBuildPath, FileMode.OpenOrCreate))
+                                    PatchFile(_fetchContext, _fetchAsset, _fileStream);
+                            }
+
+                            else if (_fetchAssetPath != null)
                             {
                                 if (!File.Exists(_fetchOutputPath) && File.Exists(_fetchAssetPath))
                                     File.Copy(_fetchAssetPath, _fetchOutputPath, true);
@@ -348,7 +355,13 @@ namespace OpenKh.Patcher
                         {
                             var _shouldCheckData = ((_fetchAsset.Method != "copy" && _fetchAsset.Method != "imd") || _fetchAsset.Source[0].Type == "internal");
 
-                            if (_fetchAssetPath != null && _shouldCheckData && _doesRegionMatch)
+                            if (_fetchBuildPath != null && File.Exists(_fetchBuildPath))
+                            {
+                                using (var _fileStream = File.Open(_fetchBuildPath, FileMode.OpenOrCreate))
+                                    PatchFile(_fetchContext, _fetchAsset, _fileStream);
+                            }
+
+                            else if (_fetchAssetPath != null && _shouldCheckData && _doesRegionMatch)
                             {
                                 byte[] _fetchAssetData = null;
 
