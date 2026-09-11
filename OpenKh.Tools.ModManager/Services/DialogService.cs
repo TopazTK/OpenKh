@@ -39,5 +39,26 @@ namespace OpenKh.Tools.ModManager.Services
             else
                 _fetchDialog.Show();
         }
+
+        public static async Task<string> ShowInput(Window? owner, string title, string message, string mainButtonText, string placeholderText, string? miscButtonMessage = null, Func<Window?, string?>? miscButtonCallback = null)
+        {
+            var _fetchDialog = new InputDialog { Title = title, MiscButtonCallback = miscButtonCallback };
+
+            _fetchDialog.MainText.Text = message;
+            _fetchDialog.AcceptButton.Content = mainButtonText;
+            _fetchDialog.InputText.PlaceholderText = placeholderText;
+
+            if (miscButtonMessage != null)
+                _fetchDialog.MiscButton.Content = miscButtonMessage;
+
+            if (owner != null)
+                return await _fetchDialog.ShowDialog<string>(owner);
+
+            else
+            {
+                _fetchDialog.Show();
+                return _fetchDialog.Result;
+            }
+        }
     }
 }

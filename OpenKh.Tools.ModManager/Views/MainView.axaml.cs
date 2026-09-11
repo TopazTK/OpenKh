@@ -207,8 +207,29 @@ public partial class MainView : Window
 
         if (_fetchConfig != null)
         {
-            // var _installDialog = new InstallModDialog();
-            string? _fetchResult = ""; // await _installDialog.ShowDialog<string?>(this);
+            var _fetchResult = await DialogService.ShowInput(this, "Install a new Mod", "Enter the name of the repository to install.", "Install", "Ex. OpenKH/a-very-cool-mod@github.com", "Select and Install an Archive or Script", (inputParent) =>
+            {
+                var _fetchTopLevel = TopLevel.GetTopLevel(inputParent);
+
+                var _fetchFiles = _fetchTopLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                                                                                     {
+                                                                                        Title = "Select an Archive or Script File...",
+                                                                                        AllowMultiple = false,
+                                                                                        FileTypeFilter = new[]
+                                                                                        {
+                                                                                            new FilePickerFileType("OpenKH Mod Archive") { Patterns = new[] { "*.zip" } },
+                                                                                            new FilePickerFileType("PCPatch Package") { Patterns = new[] { "*.kh1pcpatch", "*.kh2pcpatch", "*.bbspcpatch", "*.compcpatch", "*.dddpcpatch" } },
+                                                                                            new FilePickerFileType("LuaBackend Script") { Patterns = new[] { "*.lua" } },
+                                                                                            new FilePickerFileType("All Files") { Patterns = new[] { "*" } },
+                                                                                        }
+                                                                                     }).Result;
+
+                if (_fetchFiles.Count >= 1)
+                    return _fetchFiles[0].Path.AbsolutePath;
+
+                else
+                    return null;
+            });
 
             var _fetchModPath = PathService.ResolveMod(_fetchConfig);
             var _fetchInstallResult = 0x00;
@@ -553,11 +574,10 @@ public partial class MainView : Window
 
         if (_fetchConfig != null)
         {
-            // var _fetchDialog = new LaunchArgsDialog();
-            // var _fetchResult = await _fetchDialog.ShowDialog<string?>(this);
-            // 
-            // if (!String.IsNullOrEmpty(_fetchResult))
-            //     _fetchConfig.Frontend.LaunchArguments = _fetchResult;
+            var _fetchResult = await DialogService.ShowInput(this, "Declare Launch Aruguments", "Enter the launch arguments to use when launching on Steam.", "Done", "Ex. -fastboot -noaspect");
+            
+            if (!String.IsNullOrEmpty(_fetchResult))
+                _fetchConfig.Frontend.LaunchArguments = _fetchResult;
         }
     }
 

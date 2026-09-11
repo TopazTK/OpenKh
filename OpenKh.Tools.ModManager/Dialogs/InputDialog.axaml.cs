@@ -9,7 +9,9 @@ namespace OpenKh.Tools.ModManager.Dialogs
 {
     public partial class InputDialog : Window
     {
-        private Func<object?, bool>? _callbackMisc { get; set; }
+        public Func<Window?, string?>? MiscButtonCallback { get; set; }
+
+        public string? Result { get; set; }
 
         public InputDialog()
         {
@@ -17,10 +19,18 @@ namespace OpenKh.Tools.ModManager.Dialogs
             Loaded += OnViewLoaded;
         }
 
-        private void OnViewLoaded(object? sender, RoutedEventArgs e) => InputText.Focus();
-        
-        private void OnAcceptClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Close(InputText.Text);
+        private void OnViewLoaded(object? sender, RoutedEventArgs e)
+        {
+            InputText.Focus();
+            MiscButton.IsVisible = MiscButtonCallback == null ? false : true;
+        }
 
-        private void OnMiscClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _callbackMisc(this);
+        private void OnAcceptClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Close(Result = InputText.Text);
+
+        private void OnMiscClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (MiscButtonCallback != null)
+                Close(Result = MiscButtonCallback(this));
+        }
     }
 }
