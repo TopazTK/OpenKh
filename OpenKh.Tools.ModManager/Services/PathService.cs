@@ -16,14 +16,21 @@ namespace OpenKh.Tools.ModManager.Services
             var _fetchTargetGame = input.Frontend.TargetGame;
             var _fetchGameTarget = barePath ? "" : Config.GameShorthand[_fetchTargetGame];
 
-            if (String.IsNullOrEmpty(_fetchConfigPath))
-                return Path.Combine(AppContext.BaseDirectory, "mods", _fetchGameTarget);
+            var _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, "mods", _fetchGameTarget);
 
-            else if (!Path.IsPathFullyQualified(_fetchConfigPath))
-                return Path.Combine(AppContext.BaseDirectory, _fetchConfigPath, _fetchGameTarget);
+            if (!String.IsNullOrEmpty(_fetchConfigPath))
+            {
+                if (!Path.IsPathFullyQualified(_fetchConfigPath))
+                    _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, _fetchConfigPath, _fetchGameTarget);
 
-            else
-                return Path.Combine(_fetchConfigPath, _fetchGameTarget);
+                else
+                    _fetchTargetPath = Path.Combine(_fetchConfigPath, _fetchGameTarget);
+            }
+
+            if (!Directory.Exists(_fetchTargetPath))
+                Directory.CreateDirectory(_fetchTargetPath);
+
+            return _fetchTargetPath;
         }
 
         public static string ResolveBuild(Config input, bool barePath = false)
@@ -32,14 +39,21 @@ namespace OpenKh.Tools.ModManager.Services
             var _fetchTargetGame = input.Frontend.TargetGame;
             var _fetchGameTarget = barePath ? "" : Config.GameShorthand[_fetchTargetGame];
 
-            if (String.IsNullOrEmpty(_fetchConfigPath))
-                return Path.Combine(AppContext.BaseDirectory, "build", _fetchGameTarget);
+            var _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, "build", _fetchGameTarget);
 
-            else if (!Path.IsPathFullyQualified(_fetchConfigPath))
-                return Path.Combine(AppContext.BaseDirectory, _fetchConfigPath, _fetchGameTarget);
+            if (!String.IsNullOrEmpty(_fetchConfigPath))
+            {
+                if (!Path.IsPathFullyQualified(_fetchConfigPath))
+                    _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, _fetchConfigPath, _fetchGameTarget);
 
-            else
-                return Path.Combine(_fetchConfigPath, _fetchGameTarget);
+                else
+                    _fetchTargetPath = Path.Combine(_fetchConfigPath, _fetchGameTarget);
+            }
+
+            if (!Directory.Exists(_fetchTargetPath))
+                Directory.CreateDirectory(_fetchTargetPath);
+
+            return _fetchTargetPath;
         }
 
         public static string? ResolveData(Config input, bool barePath = false)

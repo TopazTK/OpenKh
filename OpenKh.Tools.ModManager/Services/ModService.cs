@@ -517,13 +517,8 @@ namespace OpenKh.Tools.ModManager.Services
 
             var _fetchPKGMapPath = Path.Combine(_fetchBuildPath, "patch-package-map.txt");
 
-            if (!Directory.Exists(_fetchBuildPath))
-                Directory.CreateDirectory(_fetchBuildPath);
-
-            else
+            if (Directory.Exists(_fetchBuildPath))
             {
-                Console.WriteLine("Clearing build path before building...");
-
                 Directory.Delete(_fetchBuildPath, true);
                 Directory.CreateDirectory(_fetchBuildPath);
             }
