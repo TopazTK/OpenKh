@@ -343,6 +343,7 @@ namespace OpenKh.Tools.ModManager.Services
                 {
                     Title = Path.GetFileNameWithoutExtension(fileName) + " (Lua)",
                     Description = "This Metadata has been automatically generated for this Lua Modification.",
+                    IsValid = true,
                     Assets = new List<AssetFile>()
                 };
 
@@ -373,13 +374,13 @@ namespace OpenKh.Tools.ModManager.Services
                             switch (_lineLead)
                             {
                                 case "LUAGUI_NAME":
-                                    _createMetadata.Title = "\"" + _lineGib + "\"";
+                                    _createMetadata.Title = _lineGib;
                                     break;
                                 case "LUAGUI_AUTH":
-                                    _createMetadata.OriginalAuthor = "\"" + _lineGib + "\"";
+                                    _createMetadata.OriginalAuthor = _lineGib;
                                     break;
                                 case "LUAGUI_DESC":
-                                    _createMetadata.Description = "\"" + _lineGib + "\"";
+                                    _createMetadata.Description = _lineGib;
                                     break;
                             }
                         }
