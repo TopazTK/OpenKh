@@ -494,7 +494,16 @@ public partial class MainView : Window
 
     private async void OnRestoreRequested(object? sender, RoutedEventArgs e)
     {
+        var _fetchContext = DataContext as MainViewModel;
+        var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
 
+        if (_fetchConfig != null)
+        {
+            var _fetchBuildDir = PathService.ResolveBuild(_fetchConfig);
+            Directory.Delete(_fetchBuildDir, true);
+
+            await DialogService.ShowMessage(this, "Restore Completed!", "Restoration complete! The game should run as if it isn't modded!", MessageType.INFO);
+        }
     }
 
     private async void OnBuildRunRequested(object? sender, RoutedEventArgs e)
