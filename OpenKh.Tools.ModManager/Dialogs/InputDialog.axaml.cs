@@ -4,12 +4,13 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using System;
+using System.Threading.Tasks;
 
 namespace OpenKh.Tools.ModManager.Dialogs
 {
     public partial class InputDialog : Window
     {
-        public Func<Window?, string?>? MiscButtonCallback { get; set; }
+        public Func<Window?, Task<string?>>? MiscButtonCallback { get; set; }
 
         public string? Result { get; set; }
 
@@ -27,10 +28,15 @@ namespace OpenKh.Tools.ModManager.Dialogs
 
         private void OnAcceptClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Close(Result = InputText.Text);
 
-        private void OnMiscClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        private async void OnMiscClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             if (MiscButtonCallback != null)
-                Close(Result = MiscButtonCallback(this));
+            {
+                var _fetchResult = await MiscButtonCallback(this);
+
+                if (!String.IsNullOrEmpty(_fetchResult))
+                    Close(Result = _fetchResult);
+            }
         }
     }
 }

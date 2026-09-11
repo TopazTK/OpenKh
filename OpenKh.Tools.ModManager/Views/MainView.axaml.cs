@@ -207,22 +207,22 @@ public partial class MainView : Window
 
         if (_fetchConfig != null)
         {
-            var _fetchResult = await DialogService.ShowInput(this, "Install a new Mod", "Enter the name of the repository to install.", "Install", "Ex. OpenKH/a-very-cool-mod@github.com", "Select and Install an Archive or Script", (inputParent) =>
+            var _fetchResult = await DialogService.ShowInput(this, "Install a new Mod", "Enter the name of the repository to install.", "Install", "Ex. OpenKH/a-very-cool-mod@github.com", "Select and Install an Archive or Script", async (inputParent) =>
             {
                 var _fetchTopLevel = TopLevel.GetTopLevel(inputParent);
 
-                var _fetchFiles = _fetchTopLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                var _fetchFiles = await _fetchTopLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                                                                                      {
                                                                                         Title = "Select an Archive or Script File...",
                                                                                         AllowMultiple = false,
-                                                                                        FileTypeFilter = new[]
-                                                                                        {
-                                                                                            new FilePickerFileType("OpenKH Mod Archive") { Patterns = new[] { "*.zip" } },
-                                                                                            new FilePickerFileType("PCPatch Package") { Patterns = new[] { "*.kh1pcpatch", "*.kh2pcpatch", "*.bbspcpatch", "*.compcpatch", "*.dddpcpatch" } },
-                                                                                            new FilePickerFileType("LuaBackend Script") { Patterns = new[] { "*.lua" } },
-                                                                                            new FilePickerFileType("All Files") { Patterns = new[] { "*" } },
-                                                                                        }
-                                                                                     }).Result;
+                                                                                        FileTypeFilter =
+                                                                                        [
+                                                                                            new FilePickerFileType("OpenKH Mod Archive") { Patterns = ["*.zip"] },
+                                                                                            new FilePickerFileType("PCPatch Package") { Patterns = ["*.kh1pcpatch", "*.kh2pcpatch", "*.bbspcpatch", "*.compcpatch", "*.dddpcpatch"] },
+                                                                                            new FilePickerFileType("LuaBackend Script") { Patterns = ["*.lua"] },
+                                                                                            new FilePickerFileType("All Files") { Patterns = ["*"] },
+                                                                                        ]
+                                                                                     });
 
                 if (_fetchFiles.Count >= 1)
                     return _fetchFiles[0].Path.AbsolutePath;
