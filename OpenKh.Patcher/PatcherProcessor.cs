@@ -9,17 +9,21 @@ using OpenKh.Kh2.Bdx.Models;
 using OpenKh.Kh2.Bdx.Utils;
 using OpenKh.Kh2.Messages;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using YamlDotNet.Serialization;
 using static OpenKh.Kh2.Dpd;
 using static OpenKh.Patcher.PatcherProcessor;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace OpenKh.Patcher
 {
@@ -89,7 +93,7 @@ namespace OpenKh.Patcher
             { 4, "ddd" }
         };
 
-        public void Patch(
+        public async Task Patch(
             string extractDataPath,
             string buildOutputPath,
             Metadata modMetadata,
@@ -98,6 +102,7 @@ namespace OpenKh.Patcher
             int targetPlatform = 0x00,            
             int targetGame = 0x01,
             bool isJapanese = false,
+            CancellationToken? cancelToken = null,
             IDictionary<string, string> packageMap = null,
             Dictionary<string, bool> collectionOptionalEnabledMods = null,
             Func<int, int, bool> reportProgress = null,
@@ -132,7 +137,34 @@ namespace OpenKh.Patcher
                 var _currentAssetIndex = 0;
                 var _totalAssetCount = modMetadata.Assets.Count;
 
-                Parallel.ForEach(modMetadata.Assets.AsParallel(), (_fetchAsset, _parallelState) =>
+                var _fetchFileDictionary = new ConcurrentDictionary<string, string>();
+
+                var _parallelOptions = new ParallelOptions() { CancellationToken = cancelToken.HasValue ? cancelToken.Value : new CancellationToken() };
+
+                if (!_isExtraction)
+                {
+                    var _fetchDataPath = Path.Combine(gameFilesPath, "Image", targetPlatform == 0x01 ? "dt" : (isJapanese ? "jp" : "en"));
+                    var _fetchHeaderFiles = Directory.GetFiles(_fetchDataPath).Where(x => x.Contains(_fetchGameId) && x.EndsWith(".hed"));
+
+                    await Parallel.ForEachAsync(_fetchHeaderFiles.AsParallel(), _parallelOptions, async (_fetchHeader, _fetchCancelToken) =>
+                    {
+                        using (var _fetchHeaderStream = File.OpenRead(_fetchHeader))
+                        {
+                            var _fetchPackageName = Path.GetFileNameWithoutExtension(_fetchHeader);
+                            var _fetchHeaderChildren = Hed.Read(_fetchHeaderStream);
+
+                            foreach (var _fetchEntry in _fetchHeaderChildren)
+                            {
+                                _fetchFileDictionary.TryAdd(Convert.ToHexString(_fetchEntry.MD5), _fetchPackageName);
+
+                                if (_fetchCancelToken.IsCancellationRequested)
+                                    break;
+                            }
+                        }
+                    });
+                }
+
+                await Parallel.ForEachAsync(modMetadata.Assets.AsParallel(), _parallelOptions, async (_fetchAsset, _fetchCancelToken) =>
                 {
                     if (_fetchAsset.Game != null && _fetchAsset.Game != _fetchGameId)
                         return;
@@ -209,7 +241,10 @@ namespace OpenKh.Patcher
 
                         var _multiExists = !_isExtraction;
 
-                        if (!_multiExists && _fetchAsset.Multi != null)
+                        if (_fetchAsset.Multi == null)
+                            _multiExists = false;
+
+                        else if (!_multiExists)
                         {
                             foreach (var _multiEntry in _fetchAsset.Multi)
                             {
@@ -220,127 +255,180 @@ namespace OpenKh.Patcher
                             }
                         }
 
-                        var _fetchSourcePath = (_fetchAsset.Source[0].Type != "internal" && _fetchAsset.Source[0].Name != null) ? Path.Combine(modFilesPath, _fetchAsset.Source[0].Name) : null;
-                        var _fetchSourceAssetPath = (_isExtraction && _fetchAsset.Source[0].Type == "internal" && _fetchAsset.Source[0].Name != null) ? Path.Combine(extractDataPath, _fetchAsset.Source[0].Name) : null;
+                        var _fetchSourcePath = (_fetchAsset.Method == "copy" || _fetchAsset.Method == "imd") && (_fetchAsset.Source[0].Type != "internal" && _fetchAsset.Source[0].Name != null) ? Path.Combine(modFilesPath, _fetchAsset.Source[0].Name) : null;
 
-                        var _shouldCopyFile = (_fetchAsset.Method != "copy" && _fetchAsset.Method != "imd" && ((_fetchAssetPath != null && File.Exists(_fetchAssetPath)) || _multiExists)) ||
-                                              ((_fetchAsset.Method == "copy" || _fetchAsset.Method == "imd") && (_fetchSourcePath != null && File.Exists(_fetchSourcePath))) ||
-                                              ((_fetchAsset.Method == "copy" || _fetchAsset.Method == "imd") && (_fetchSourceAssetPath != null && File.Exists(_fetchSourceAssetPath)) || _multiExists) ||
-                                              Tests;
+                        var _shouldCopySource = (_fetchAsset.Method != "copy" && _fetchAsset.Method != "imd" && ((_fetchAssetPath != null && File.Exists(_fetchAssetPath)) || _multiExists || !_isExtraction)) ||
+                                                ((_fetchAsset.Method == "copy" || _fetchAsset.Method == "imd") && (_fetchSourcePath != null && File.Exists(_fetchSourcePath))) ||
+                                                Tests;
 
                         var _doesRegionMatch = (!isJapanese && !_fetchName.Contains(".a.jp") && !_fetchName.Contains("/jp/")) || (isJapanese && (_fetchName.Contains(".a.jp") || _fetchName.Contains("/jp/")));
 
-                        if (_shouldCopyFile)
+                        if (_shouldCopySource || _fetchAsset.Source[0].Type == "internal")
                         {
-                            byte[] _fetchAssetData = null;
-
                             if (_fetchAssetPath != null)
                             {
                                 if (!File.Exists(_fetchOutputPath) && File.Exists(_fetchAssetPath))
-                                    File.Copy(_fetchAssetPath, _fetchOutputPath);
+                                    File.Copy(_fetchAssetPath, _fetchOutputPath, true);
+                            }
+
+                            else if (_fetchSourcePath != null)
+                            {
+                                if (!File.Exists(_fetchOutputPath) && File.Exists(_fetchSourcePath))
+                                    File.Copy(_fetchSourcePath, _fetchOutputPath, true);
                             }
 
                             else
                             {
-                                var _fetchDataPath = Path.Combine(gameFilesPath, "Image", targetPlatform == 0x01 ? "dt" : (isJapanese ? "jp" : "en"));
-                                var _fetchHeaderFiles = Directory.GetFiles(_fetchDataPath).Where(x => x.Contains(_fetchGameId) && x.EndsWith(".hed"));
+                                byte[] _fetchAssetData = null;
 
-                                _fetchHeaderFiles.AsParallel().ForAll(_fetchHeader =>
+                                var _fetchTarget = _fetchAsset.Method != "copy" && _fetchAsset.Method != "imd" ? _fetchName : _fetchAsset.Source[0].Name;
+
+                                var _fetchParent = "";
+                                var _fetchChild = "";
+
+                                if (_isFileRAW)
+                                    _fetchTarget = _fetchTarget.Replace("raw/", "");
+
+                                if (_isFileRemastered)
                                 {
-                                    var _fetchPackageFile = Path.ChangeExtension(_fetchHeader, "pkg");
-                                    var _fetchRegularName = _fetchName;
+                                    var _fetchMatch = Regex.Match(_fetchTarget, "[\\w,-]+\\.[a-zA-Z0-9]{2,4}");
 
-                                    using (var _fetchHeaderStream = File.OpenRead(_fetchHeader))
+                                    var _fetchIndex = _fetchTarget.IndexOf(_fetchMatch.Value);
+                                    var _fetchEndPoint = _fetchIndex + _fetchMatch.Value.Length;
+
+                                    var _fetchSubFirst = _fetchTarget.Substring(0, _fetchEndPoint);
+                                    var _fetchSubSecond = _fetchTarget.Substring(_fetchEndPoint, _fetchTarget.Length - _fetchEndPoint);
+
+                                    _fetchParent = _fetchSubFirst.Replace("remastered/", "");
+                                    _fetchChild = _fetchSubSecond.Trim('/');
+                                }
+
+                                var _fetchNameHash = Egs.Helpers.CreateMD5(_isFileRemastered ? _fetchParent : _fetchTarget);
+                                var _fetchKeyExists = _fetchFileDictionary.ContainsKey(_fetchNameHash);
+
+                                if (_fetchKeyExists)
+                                {
+                                    var _fetchFilePack = _fetchFileDictionary[_fetchNameHash];
+
+                                    if (!String.IsNullOrEmpty(_fetchFilePack))
                                     {
-                                        var _fetchEntries = Hed.Read(_fetchHeaderStream);
-                                        var _fetchTargetEntry = _fetchEntries.FirstOrDefault(x => Egs.Helpers.ToString(x.MD5) == Egs.Helpers.CreateMD5(_fetchRegularName));
+                                        var _fetchDataPath = Path.Combine(gameFilesPath, "Image", targetPlatform == 0x01 ? "dt" : (isJapanese ? "jp" : "en"));
 
-                                        if (_fetchTargetEntry != null)
+                                        var _fetchHeaderName = Path.Combine(_fetchDataPath, _fetchFilePack + ".hed");
+                                        var _fetchPackageName = Path.Combine(_fetchDataPath, _fetchFilePack + ".pkg");
+
+                                        using (var _fetchHeaderStream = File.OpenRead(_fetchHeaderName))
                                         {
-                                            using (var _fetchPackageStream = File.OpenRead(_fetchPackageFile))
-                                            {
-                                                if (!_isFileRemastered)
-                                                {
-                                                    var _fetchTargetAsset = new EgsHdAsset(_fetchPackageStream.SetPosition(_fetchTargetEntry.Offset));
-                                                    _fetchAssetData = _fetchTargetAsset.OriginalData;
+                                            var _fetchEntries = Hed.Read(_fetchHeaderStream);
+                                            var _fetchTargetEntry = _fetchEntries.FirstOrDefault(x => Convert.ToHexString(x.MD5) == _fetchNameHash);
 
+                                            using (var _fetchPackageStream = File.OpenRead(_fetchPackageName))
+                                            {
+                                                var _fetchTargetAsset = new EgsHdAsset(_fetchPackageStream.SetPosition(_fetchTargetEntry.Offset));
+
+                                                if (_isFileRemastered)
+                                                    _fetchTargetAsset.RemasteredAssetsDecompressedData.TryGetValue(_fetchChild, out _fetchAssetData);
+
+                                                else
+                                                    _fetchAssetData = _isFileRAW ? _fetchTargetAsset.OriginalRawData : _fetchTargetAsset.OriginalData;
+
+                                                if (_fetchAssetData != null)
                                                     File.WriteAllBytes(_fetchOutputPath, _fetchAssetData);
-                                                }
                                             }
                                         }
                                     }
-                                });
-                            }
+                                }
 
-                            if (File.Exists(_fetchOutputPath))
-                            {
-                                using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
+                                using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate))
                                     PatchFile(_fetchContext, _fetchAsset, _fileStream, _fetchAssetData);
                             }
                         }
 
                         else
                         {
-                            if (_fetchAssetPath != null && _doesRegionMatch)
+                            var _shouldCheckData = ((_fetchAsset.Method != "copy" && _fetchAsset.Method != "imd") || _fetchAsset.Source[0].Type == "internal");
+
+                            if (_fetchAssetPath != null && _shouldCheckData && _doesRegionMatch)
                             {
-                                if ((_fetchAsset.Method != "copy" && _fetchAsset.Method != "imd") || _fetchAsset.Source[0].Type == "internal")
+                                byte[] _fetchAssetData = null;
+
+                                var _fetchTarget = _fetchAsset.Method != "copy" && _fetchAsset.Method != "imd" ? _fetchName : _fetchAsset.Source[0].Name;
+
+                                var _fetchParent = "";
+                                var _fetchChild = "";
+
+                                if (_isFileRAW)
+                                    _fetchTarget = _fetchTarget.Replace("raw/", "");
+
+                                if (_isFileRemastered)
                                 {
-                                    if (targetPlatform != 0x00)
+                                    var _fetchMatch = Regex.Match(_fetchTarget, "[\\w,-]+\\.[a-zA-Z0-9]{2,4}");
+
+                                    var _fetchIndex = _fetchTarget.IndexOf(_fetchMatch.Value);
+                                    var _fetchEndPoint = _fetchIndex + _fetchMatch.Value.Length;
+
+                                    var _fetchSubFirst = _fetchTarget.Substring(0, _fetchEndPoint);
+                                    var _fetchSubSecond = _fetchTarget.Substring(_fetchEndPoint, _fetchTarget.Length - _fetchEndPoint);
+
+                                    _fetchParent = _fetchSubFirst.Replace("remastered/", "");
+                                    _fetchChild = _fetchSubSecond.Trim('/');
+                                }
+
+                                var _fetchNameHash = Egs.Helpers.CreateMD5(_isFileRemastered ? _fetchParent : _fetchTarget);
+                                var _fetchKeyExists = _fetchFileDictionary.ContainsKey(_fetchNameHash);
+
+                                if (_fetchKeyExists)
+                                {
+                                    var _fetchFilePack = _fetchFileDictionary[_fetchNameHash];
+
+                                    if (!String.IsNullOrEmpty(_fetchFilePack))
                                     {
-                                        byte[] _fetchAssetData = null;
-
                                         var _fetchDataPath = Path.Combine(gameFilesPath, "Image", targetPlatform == 0x01 ? "dt" : (isJapanese ? "jp" : "en"));
-                                        var _fetchHeaderFiles = Directory.GetFiles(_fetchDataPath).Where(x => x.Contains(_fetchGameId) && x.EndsWith(".hed"));
 
-                                        _fetchHeaderFiles.AsParallel().ForAll(_fetchHeader =>
+                                        var _fetchHeaderName = Path.Combine(_fetchDataPath, _fetchFilePack + ".hed");
+                                        var _fetchPackageName = Path.Combine(_fetchDataPath, _fetchFilePack + ".pkg");
+
+                                        using (var _fetchHeaderStream = File.OpenRead(_fetchHeaderName))
                                         {
-                                            var _fetchPackageFile = Path.ChangeExtension(_fetchHeader, "pkg");
-                                            var _fetchRegularName = _fetchName;
+                                            var _fetchEntries = Hed.Read(_fetchHeaderStream);
+                                            var _fetchTargetEntry = _fetchEntries.FirstOrDefault(x => Convert.ToHexString(x.MD5) == _fetchNameHash);
 
-                                            using (var _fetchHeaderStream = File.OpenRead(_fetchHeader))
+                                            using (var _fetchPackageStream = File.OpenRead(_fetchPackageName))
                                             {
-                                                var _fetchEntries = Hed.Read(_fetchHeaderStream);
-                                                var _fetchTargetEntry = _fetchEntries.FirstOrDefault(x => Egs.Helpers.ToString(x.MD5) == Egs.Helpers.CreateMD5(_fetchRegularName));
+                                                var _fetchTargetAsset = new EgsHdAsset(_fetchPackageStream.SetPosition(_fetchTargetEntry.Offset));
 
-                                                if (_fetchTargetEntry != null)
-                                                {
-                                                    using (var _fetchPackageStream = File.OpenRead(_fetchPackageFile))
-                                                    {
-                                                        if (!_isFileRemastered)
-                                                        {
-                                                            var _fetchTargetAsset = new EgsHdAsset(_fetchPackageStream.SetPosition(_fetchTargetEntry.Offset));
-                                                            _fetchAssetData = _fetchTargetAsset.OriginalData;
+                                                if (_isFileRemastered)
+                                                    _fetchTargetAsset.RemasteredAssetsDecompressedData.TryGetValue(_fetchChild, out _fetchAssetData);
 
-                                                            File.WriteAllBytes(_fetchOutputPath, _fetchAssetData);
-                                                        }
-                                                    }
-                                                }
+                                                else
+                                                    _fetchAssetData = _isFileRAW ? _fetchTargetAsset.OriginalRawData : _fetchTargetAsset.OriginalData;
+
+                                                if (_fetchAssetData != null)
+                                                    File.WriteAllBytes(_fetchOutputPath, _fetchAssetData);
                                             }
-                                        });
-
-                                        if (File.Exists(_fetchOutputPath))
-                                        {
-                                            using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
-                                                PatchFile(_fetchContext, _fetchAsset, _fileStream, _fetchAssetData);
                                         }
                                     }
                                 }
+
+                                using (var _fileStream = File.Open(_fetchOutputPath, FileMode.OpenOrCreate))
+                                    PatchFile(_fetchContext, _fetchAsset, _fileStream, _fetchAssetData);
                             }
 
+                            else if (_fetchSourcePath != null && File.Exists(_fetchSourcePath))
+                                File.Copy(_fetchSourcePath, _fetchOutputPath, true);
                         }
                     }
 
                     _currentAssetIndex++;
 
                     if (reportProgress != null)
-                    {
-                        var _fetchProgress = reportProgress(_currentAssetIndex, _totalAssetCount);
+                        reportProgress(_currentAssetIndex, _totalAssetCount);
 
-                        if (!_fetchProgress)
-                            _parallelState.Stop();
-                    }
+                    await Task.Delay(1, _fetchCancelToken);
                 });
             }
+
+            catch (TaskCanceledException) { }
 
             catch (Exception ex)
             {

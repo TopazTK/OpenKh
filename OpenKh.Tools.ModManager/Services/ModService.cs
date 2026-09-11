@@ -562,22 +562,20 @@ namespace OpenKh.Tools.ModManager.Services
 
                     var _fetchJapanese = PathService.ResolveRegionJP(currentConfig);
 
-                    await Task.Run(() =>
-                    {
-                        _fetchPatcher.Patch
-                        (
-                            _fetchDataPath,
-                            _fetchBuildPath,
-                            _fetchMetadata,
-                            _fetchMod.ModPath,
-                            _fetchGamePath,
-                            (int)currentConfig.Frontend.TargetPlatform,
-                            (int)currentConfig.Frontend.TargetGame,
-                            _fetchJapanese.Value,
-                            _fetchPackageMap,
-                            reportProgress: reportAssetProgress
-                        );
-                    }, CancelToken);
+                    await _fetchPatcher.Patch
+                    (
+                        _fetchDataPath,
+                        _fetchBuildPath,
+                        _fetchMetadata,
+                        _fetchMod.ModPath,
+                        _fetchGamePath,
+                        (int)currentConfig.Frontend.TargetPlatform,
+                        (int)currentConfig.Frontend.TargetGame,
+                        _fetchJapanese.Value,
+                        CancelToken,
+                        _fetchPackageMap,
+                        reportProgress: reportAssetProgress
+                    );
 
                     if (CancelToken.IsCancellationRequested)
                         break;
