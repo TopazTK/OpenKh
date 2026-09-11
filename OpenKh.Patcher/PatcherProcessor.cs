@@ -437,10 +437,13 @@ namespace OpenKh.Patcher
                 var _fetchSource = Path.Combine(context.SourceModAssetPath, assetFile.Source[0].Name);
 
                 if (!File.Exists(_fetchSource))
-                    throw new FileNotFoundException($"The mod does not contain the file {assetFile.Source[0].Name}", _fetchSource);
+                    Console.WriteLine($"The mod does not contain the file {assetFile.Source[0].Name} in {context.SourceModAssetPath}");
 
-                using (var _fetchStream = File.OpenRead(_fetchSource))
-                    _fetchStream.CopyTo(stream);
+                else
+                {
+                    using (var _fetchStream = File.OpenRead(_fetchSource))
+                        _fetchStream.CopyTo(stream);
+                }
             }
         }
 
