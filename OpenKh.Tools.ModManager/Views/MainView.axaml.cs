@@ -164,10 +164,7 @@ public partial class MainView : Window
 
         if (_fetchModList != null)
         {
-            // Ask the user if they *really* want to remove said mod.
-
-            var _removeDialog = new RemoveModDialog();
-            bool? _fetchResult = await _removeDialog.ShowDialog<bool?>(this);
+            bool? _fetchResult = await DialogService.ShowQuestion(this, "Remove Mod?", "Are you sure you want to remove the selected mod?");
 
             // If they indeed do:
 
@@ -210,8 +207,8 @@ public partial class MainView : Window
 
         if (_fetchConfig != null)
         {
-            var _installDialog = new InstallModDialog();
-            string? _fetchResult = await _installDialog.ShowDialog<string?>(this);
+            // var _installDialog = new InstallModDialog();
+            string? _fetchResult = ""; // await _installDialog.ShowDialog<string?>(this);
 
             var _fetchModPath = PathService.ResolveMod(_fetchConfig);
             var _fetchInstallResult = 0x00;
@@ -266,10 +263,7 @@ public partial class MainView : Window
                 _progressDialog.Close(true);
 
                 if (_fetchInstallResult == 0x01)
-                {
-                    var _errorDialog = new InvalidYamlError();
-                    await _errorDialog.ShowDialog(this);
-                }
+                    await DialogService.ShowMessage(this, "ERROR - Invalid Mod", "This is NOT a valid/compliant Mod Manager Mod. Please make sure it exists and it is valid.", MessageType.ERROR);
 
                 else if (_fetchInstallResult == 0x00)
                 {
@@ -474,11 +468,12 @@ public partial class MainView : Window
         _progressDialog.Close(true);
 
         if (_buildResult == 1)
-        {
-            var _errorDialog = new BuildModError();
-            _errorDialog.MainText.Text = string.Format(_errorDialog.MainText.Text, _currentModName);
-            await _errorDialog.ShowDialog(this);
-        }
+            await DialogService.ShowMessage(this, "ERROR - Failed to build Mod", string.Format("Building failed on this Mod: {0}\nPlease re-install the Mod and try again!", _currentModName), MessageType.ERROR);
+    }
+
+    private async void OnRestoreRequested(object? sender, RoutedEventArgs e)
+    {
+
     }
 
     private async void OnBuildRunRequested(object? sender, RoutedEventArgs e)
@@ -543,12 +538,8 @@ public partial class MainView : Window
                     break;
 
                 case 1:
-                {
-                    var _errorDialog = new BuildModError();
-                    _errorDialog.MainText.Text = string.Format(_errorDialog.MainText.Text, _currentModName);
-                    await _errorDialog.ShowDialog(this);
-                }
-                break;
+                    await DialogService.ShowMessage(this, "ERROR - Failed to build Mod", string.Format("Building failed on this Mod: {0}\nPlease re-install the Mod and try again!", _currentModName), MessageType.ERROR);
+                    break;
             }
         }
     }
@@ -562,11 +553,11 @@ public partial class MainView : Window
 
         if (_fetchConfig != null)
         {
-            var _fetchDialog = new LaunchArgsDialog();
-            var _fetchResult = await _fetchDialog.ShowDialog<string?>(this);
-
-            if (!String.IsNullOrEmpty(_fetchResult))
-                _fetchConfig.Frontend.LaunchArguments = _fetchResult;
+            // var _fetchDialog = new LaunchArgsDialog();
+            // var _fetchResult = await _fetchDialog.ShowDialog<string?>(this);
+            // 
+            // if (!String.IsNullOrEmpty(_fetchResult))
+            //     _fetchConfig.Frontend.LaunchArguments = _fetchResult;
         }
     }
 
@@ -580,7 +571,7 @@ public partial class MainView : Window
             PackageService.InstallPanacea(_fetchConfig);
             _fetchContext.ConfigurationValid = _fetchConfig.IsValid();
 
-            await new PanaceaInstallDialog().ShowDialog(this);
+            await DialogService.ShowMessage(this, "Panacea Installed!", "Panacea has been installed in accordance to current settings.", MessageType.INFO);
         }
     }
 
@@ -593,7 +584,7 @@ public partial class MainView : Window
         {
             PackageService.InstallBackend(_fetchConfig);
 
-            await new BackendInstallDialog().ShowDialog(this);
+            await DialogService.ShowMessage(this, "LuaBackend Installed!", "LuaBackend has been installed in accordance to current settings.", MessageType.INFO);
         }
     }
 }
