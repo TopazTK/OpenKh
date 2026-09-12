@@ -196,8 +196,9 @@ namespace OpenKh.Tools.ModManager.Services
 
                 var _fetchGitDir = new DirectoryInfo(_fetchCurrentGitPath);
 
-                foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                    _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                if (_fetchGitDir.Exists)
+                    foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
+                        _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
 
                 // After the task finishes/aborts, if we requested cancellation, abort.
                 if (CancelToken.IsCancellationRequested)
@@ -612,7 +613,7 @@ namespace OpenKh.Tools.ModManager.Services
 
             var _fetchAPIFilePath = Path.Combine(_fetchGamePath, "steam_appid.txt");
 
-            var _fetchLauncherPath = Path.Combine(AppContext.BaseDirectory, "assembly", "OpenKh.Command.Launcher.exe");
+            var _fetchLauncherPath = Path.Combine(AppContext.BaseDirectory, "assembly", "OpenKh.Command.Interceptor.exe");
             var _fetchTargetGamePath = Path.Combine(_fetchGamePath, Config.GameExecutable[_fetchTargetGame]);
 
             var _fetchAPIExists = _fetchTargetPlatform == Platform.STEAM ? File.Exists(_fetchAPIFilePath) : false;
