@@ -624,11 +624,16 @@ namespace OpenKh.Tools.ModManager.Services
             var _fetchArguments = currentConfig.Frontend.LaunchArguments;
             var _fetchArgumentPath = Path.Combine(_fetchGamePath, "launch_args.txt");
 
+            var _fetchDeletePath = Path.Combine(_fetchGamePath, "delete.this");
+
             if (_fetchAPIExists)
                 _fetchArguments = $"{Config.GameShorthand[_fetchTargetGame]} {_fetchArguments}";
 
             Uri _fetchTargetUri = null;
             FileInfo _fetchTargetFile = null;
+
+            if (File.Exists(_fetchDeletePath))
+                File.Delete(_fetchDeletePath);
 
             if (!OperatingSystem.IsWindows() || !_fetchAPIExists)
             {

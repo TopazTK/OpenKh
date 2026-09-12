@@ -16,17 +16,26 @@ static map<string, string> MAP_NAMES =
     {"ddd", "KINGDOM HEARTS Dream Drop Distance.exe" },
 };
 
+static string SELF_NAME = "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe";
+static string REAL_NAME = "KINGDOM HEARTS HD 1.5+2.5 ReMIX.bak";
+
 static string MAIN_LAUNCH = "KINGDOM HEARTS HD 1.5+2.5 Launcher.exe";
 static string ARGUMENT_FETCH = "launch_args.txt";
 
 int main(int argc, char* argv[])
 {
+    auto _fetchHandle = GetConsoleWindow();
+    ShowWindow(_fetchHandle, SW_HIDE);
+
     wchar_t _fetchPath[MAX_PATH];
 
     auto _fetchLength = GetModuleFileNameW(nullptr, _fetchPath, MAX_PATH);
     auto _fetchPathFS = filesystem::path(_fetchPath).parent_path().string();
 
     auto _fetchArgsPath = _fetchPathFS + "\\" + ARGUMENT_FETCH;
+
+    auto _fetchSelfPath = "\"" + _fetchPathFS + "\\" + SELF_NAME + "\"";
+    auto _fetchRealPath = "\"" + _fetchPathFS + "\\" + REAL_NAME + "\"";
 
     if (argc == 0x01)
     {
@@ -88,6 +97,9 @@ int main(int argc, char* argv[])
 
     if (filesystem::exists(_fetchArgsPath))
         filesystem::remove(_fetchArgsPath);
+
+    system(string("RENAME " + _fetchSelfPath + " \"delete.this\"").c_str());
+    system(string("RENAME " + _fetchRealPath + " \"" + SELF_NAME + "\"").c_str());
 
     return 0;
 }
