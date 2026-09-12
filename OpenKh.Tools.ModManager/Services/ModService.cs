@@ -622,6 +622,7 @@ namespace OpenKh.Tools.ModManager.Services
             var _fetchReMIXFilePath = currentConfig.Frontend.TargetGame == Game.DREAM_DROP_DISTANCE ? Path.Combine(_fetchGamePath, "KINGDOM HEARTS HD 2.8 Final Chapter Prologue.exe") : Path.Combine(_fetchGamePath, "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe");
 
             var _fetchArguments = currentConfig.Frontend.LaunchArguments;
+            var _fetchArgumentPath = Path.Combine(_fetchGamePath, "launch_args.txt");
 
             if (_fetchAPIExists)
                 _fetchArguments = $"{Config.GameShorthand[_fetchTargetGame]} {_fetchArguments}";
@@ -634,7 +635,7 @@ namespace OpenKh.Tools.ModManager.Services
                 switch (_fetchTargetPlatform)
                 {
                     case Platform.STEAM:
-                        _fetchTargetUri = new Uri($"steam://rungameid/{_fetchSteamId}" + (!String.IsNullOrEmpty(_fetchArguments) ? $"//{ Uri.EscapeDataString(_fetchArguments) }" : ""));
+                        _fetchTargetUri = new Uri($"steam://rungameid/{_fetchSteamId}");
                         break;
                     case Platform.EPIC_GAMES_STORE:
                         _fetchTargetUri = new Uri("com.epicgames.launcher://apps/4158b699dd70447a981fee752d970a3e%3A5aac304f0e8948268ddfd404334dbdc7%3A68c214c58f694ae88c2dab6f209b43e4?action=launch");
@@ -644,6 +645,9 @@ namespace OpenKh.Tools.ModManager.Services
 
             if (topLevelObject.Launcher != null && _fetchTargetUri != null)
             {
+                if (!String.IsNullOrEmpty(_fetchArguments))
+                    File.WriteAllText(_fetchArgumentPath, _fetchArguments);
+
                 if (_fetchAPIExists)
                 {
                     var _fetchReMIXBackup = Path.ChangeExtension(_fetchReMIXFilePath, ".bak");
