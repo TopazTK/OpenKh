@@ -23,7 +23,14 @@ namespace OpenKh.Tools.ModManager.Services
             else
             {
                 _fetchDialog.Show();
-                return _fetchDialog.Result;
+
+                await Task.Run(() =>
+                {
+                    while (_fetchDialog.Result == null)
+                    { }
+                });
+
+                return _fetchDialog.Result.Value;
             }
         }
 

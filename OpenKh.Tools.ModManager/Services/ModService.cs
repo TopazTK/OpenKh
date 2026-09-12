@@ -118,9 +118,22 @@ namespace OpenKh.Tools.ModManager.Services
             }
 
             // If the directory does not exist, create it. 
-            // TODO: If it does, ask for an overwrite.
             if (!Directory.Exists(_fetchCurrentModDir))
                 Directory.CreateDirectory(_fetchCurrentModDir);
+
+            else
+            {
+                var _fetchResult = await DialogService.ShowQuestion(null, "Overwrite Existting Mod?", "The mod you are trying to install already exists. Do you wish to overwrite it?");
+
+                if (_fetchResult == false)
+                    return 0x03;
+
+                await Task.Run(() =>
+                {
+                    Directory.Delete(_fetchCurrentModDir, true);
+                    Directory.CreateDirectory(_fetchCurrentModDir);
+                });
+            }
 
             // This is being done with a try-catch because if the git doesn't exist this throws an exception.
             // If it does, consider this is not a valid mod and abort.
@@ -258,6 +271,24 @@ namespace OpenKh.Tools.ModManager.Services
             var _fetchExtension = Path.GetExtension(fileName).ToLower();
             var _fetchCurrentModDir = Path.Combine(modPath, Path.GetFileNameWithoutExtension(fileName));
 
+            // If the directory don't exist, create it.
+            if (!Directory.Exists(_fetchCurrentModDir))
+                Directory.CreateDirectory(_fetchCurrentModDir);
+
+            else
+            {
+                var _fetchResult = await DialogService.ShowQuestion(null, "Overwrite Existting Mod?", "The mod you are trying to install already exists. Do you wish to overwrite it?");
+
+                if (_fetchResult == false)
+                    return 0x03;
+
+                await Task.Run(() =>
+                {
+                    Directory.Delete(_fetchCurrentModDir, true);
+                    Directory.CreateDirectory(_fetchCurrentModDir);
+                });
+            }
+
             // If the file is a ZIP Archive:
             if (_fetchExtension.Contains("zip"))
             {
@@ -271,11 +302,6 @@ namespace OpenKh.Tools.ModManager.Services
                     // If the archive does not contain a YAML, abort.
                     if (_fetchArchive.Entries.FirstOrDefault(x => x.Name == "mod.yml") == null)
                         return 0x01;
-
-                    // If the directory don't exist, create it.
-                    // TODO: If it exists, ask for an overwrite.
-                    if (!Directory.Exists(_fetchCurrentModDir))
-                        Directory.CreateDirectory(_fetchCurrentModDir);
 
                     // Now we gettin' to the nitty gritty.
                     await Task.Run(() =>
@@ -335,10 +361,7 @@ namespace OpenKh.Tools.ModManager.Services
             {
                 var _fetchCurrentLuaName = Path.Combine(_fetchCurrentModDir, Path.GetFileName(fileName));
 
-                if (!Directory.Exists(_fetchCurrentModDir))
-                    Directory.CreateDirectory(_fetchCurrentModDir);
-
-                File.Copy(fileName, _fetchCurrentLuaName);
+                File.Copy(fileName, _fetchCurrentLuaName, true);
 
                 var _createMetadata = new Metadata
                 {
@@ -400,9 +423,6 @@ namespace OpenKh.Tools.ModManager.Services
                 using (var _fileStream = new FileStream(fileName, FileMode.Open))
                 {
                     var _fetchArchive = new ZipArchive(_fileStream, ZipArchiveMode.Read);
-
-                    if (!Directory.Exists(_fetchCurrentModDir))
-                        Directory.CreateDirectory(_fetchCurrentModDir);
 
                     await Task.Run(() =>
                     {
@@ -519,11 +539,14 @@ namespace OpenKh.Tools.ModManager.Services
 
             var _fetchPKGMapPath = Path.Combine(_fetchBuildPath, "patch-package-map.txt");
 
-            if (Directory.Exists(_fetchBuildPath))
+            await Task.Run(async () =>
             {
-                Directory.Delete(_fetchBuildPath, true);
-                Directory.CreateDirectory(_fetchBuildPath);
-            }
+                if (Directory.Exists(_fetchBuildPath))
+                {
+                    Directory.Delete(_fetchBuildPath, true);
+                    Directory.CreateDirectory(_fetchBuildPath);
+                }
+            });
 
             var _currentModName = "";
             var _currentModIndex = 0;

@@ -7,7 +7,7 @@ namespace OpenKh.Tools.ModManager.Dialogs
 {
     public partial class QuestionDialog : Window
     {
-        public bool Result { get; set; }
+        public bool? Result { get; set; }
 
         public QuestionDialog()
         {

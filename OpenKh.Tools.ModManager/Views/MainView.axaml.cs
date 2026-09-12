@@ -345,6 +345,11 @@ public partial class MainView : Window
                             }
                         }
 
+                        var _fetchExistingMod = _fetchModsList.FirstOrDefault(x => x.ModPath == _modModel.ModPath);
+
+                        if (_fetchExistingMod != null)
+                            _fetchModsList.Remove(_fetchExistingMod);
+
                         var _fetchFirstInvalid = _fetchModsList.FirstOrDefault(x => !x.ModValid);
                         var _fetchModIndex = _fetchFirstInvalid != null ? _fetchModsList.IndexOf(_fetchFirstInvalid) : _fetchModsList.Count;
 
@@ -366,6 +371,11 @@ public partial class MainView : Window
                             ModActive = false,
                             ModValid = false
                         };
+
+                        var _fetchExistingMod = _fetchModsList.FirstOrDefault(x => x.ModPath == _modModel.ModPath);
+
+                        if (_fetchExistingMod != null)
+                            _fetchModsList.Remove(_fetchExistingMod);
 
                         _fetchModsList.Add(_modModel);
                     }
