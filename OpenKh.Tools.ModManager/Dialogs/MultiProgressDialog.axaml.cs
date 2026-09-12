@@ -2,14 +2,12 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using OpenKh.Tools.ModManager.Services;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 
 namespace OpenKh.Tools.ModManager.Dialogs
 {
-    public partial class ModProgressDialog : Window
+    public partial class MultiProgressDialog : Window
     {
-        public ModProgressDialog()
+        public MultiProgressDialog()
         {
             InitializeComponent();
         }

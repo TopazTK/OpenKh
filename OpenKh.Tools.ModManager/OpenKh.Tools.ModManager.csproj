@@ -39,6 +39,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="Dialogs\SingleProgressDialog.axaml.cs">
+      <DependentUpon>SingleProgressDialog.axaml</DependentUpon>
+    </Compile>
     <Compile Update="Views\MainView.axaml.cs">
       <DependentUpon>MainView.axaml</DependentUpon>
     </Compile>
