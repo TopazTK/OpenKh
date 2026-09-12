@@ -99,12 +99,12 @@ namespace OpenKh.Tools.ModManager.Wizard
                         // It is stupid that I have to do this.
                         // If someone knows a better way PLEASE tell me.
                         var _steamPossibleDirs = new List<string>()
-                    {
-                        Path.Combine(_fetchHome, ".steam/steam"),
-                        Path.Combine(_fetchHome, ".local/share/Steam"),
-                        Path.Combine(_fetchHome, ".var/app/com.valvesoftware.Steam/.steam"),
-                        Path.Combine(_fetchHome, ".var/app/com.valvesoftware.Steam/data/Steam")
-                    };
+                        {
+                            Path.Combine(_fetchHome, ".steam/steam"),
+                            Path.Combine(_fetchHome, ".local/share/Steam"),
+                            Path.Combine(_fetchHome, ".var/app/com.valvesoftware.Steam/.steam"),
+                            Path.Combine(_fetchHome, ".var/app/com.valvesoftware.Steam/data/Steam")
+                        };
 
                         var _fetchInstallDir = _steamPossibleDirs.FirstOrDefault(x => Directory.Exists(x));
                         _fetchConfigPath = Path.Combine(_fetchInstallDir, "steamapps", "libraryfolders.vdf");

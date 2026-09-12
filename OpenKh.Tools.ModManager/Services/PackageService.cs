@@ -141,6 +141,7 @@ namespace OpenKh.Tools.ModManager.Services
                 File.WriteAllText(Path.Combine(_fetchPath28, "panacea_settings.txt"), _createPath);
             }
 
+            InstallOverrides(currentConfig);
         }
     
         public static void RemovePanacea(Config currentConfig)
@@ -331,6 +332,8 @@ namespace OpenKh.Tools.ModManager.Services
                 File.Copy(_fetchBackendPath, _fetchAssembly28, true);
                 File.WriteAllLines(Path.Combine(_fetchPath28, "LuaBackend.toml"), _configLines);
             }
+
+            InstallOverrides(currentConfig);
         }
     
         public static void RemoveBackend(Config currentConfig)
@@ -426,6 +429,75 @@ namespace OpenKh.Tools.ModManager.Services
 
             if (_isValid28)
                 File.Delete(_fetchSteamID28);
+        }
+
+        public static bool InstallOverrides(Config currentConfig)
+        {
+            if (OperatingSystem.IsLinux())
+            {
+                var _fetchHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+                // It is stupid that I have to do this.
+                // If someone knows a better way PLEASE tell me.
+                var _steamPossibleDirs = new List<string>()
+                {
+                    Path.Combine(_fetchHome, ".steam/steam"),
+                    Path.Combine(_fetchHome, ".local/share/Steam"),
+                    Path.Combine(_fetchHome, ".var/app/com.valvesoftware.Steam/.steam"),
+                    Path.Combine(_fetchHome, ".var/app/com.valvesoftware.Steam/data/Steam")
+                };
+
+                var _fetchInstallDir = _steamPossibleDirs.FirstOrDefault(x => Directory.Exists(x));
+
+                var _fetchRegistry1525 = Path.Combine(_fetchInstallDir, "steamapps", "compatdata", "2552430", "pfx", "user.reg");
+                var _fetchRegistry28 = Path.Combine(_fetchInstallDir, "steamapps", "compatdata", "2552440", "pfx", "user.reg");
+
+                if (!File.Exists(_fetchRegistry1525) && !File.Exists(_fetchRegistry28))
+                    return false;
+
+                if (File.Exists(_fetchRegistry1525))
+                {
+                    var _fetchRegistryRAW = new List<string>(File.ReadAllLines(_fetchRegistry1525));
+                    var _fetchOverride = _fetchRegistryRAW.FirstOrDefault(x => x.Contains("\"version\"=\"native,builtin\""));
+
+                    if (_fetchOverride == null)
+                    {
+                        var _fetchOverridesLine = _fetchRegistryRAW.First(x => x.Contains(@"[Software\\Wine\\DllOverrides]"));
+                        var _fetchOverridesPosition = _fetchRegistryRAW.IndexOf(_fetchOverridesLine);
+
+                        _fetchRegistryRAW.Insert(_fetchOverridesPosition + 0x02, "\"version\"=\"native,builtin\"");
+
+                        File.WriteAllLines(_fetchRegistry1525, _fetchRegistryRAW.ToArray());
+                    }
+
+                    else
+                        return true;
+                }
+
+                if (File.Exists(_fetchRegistry28))
+                {
+                    var _fetchRegistryRAW = new List<string>(File.ReadAllLines(_fetchRegistry28));
+                    var _fetchOverride = _fetchRegistryRAW.FirstOrDefault(x => x.Contains("\"version\"=\"native,builtin\""));
+
+                    if (_fetchOverride == null)
+                    {
+                        var _fetchOverridesLine = _fetchRegistryRAW.First(x => x.Contains(@"[Software\\Wine\\DllOverrides]"));
+                        var _fetchOverridesPosition = _fetchRegistryRAW.IndexOf(_fetchOverridesLine);
+
+                        _fetchRegistryRAW.Insert(_fetchOverridesPosition + 0x02, "\"version\"=\"native,builtin\"");
+
+                        File.WriteAllLines(_fetchRegistry1525, _fetchRegistryRAW.ToArray());
+                    }
+
+                    else
+                        return true;
+                }
+
+                return true;
+            }
+
+            else
+                return false;
         }
     }
 }
