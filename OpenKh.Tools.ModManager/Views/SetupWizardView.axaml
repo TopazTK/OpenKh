@@ -23,7 +23,7 @@
         <ContentControl Grid.Row="0" VerticalAlignment="Top" Content="{ReflectionBinding _rootModel.CurrentWizardPage, ElementName=Root}" />
         <StackPanel Grid.Row="1" Spacing="5" Margin="10" VerticalAlignment="Bottom" HorizontalAlignment="Right" Orientation="Horizontal">
             <Button Content="Back" Name="BackButton" Click="OnBackPage" HorizontalContentAlignment="Center" Width="80" IsEnabled="false"/>
-            <Button Content="Next" Name="NextButton" Click="OnNextPage" HorizontalContentAlignment="Center" Width="80"/>
+            <Button Content="Next" Name="NextButton" Click="OnNextPage" HorizontalContentAlignment="Center" Width="80" IsVisible="{ReflectionBinding !#FinishButton.IsVisible}"/>
             <Button Content="Cancel" Name="CancelButton" Click="OnSubmitClick" HorizontalContentAlignment="Center" Width="80" Margin="5, 0, 0, 0"/>
             <Button Content="Finish" Name="FinishButton" Click="OnSubmitClick" HorizontalContentAlignment="Center" IsVisible="False" Width="80" Margin="5, 0, 0, 0"/>
         </StackPanel>

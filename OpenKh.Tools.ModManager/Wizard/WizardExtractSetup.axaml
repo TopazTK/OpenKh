@@ -38,14 +38,14 @@
         </TextBlock>
             <StackPanel Spacing="5" HorizontalAlignment="Center">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
-                    <ToggleButton Name="ExtractKH1" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts I [~23GB]"/>
-                    <ToggleButton Name="ExtractKH2" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts II [~43GB]"/>
+                    <ToggleButton Name="ExtractKH1" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts I [~23GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <ToggleButton Name="ExtractKH2" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts II [~43GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
-                    <ToggleButton Name="ExtractCOM" Width="225" HorizontalContentAlignment="Center" Content="Re:Chain of Memories [~14GB]"/>
-                    <ToggleButton Name="ExtractBBS" Width="225" HorizontalContentAlignment="Center" Content="Birth by Sleep [~19GB]"/>
+                    <ToggleButton Name="ExtractCOM" Width="225" HorizontalContentAlignment="Center" Content="Re:Chain of Memories [~14GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <ToggleButton Name="ExtractBBS" Width="225" HorizontalContentAlignment="Center" Content="Birth by Sleep [~19GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                 </StackPanel>
-                <ToggleButton Name="ExtractDDD" Width="225" HorizontalAlignment="Center" HorizontalContentAlignment="Center" Content="Dream Drop Distance [~19GB]"/>
+                <ToggleButton Name="ExtractDDD" Width="225" HorizontalAlignment="Center" HorizontalContentAlignment="Center" Content="Dream Drop Distance [~19GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[1], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             </StackPanel>
         <TextBlock TextWrapping="Wrap" Margin="0, 10, 0, 5">
             Please declare the path you want to extract to below, if you do not, it will default to the <Bold>"extract"</Bold> folder relative to the Mod Manager:
@@ -65,9 +65,9 @@
                     <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />
                 </Button>
             </Grid>
-            <ProgressBar Name="ProgressExtract" Height="30"/>
             <Button Name="ExtractStartButton" Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Start Extracting" Click="OnExtractStart"/>
             <Button Name="ExtractStopButton" Margin="0, 5, 0, 10" Height="30" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Stop Extracting" Click="OnExtractStop" IsVisible="false" />
+            <ProgressBar Name="ProgressExtract" Height="30" IsVisible="{ReflectionBinding #ExtractStopButton.IsVisible}"/>
         </StackPanel>
     </StackPanel>
 </ContentPage>
