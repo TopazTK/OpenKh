@@ -96,7 +96,7 @@ namespace OpenKh.Tools.ModManager.Services
                     extractGames[2] ? "Recom" : "",
                     extractGames[3] ? "bbs" : "",
                     extractGames[4] ? "kh3d" : ""
-                }.Where(x => !String.IsNullOrEmpty(x));
+                }.Where(x => !String.IsNullOrEmpty(x)).ToList();
 
                 // Declare the progress variables.
                 var _fetchFilesCurrent = 0;
@@ -111,9 +111,6 @@ namespace OpenKh.Tools.ModManager.Services
                     currentConfig.Frontend.DataPath = Path.Combine(AppContext.BaseDirectory, "extract");
                     _fetchDataPath = currentConfig.Frontend.DataPath;
                 }
-
-                // Create options that every parallel in this function will use.
-                var _parallelOptions = new ParallelOptions() { CancellationToken = CancelToken };
 
                 // Start a task for header traversal:
                 await Task.Run(() =>
@@ -154,99 +151,108 @@ namespace OpenKh.Tools.ModManager.Services
                 if (CancelToken.IsCancellationRequested)
                     return 0x03;
 
-                // Start a parallel for each game that is declared for extraction:
-                await Parallel.ForEachAsync(_fetchExtractList.AsParallel(), _parallelOptions, async (_fetchExtractGame, _fetchStateGame) =>
+                await Task.Run(() =>
                 {
-                    // Fetch the game path accounting for DDD and the game region. If the region was not able to be processed, consider it to be International.
-                    var _fetchGamePath = _fetchExtractGame == "kh3d" ? PathService.ResolvePath28(currentConfig) : PathService.ResolvePath1525(currentConfig);
-                    var _resolveJP = PathService.ResolveRegionJP(currentConfig) ?? false;
-
-                    // Fetch all the header files for the current game.
-                    var _fetchPackagePath = Path.Combine(_fetchGamePath, "Image", currentConfig.Frontend.TargetPlatform == Platform.STEAM ? "dt" : (_resolveJP ? "jp" : "en"));
-                    var _fetchHeaderFiles = Directory.GetFiles(_fetchPackagePath).Where(x => x.Contains(_fetchExtractGame) && x.EndsWith(".hed"));
-
                     // Start a parallel for every header parsed:
-                    await Parallel.ForEachAsync(_fetchHeaderFiles.AsParallel(), _parallelOptions, async (_fetchHeader, _fetchStateHeader) =>
+                    Parallel.ForEach(_fetchExtractList.AsParallel(), async (_fetchExtractGame, _fetchStateGame) =>
                     {
-                        // Resolve the package name derived from the header.
-                        var _fetchPackage = Path.ChangeExtension(_fetchHeader, ".pkg");
+                        // Fetch the game path accounting for DDD and the game region. If the region was not able to be processed, consider it to be International.
+                        var _fetchGamePath = _fetchExtractGame == "kh3d" ? PathService.ResolvePath28(currentConfig) : PathService.ResolvePath1525(currentConfig);
+                        var _resolveJP = PathService.ResolveRegionJP(currentConfig) ?? false;
 
-                        // Open the header for reading, and read it as a HED class.
-                        using (var _fetchHedStream = new FileStream(_fetchHeader, FileMode.Open))
+                        // Fetch all the header files for the current game.
+                        var _fetchPackagePath = Path.Combine(_fetchGamePath, "Image", currentConfig.Frontend.TargetPlatform == Platform.STEAM ? "dt" : (_resolveJP ? "jp" : "en"));
+                        var _fetchHeaderFiles = Directory.GetFiles(_fetchPackagePath).Where(x => x.Contains(_fetchExtractGame) && x.EndsWith(".hed"));
+
+                        // Start a parallel for every header parsed:
+                        Parallel.ForEach(_fetchHeaderFiles.AsParallel(), async (_fetchHeader, _fetchStateHeader) =>
                         {
-                            var _fetchFiles = Hed.Read(_fetchHedStream);
+                            // Resolve the package name derived from the header.
+                            var _fetchPackage = Path.ChangeExtension(_fetchHeader, ".pkg");
 
-                            // Open the derivitive package for shared reading.
-                            using (var _fetchPkgStream = new FileStream(_fetchPackage, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            // Open the header for reading, and read it as a HED class.
+                            using (var _fetchHedStream = new FileStream(_fetchHeader, FileMode.Open))
                             {
-                                // Start a parallel for every file in the header :
-                                await Parallel.ForEachAsync(_fetchFiles.AsParallel(), _parallelOptions, async (_fetchFile, _fetchStateFile) =>
+                                var _fetchFiles = Hed.Read(_fetchHedStream);
+
+                                // Open the derivitive package for shared reading.
+                                using (var _fetchPkgStream = new FileStream(_fetchPackage, FileMode.Open, FileAccess.Read, FileShare.Read))
                                 {
-                                    // Increment the file progress.
-                                    _fetchFilesCurrent++;
-
-                                    // Fetch the hex string of the file hash and check if the hash is known.
-                                    var _fetchHashText = Convert.ToHexString(_fetchFile.MD5);
-                                    var _fetchNameValue = EgsTools.Names.FirstOrDefault(x => x.Key == _fetchHashText).Value;
-
-                                    // If it is, fetch the name. Otherwise construct a name from the hash string.
-                                    var _fetchFileName = String.IsNullOrEmpty(_fetchNameValue) ? $"{_fetchHashText}.dat" : _fetchNameValue;
-
-                                    // Resolve the extraction target for the file and its directory.
-                                    var _fetchFilePath = Path.Combine(_fetchDataPath, DICT_SHORTHAND[_fetchExtractGame], _fetchFileName);
-                                    var _fetchFileDir = Path.GetDirectoryName(_fetchFilePath);
-
-                                    // If the target directory does not exist, create it.
-                                    if (!Directory.Exists(_fetchFileDir))
-                                        Directory.CreateDirectory(_fetchFileDir);
-
-                                    // Set the stream position and fetch the file as an HDAsset.
-                                    _fetchPkgStream.SetPosition(_fetchFile.Offset);
-                                    var _fetchData = new EgsHdAsset(_fetchPkgStream);
-
-                                    // Write the file to the disk.
-                                    await File.WriteAllBytesAsync(_fetchFilePath, _fetchData.OriginalData);
-
-                                    // If the file has any remastered assets:
-                                    if (_fetchData.Assets.Count() != 0x00)
+                                    foreach (var _fetchFile in _fetchFiles)
                                     {
-                                        // Construct the remastered extraction path.
-                                        var _fetchRemasterPath = Path.Combine(_fetchDataPath, DICT_SHORTHAND[_fetchExtractGame], "remastered", _fetchFileName);
+                                        // Increment the file progress.
+                                        _fetchFilesCurrent++;
 
-                                        // Start a parallel for every remastered asset:
-                                        await Parallel.ForEachAsync(_fetchData.Assets.AsParallel(), _parallelOptions, async (_fetchAsset, _fetchStateAsset) =>
+                                        // Fetch the hex string of the file hash and check if the hash is known.
+                                        var _fetchHashText = Convert.ToHexString(_fetchFile.MD5);
+                                        var _fetchNameValue = EgsTools.Names.FirstOrDefault(x => x.Key == _fetchHashText).Value;
+
+                                        // If it is, fetch the name. Otherwise construct a name from the hash string.
+                                        var _fetchFileName = String.IsNullOrEmpty(_fetchNameValue) ? $"{_fetchHashText}.dat" : _fetchNameValue;
+
+                                        // Resolve the extraction target for the file and its directory.
+                                        var _fetchFilePath = Path.Combine(_fetchDataPath, DICT_SHORTHAND[_fetchExtractGame], _fetchFileName);
+                                        var _fetchFileDir = Path.GetDirectoryName(_fetchFilePath);
+
+                                        // If the target directory does not exist, create it.
+                                        if (!Directory.Exists(_fetchFileDir))
+                                            Directory.CreateDirectory(_fetchFileDir);
+
+                                        // Set the stream position and fetch the file as an HDAsset.
+                                        _fetchPkgStream.SetPosition(_fetchFile.Offset);
+                                        var _fetchData = new EgsHdAsset(_fetchPkgStream);
+
+                                        // Write the file to the disk.
+                                        File.WriteAllBytes(_fetchFilePath, _fetchData.OriginalData);
+
+                                        // If the file has any remastered assets:
+                                        if (_fetchData.Assets.Count() != 0x00)
                                         {
-                                            // Fetch the asset target path and directory.
-                                            var _fetchAssetPath = Path.Combine(_fetchRemasterPath, _fetchAsset);
-                                            var _fetchAssetDir = Path.GetDirectoryName(_fetchAssetPath);
+                                            // Construct the remastered extraction path.
+                                            var _fetchRemasterPath = Path.Combine(_fetchDataPath, DICT_SHORTHAND[_fetchExtractGame], "remastered", _fetchFileName);
 
-                                            // If the directory does not exist, create it.
-                                            if (!Directory.Exists(_fetchAssetDir))
-                                                Directory.CreateDirectory(_fetchAssetDir);
+                                            foreach (var _fetchAsset in _fetchData.Assets)
+                                            {
+                                                // Fetch the asset target path and directory.
+                                                var _fetchAssetPath = Path.Combine(_fetchRemasterPath, _fetchAsset);
+                                                var _fetchAssetDir = Path.GetDirectoryName(_fetchAssetPath);
 
-                                            // Fetch the data for the asset and write it.
-                                            var _fetchAssetData = _fetchData.RemasteredAssetsDecompressedData[_fetchAsset];
-                                            await File.WriteAllBytesAsync(_fetchAssetPath, _fetchAssetData);
-                                        });
+                                                // If the directory does not exist, create it.
+                                                if (!Directory.Exists(_fetchAssetDir))
+                                                    Directory.CreateDirectory(_fetchAssetDir);
+
+                                                // Fetch the data for the asset and write it.
+                                                var _fetchAssetData = _fetchData.RemasteredAssetsDecompressedData[_fetchAsset];
+                                                File.WriteAllBytes(_fetchAssetPath, _fetchAssetData);
+
+                                                if (CancelToken.IsCancellationRequested)
+                                                    break;
+                                            }
+
+                                        }
+
+                                        // Callback to the progress feedback function.
+
+                                        if (reportProgress != null)
+                                            reportProgress(_fetchFilesCurrent, _fetchFilesTotal);
+
+                                        if (CancelToken.IsCancellationRequested)
+                                            break;
                                     }
 
-                                    // Callback to the progress feedback function.
-
-                                    if (reportProgress != null)
-                                    {
-                                        var _fetchProgress = reportProgress(_fetchFilesCurrent, _fetchFilesTotal);
-
-                                        // If the function returned false [meaning a cancellation was requested]: Request cancellation.
-                                        if (!_fetchProgress)
-                                            CancelTokenSource.Cancel();
-                                    }
-                                });
+                                }
                             }
-                        }
-                    });
-                });
 
-                // If cancellation was requested, cancel the process.
+                            if (CancelToken.IsCancellationRequested)
+                                _fetchStateHeader.Stop();
+                        });
+
+                        if (CancelToken.IsCancellationRequested)
+                            _fetchStateGame.Stop();
+                    });
+
+                }, CancelToken);
+
                 if (CancelToken.IsCancellationRequested)
                     return 0x03;
             }
@@ -284,7 +290,7 @@ namespace OpenKh.Tools.ModManager.Services
             var _fetchModPath = PathService.ResolveMod(currentConfig);
 
             // Construct the mod and git directories.
-            var _fetchCurrentModDir = Path.Combine(_fetchModPath, _fetchName);
+            var _fetchCurrentModDir = Path.Combine(_fetchModPath, _fetchAuthor, _fetchName);
             var _fetchCurrentGitPath = Path.Combine(_fetchCurrentModDir, ".git");
 
             // Create the Uri to be used with Git.
@@ -481,7 +487,7 @@ namespace OpenKh.Tools.ModManager.Services
 
             // Get the extension to check and the mod path to process.
             var _fetchExtension = Path.GetExtension(fileName).ToLower();
-            var _fetchCurrentModDir = Path.Combine(_fetchModPath, Path.GetFileNameWithoutExtension(fileName));
+            var _fetchCurrentModDir = Path.Combine(_fetchModPath, "local", Path.GetFileNameWithoutExtension(fileName));
 
             // If the directory don't exist, create it.
             if (!Directory.Exists(_fetchCurrentModDir))
