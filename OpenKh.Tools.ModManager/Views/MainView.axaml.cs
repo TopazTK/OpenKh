@@ -432,7 +432,7 @@ public partial class MainView : Window
                                 _fetchModsList.Remove(_fetchExistingMod);
 
                             var _fetchFirstInvalid = _fetchModsList.FirstOrDefault(x => !x.ModValid);
-                            var _fetchModIndex = _fetchFirstInvalid != null ? _fetchModsList.IndexOf(_fetchFirstInvalid) : _fetchModsList.Count;
+                            var _fetchModIndex = _fetchFirstInvalid != null ? _fetchModsList.IndexOf(_fetchFirstInvalid) : 0x00;
 
                             _fetchModsList.Insert(_fetchModIndex, _modModel);
                             _fetchContext.HasModsInstalled = true;
@@ -536,7 +536,7 @@ public partial class MainView : Window
                                     _fetchModsList.Remove(_fetchExistingMod);
 
                                 var _fetchFirstInvalid = _fetchModsList.FirstOrDefault(x => !x.ModValid);
-                                var _fetchModIndex = _fetchFirstInvalid != null ? _fetchModsList.IndexOf(_fetchFirstInvalid) : _fetchModsList.Count;
+                                var _fetchModIndex = _fetchFirstInvalid != null ? _fetchModsList.IndexOf(_fetchFirstInvalid) : 0x00;
 
                                 _fetchModsList.Insert(_fetchModIndex, _modModel);
                                 _fetchContext.HasModsInstalled = true;
