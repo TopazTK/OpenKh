@@ -23,6 +23,8 @@ namespace OpenKh.Tools.ModManager.Dialogs
         private void OnViewLoaded(object? sender, RoutedEventArgs e)
         {
             InputText.Focus();
+
+            InputText.MaxWidth = this.Width;
             MiscButton.IsVisible = MiscButtonCallback == null ? false : true;
         }
 
