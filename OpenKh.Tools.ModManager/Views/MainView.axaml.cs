@@ -60,6 +60,8 @@ public partial class MainView : Window
             {
                 ShowInTaskbar = false,
                 Background = Brushes.Transparent,
+                Width = 0,
+                Height = 0,
                 WindowDecorations = WindowDecorations.None,
                 TransparencyLevelHint = new List<WindowTransparencyLevel>() { WindowTransparencyLevel.Transparent }
             };
@@ -357,13 +359,25 @@ public partial class MainView : Window
                 {
                     case 0x00:
                     {
-                        var _fetchLatestMod = new DirectoryInfo(_fetchModPath).GetDirectories()
-                                                      .OrderByDescending(d => d.LastWriteTimeUtc)
-                                                      .First();
+                        var _fetchModFolder = "";
 
-                        var _fetchPathGit = Path.Combine(_fetchLatestMod.FullName, ".git");
-                        var _fetchYamlName = Path.Combine(_fetchLatestMod.FullName, "mod.yml");
-                        var _fetchPathIcon = Path.Combine(_fetchLatestMod.FullName, "icon.png");
+                        if (_fetchFileInfo.Exists)
+                            _fetchModFolder = $"local/{ Path.GetFileNameWithoutExtension(_fetchResult) }";
+
+                        else
+                        {
+                            var _fetchModAuthor = _fetchResult.Split('/').First();
+                            var _fetchModName = _fetchResult.Split('/').Last();
+
+                            _fetchModName = _fetchModName.Split(':').First();
+                            _fetchModName = _fetchModName.Split('@').First();
+
+                            _fetchModFolder = Path.Combine(_fetchModPath, _fetchModAuthor, _fetchModName);
+                        }
+
+                        var _fetchPathGit = Path.Combine(_fetchModFolder, ".git");
+                        var _fetchYamlName = Path.Combine(_fetchModFolder, "mod.yml");
+                        var _fetchPathIcon = Path.Combine(_fetchModFolder, "icon.png");
 
                         var _fetchMetadata = Metadata.Read(_fetchYamlName);
 
@@ -374,7 +388,7 @@ public partial class MainView : Window
                                 ModTitle = _fetchMetadata.Title,
                                 ModAuthor = _fetchMetadata.OriginalAuthor,
                                 ModDescription = _fetchMetadata.Description,
-                                ModPath = _fetchLatestMod.FullName,
+                                ModPath = _fetchModFolder,
                                 ModFilesList = _fetchMetadata.Assets.Select(x => x.Name).ToArray(),
                                 ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
                                 ModActive = true,
@@ -434,7 +448,7 @@ public partial class MainView : Window
                                 ModAuthor = "This mod is invalid!",
                                 ModDescription = "This mod contains errors within its YAML file. Please check the formatting!",
                                 ModIcon = new Bitmap(AssetLoader.Open(uri)),
-                                ModPath = _fetchLatestMod.FullName,
+                                ModPath = _fetchModFolder,
                                 ModActive = false,
                                 ModValid = false
                             };
@@ -456,13 +470,14 @@ public partial class MainView : Window
                     {
                         foreach (var _fetchSuccess in _fetchSuccessList)
                         {
+                            var _fetchModAuthor = _fetchResult.Split('/').First();
                             var _fetchModName = _fetchSuccess.Split('/').Last();
 
                             // Just in case we have platform and branch info, lose them.
                             _fetchModName = _fetchModName.Split(':').First();
                             _fetchModName = _fetchModName.Split('@').First();
 
-                            var _fetchCurrentPath = Path.Combine(_fetchModPath, _fetchModName);
+                            var _fetchCurrentPath = Path.Combine(_fetchModPath, _fetchModAuthor, _fetchModName);
 
                             var _fetchPathGit = Path.Combine(_fetchCurrentPath, ".git");
                             var _fetchYamlName = Path.Combine(_fetchCurrentPath, "mod.yml");
@@ -587,7 +602,7 @@ public partial class MainView : Window
         {
             var _fetchMemoryPath = Path.Combine(PathService.ResolveMod(_fetchConfig), "mod_memory.yml");
 
-            var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
+            var _fetchMemoryRAW = File.Exists(_fetchMemoryPath) ? File.ReadAllText(_fetchMemoryPath) : "[]";
             var _fetchMemory = YamlSerializer.Deserialize<ObservableCollection<MemoryModel>>(_fetchMemoryRAW);
 
             var _fetchSenderHash = ModService.ResolveMD5(e.TargetMod, _fetchConfig);

@@ -151,104 +151,107 @@ public partial class MainViewModel : ViewModelBase
 
         foreach (var _fetchDirectory in Directory.EnumerateDirectories(_fetchModsPath))
         {
-            // Construct the paths to YAML and PNG files.
-            var _fetchPathYaml = Path.Combine(_fetchDirectory, "mod.yml");
-            var _fetchPathIcon = Path.Combine(_fetchDirectory, "icon.png");
-
-            var _fetchPathGit = Path.Combine(_fetchDirectory, ".git");
-
-            // YAML don't do it? Don't do it!
-            if (!File.Exists(_fetchPathYaml))
-                continue;
-
-            // Fetch and read the YAML to parse the metadata.
-            var _metadata = Metadata.Read(_fetchPathYaml);
-
-            // If the metadata is valid, parse the mod and push it to the ViewModel.
-
-            if (_metadata.IsValid)
+            foreach (var _fetchChild in Directory.EnumerateDirectories(_fetchDirectory))
             {
-                var _modModel = new ModModel
-                {
-                    ModTitle = _metadata.Title,
-                    ModAuthor = _metadata.OriginalAuthor,
-                    ModDescription = _metadata.Description,
-                    ModPath = _fetchDirectory,
-                    ModFilesList = _metadata.Assets.Select(x => x.Name).ToArray(),
-                    ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
-                    ModActive = true,
-                    ModValid = true
-                };
+                // Construct the paths to YAML and PNG files.
+                var _fetchPathYaml = Path.Combine(_fetchChild, "mod.yml");
+                var _fetchPathIcon = Path.Combine(_fetchChild, "icon.png");
 
-                // We have found a Git Repository, let's see what's up.
+                var _fetchPathGit = Path.Combine(_fetchChild, ".git");
 
-                Task.Run(() =>
+                // YAML don't do it? Don't do it!
+                if (!File.Exists(_fetchPathYaml))
+                    continue;
+
+                // Fetch and read the YAML to parse the metadata.
+                var _metadata = Metadata.Read(_fetchPathYaml);
+
+                // If the metadata is valid, parse the mod and push it to the ViewModel.
+
+                if (_metadata.IsValid)
                 {
-                    if (Directory.Exists(_fetchPathGit))
+                    var _modModel = new ModModel
                     {
-                        if (Repository.IsValid(_fetchPathGit))
+                        ModTitle = _metadata.Title,
+                        ModAuthor = _metadata.OriginalAuthor,
+                        ModDescription = _metadata.Description,
+                        ModPath = _fetchChild,
+                        ModFilesList = _metadata.Assets.Select(x => x.Name).ToArray(),
+                        ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
+                        ModActive = true,
+                        ModValid = true
+                    };
+
+                    // We have found a Git Repository, let's see what's up.
+
+                    Task.Run(() =>
+                    {
+                        if (Directory.Exists(_fetchPathGit))
                         {
-                            var _fetchGit = new Repository(_fetchPathGit);
-
-                            try
+                            if (Repository.IsValid(_fetchPathGit))
                             {
-                                if (!_fetchGit.Info.IsHeadDetached)
-                                {
-                                    var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+                                var _fetchGit = new Repository(_fetchPathGit);
 
-                                    _modModel.ModSource = new Uri(_fetchRemote.Url);
-                                    _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
-
-                                    _modModel.ModPlatform = _modModel.ModSource.Host;
-
-                                    Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
-
-                                    var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
-                                    _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
-
-                                }
-                            }
-
-                            catch (LibGit2SharpException) { }
-
-                            _fetchGit.Dispose();
-                            var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
-
-                            foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                            {
                                 try
                                 {
-                                    if (_fetchFile.Exists)
-                                        _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                                    if (!_fetchGit.Info.IsHeadDetached)
+                                    {
+                                        var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+
+                                        _modModel.ModSource = new Uri(_fetchRemote.Url);
+                                        _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+
+                                        _modModel.ModPlatform = _modModel.ModSource.Host;
+
+                                        Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
+
+                                        var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
+                                        _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
+
+                                    }
                                 }
 
-                                catch (Exception) { }
+                                catch (LibGit2SharpException) { }
+
+                                _fetchGit.Dispose();
+                                var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
+
+                                foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
+                                {
+                                    try
+                                    {
+                                        if (_fetchFile.Exists)
+                                            _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                                    }
+
+                                    catch (Exception) { }
+                                }
                             }
                         }
-                    }
-                });
+                    });
 
-                _fetchMods.Add(_modModel);
-            }
+                    _fetchMods.Add(_modModel);
+                }
 
-            // Otherwise, make it known that the mod sucks ASS and is no good for us, but still push it to the ViewModel so we know about it :D
+                // Otherwise, make it known that the mod sucks ASS and is no good for us, but still push it to the ViewModel so we know about it :D
 
-            else
-            {
-                var uri = new Uri("avares://OpenKh.Tools.ModManager/Assets/invalid_mod.png");
-
-                var _modModel = new ModModel
+                else
                 {
-                    ModTitle = _metadata.Title,
-                    ModAuthor = "This mod is invalid!",
-                    ModDescription = "This mod contains errors within its YAML file. Please check the formatting!",
-                    ModIcon = new Bitmap(AssetLoader.Open(uri)),
-                    ModPath = _fetchDirectory,
-                    ModActive = false,
-                    ModValid = false
-                };
+                    var uri = new Uri("avares://OpenKh.Tools.ModManager/Assets/invalid_mod.png");
 
-                _fetchMods.Add(_modModel);
+                    var _modModel = new ModModel
+                    {
+                        ModTitle = _metadata.Title,
+                        ModAuthor = "This mod is invalid!",
+                        ModDescription = "This mod contains errors within its YAML file. Please check the formatting!",
+                        ModIcon = new Bitmap(AssetLoader.Open(uri)),
+                        ModPath = _fetchChild,
+                        ModActive = false,
+                        ModValid = false
+                    };
+
+                    _fetchMods.Add(_modModel);
+                }
             }
         }
 
