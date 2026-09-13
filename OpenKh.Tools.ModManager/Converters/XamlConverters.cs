@@ -80,4 +80,18 @@ namespace OpenKh.Tools.ModManager.Converters
             return values[0] != null && values[1] is bool b && b;
         }
     }
+
+    public class SubtractPropertyCalculator : IValueConverter
+    {
+        public object? IfTrue { get; set; }
+        public object? IfFalse { get; set; }
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            double _fetchValue = value != null && value is double d ? d : 0.0;
+            double _fetchSubtract = parameter != null && parameter is string str ? double.Parse(str) : 0.0;
+
+            return _fetchValue - _fetchSubtract;
+        }
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
+    }
 }

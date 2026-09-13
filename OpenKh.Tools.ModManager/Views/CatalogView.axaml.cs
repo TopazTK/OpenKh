@@ -58,7 +58,7 @@ namespace OpenKh.Tools.ModManager.Views
             }
         }
 
-        private void OnModActiveChanged(object? sender, ModListView.ModActiveChangedEventArgs e)
+        private void OnModActiveChanged(object? sender, ModWrapView.ModActiveChangedEventArgs e)
         {
             var _fetchContext = DataContext as CatalogViewModel;
             var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;

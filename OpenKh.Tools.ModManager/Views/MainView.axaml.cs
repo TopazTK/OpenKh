@@ -361,13 +361,16 @@ public partial class MainView : Window
                     {
                         var _fetchModFolder = "";
 
+                        var _fetchModAuthor = "";
+                        var _fetchModName = "";
+
                         if (_fetchFileInfo.Exists)
                             _fetchModFolder = $"local/{ Path.GetFileNameWithoutExtension(_fetchResult) }";
 
                         else
                         {
-                            var _fetchModAuthor = _fetchResult.Split('/').First();
-                            var _fetchModName = _fetchResult.Split('/').Last();
+                            _fetchModAuthor = _fetchResult.Split('/').First();
+                            _fetchModName = _fetchResult.Split('/').Last();
 
                             _fetchModName = _fetchModName.Split(':').First();
                             _fetchModName = _fetchModName.Split('@').First();
@@ -385,9 +388,9 @@ public partial class MainView : Window
                         {
                             var _modModel = new ModModel
                             {
-                                ModTitle = _fetchMetadata.Title,
-                                ModAuthor = _fetchMetadata.OriginalAuthor,
-                                ModDescription = _fetchMetadata.Description,
+                                ModTitle = !String.IsNullOrEmpty(_fetchMetadata.Title) ? _fetchMetadata.Title : _fetchModName,
+                                ModAuthor = !String.IsNullOrEmpty(_fetchMetadata.OriginalAuthor) ? _fetchMetadata.OriginalAuthor : _fetchModAuthor,
+                                ModDescription = !String.IsNullOrEmpty(_fetchMetadata.Description) ? _fetchMetadata.Description : "This mod does not have a description, but we believe it's pretty cool.",
                                 ModPath = _fetchModFolder,
                                 ModFilesList = _fetchMetadata.Assets.Select(x => x.Name).ToArray(),
                                 ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
@@ -444,7 +447,7 @@ public partial class MainView : Window
 
                             var _modModel = new ModModel
                             {
-                                ModTitle = _fetchMetadata.Title,
+                                ModTitle = !String.IsNullOrEmpty(_fetchMetadata.Title) ? _fetchMetadata.Title : _fetchModName,
                                 ModAuthor = "This mod is invalid!",
                                 ModDescription = "This mod contains errors within its YAML file. Please check the formatting!",
                                 ModIcon = new Bitmap(AssetLoader.Open(uri)),
