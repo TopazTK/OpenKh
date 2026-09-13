@@ -31,6 +31,7 @@
             <Menu>
                 <MenuItem Header="Mods">
                     <MenuItem Header="Install a New Mod..." Click="OnInstallClicked" InputGesture="Ctrl+N" HotKey="Ctrl+N"/>
+                    <MenuItem Header="Open Online Catalog..." Click="OnCatalogRequested" InputGesture="Ctrl+M" HotKey="Ctrl+M"/>
                     <Separator/>
                     <MenuItem Header="Open Folder..." Click="OnOpenFolderClicked" InputGesture="Ctrl+O" HotKey="Ctrl+O" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                     <MenuItem Header="Remove..." Click="OnRemoveClicked" InputGesture="Delete" HotKey="Delete" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>

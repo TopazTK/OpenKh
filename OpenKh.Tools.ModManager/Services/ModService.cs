@@ -794,50 +794,56 @@ namespace OpenKh.Tools.ModManager.Services
                 }, CancelToken);
             }
 
+
             // Run the actual patcher task:
             await Task.Run(async () =>
             {
-                // The mods will be handles sequentially to ensure their build is sound.
-                // This operation CANNOT be done in parallel.
-                for (int _modIdx = modsList.Count() - 1; _modIdx >= 0; _modIdx--)
+                try
                 {
-                    // Fetch the target mod.
-                    var _fetchMod = modsList.ElementAt(_modIdx);
+                    // The mods will be handles sequentially to ensure their build is sound.
+                    // This operation CANNOT be done in parallel.
+                    for (int _modIdx = modsList.Count() - 1; _modIdx >= 0; _modIdx--)
+                    {
+                        // Fetch the target mod.
+                        var _fetchMod = modsList.ElementAt(_modIdx);
 
-                    // Increase handles mod progress.
-                    _currentModIndex++;
+                        // Increase handles mod progress.
+                        _currentModIndex++;
 
-                    // If the mod isn't valid or isn't active, skip it. 
-                    if (!_fetchMod.ModValid || !_fetchMod.ModActive)
-                        continue;
+                        // If the mod isn't valid or isn't active, skip it. 
+                        if (!_fetchMod.ModValid || !_fetchMod.ModActive)
+                            continue;
 
-                    // Feed the title of the mod to the callback.
-                    _currentModName = _fetchMod.ModTitle;
+                        // Feed the title of the mod to the callback.
+                        _currentModName = _fetchMod.ModTitle;
 
-                    // Fetch the [mod.yml] file for the mod and read it as Metadata.
-                    var _fetchYamlPath = Path.Combine(_fetchMod.ModPath, "mod.yml");
-                    var _fetchMetadata = Metadata.Read(_fetchYamlPath);
+                        // Fetch the [mod.yml] file for the mod and read it as Metadata.
+                        var _fetchYamlPath = Path.Combine(_fetchMod.ModPath, "mod.yml");
+                        var _fetchMetadata = Metadata.Read(_fetchYamlPath);
 
-                    // Await the patcher process for this mod.
-                    await _fetchPatcher.Patch
-                    (
-                        _fetchDataPath,
-                        _fetchBuildPath,
-                        _fetchMetadata,
-                        _fetchMod.ModPath,
-                        _fetchGamePath,
-                        (int)currentConfig.Frontend.TargetPlatform,
-                        (int)currentConfig.Frontend.TargetGame,
-                        _fetchJapanese,
-                        CancelToken,
-                        _fetchPackageMap,
-                        reportProgress: reportAssetProgress
-                    );
+                        // Await the patcher process for this mod.
+                        await _fetchPatcher.Patch
+                        (
+                            _fetchDataPath,
+                            _fetchBuildPath,
+                            _fetchMetadata,
+                            _fetchMod.ModPath,
+                            _fetchGamePath,
+                            (int)currentConfig.Frontend.TargetPlatform,
+                            (int)currentConfig.Frontend.TargetGame,
+                            _fetchJapanese,
+                            CancelToken,
+                            _fetchPackageMap,
+                            reportProgress: reportAssetProgress
+                        );
 
-                    // If cancellation is requested, break out.
-                    if (CancelToken.IsCancellationRequested)
-                        break;
+                        // If cancellation is requested, break out.
+                        if (CancelToken.IsCancellationRequested)
+                            break;
+                    }
                 }
+                catch (TaskCanceledException) { }
+
             }, CancelToken);
 
             // If cancellation is requested, cancel the process, but clean the build folder beforehand.

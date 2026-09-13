@@ -81,6 +81,53 @@ namespace OpenKh.Patcher
             }
         }
 
+        public static Metadata Read(StringReader fileStream)
+        {
+            var _fetchYamlRaw = fileStream.ReadToEnd();
+
+            // Replace all back slashes as Windows supports forward slashes but Linux doesn't support back slashes.
+            _fetchYamlRaw = _fetchYamlRaw.Replace('\\', '/');
+
+            try
+            {
+                var _fetchSerial = YamlSerializer.Deserialize<Metadata>(_fetchYamlRaw, new YamlSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+                // A single mod should not be able to patch a file more than once.
+                // Ignore any and all duplicates that target the same file.
+                var _fetchAssetUnique = _fetchSerial.Assets.DistinctBy(x => new { x.Name, x.Platform });
+                _fetchSerial.Assets = _fetchAssetUnique.ToList();
+
+                return _fetchSerial;
+            }
+
+            catch (SharpYaml.YamlException ex)
+            {
+                // Handle YAML parsing errors
+                Debug.WriteLine($"Error deserializing YAML: {ex.Message}");
+
+                var _fetchTitle = string.Empty;
+                var _fetchMatch = Regex.Match(_fetchYamlRaw, @"(?<=title:).*", RegexOptions.None, TimeSpan.FromMilliseconds(500));
+
+                if (_fetchMatch.Success)
+                    _fetchTitle = _fetchMatch.Value.Trim();
+
+                var metadata = new Metadata
+                {
+                    Title = _fetchTitle,
+                    IsValid = false
+                };
+
+                return metadata; // Return modified metadata indicating failure
+            }
+
+            catch (Exception ex)
+            {
+                // Handle other unexpected errors
+                Debug.WriteLine($"Unexpected error: {ex.Message}");
+                throw; // Rethrow other exceptions for further investigation
+            }
+        }
+
         public void Write(Stream stream)
         {
             using (var writer = new StreamWriter(stream))

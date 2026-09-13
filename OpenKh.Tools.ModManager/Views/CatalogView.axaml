@@ -1,0 +1,43 @@
+<Window xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" Width="750" Height="650"
+             MinWidth="690" MinHeight="555"
+             xmlns:view="clr-namespace:OpenKh.Tools.ModManager.Views"
+             x:Class="OpenKh.Tools.ModManager.Views.CatalogView" x:Name="Root"
+             Title="Mod Manager - Online Catalog" WindowStartupLocation="CenterOwner">
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" Margin="10, 10, 10, 0">
+            <StackPanel Spacing="5">
+                <TextBox Margin="5" PlaceholderText="Search Mod..."/>
+                <TextBlock Margin="5" FontSize="16" TextWrapping="Wrap">
+                    Here are the mods that are available on GitHub for the currently selected game.<LineBreak/>
+                    This list is <Bold>not curated</Bold> and as such OpenKH is <Bold>not responsible</Bold> for the mods present here.
+                </TextBlock>
+            </StackPanel>
+        </Grid>
+        <Grid Margin="10, 5, 10, 10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.75*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="0.10*"/>
+            </Grid.RowDefinitions>
+
+            <GroupBox Margin="5" Header="Mod Catalog">
+                <view:ModListView Name="ModList" ModActiveChanged="OnModActiveChanged"/>
+            </GroupBox>
+
+            <GroupBox Margin="5" Grid.Column="1" Header="Mod Properties">
+                <view:ModDetailsView Name="ModDetails" DataContext="{ReflectionBinding CurrentMod}" IsVisible="{Binding Converter={x:Static ObjectConverters.IsNotNull}}"/>
+            </GroupBox>
+
+            <ProgressBar Grid.Row="1" Margin="5" Name="MainProgress" ProgressTextFormat="Fetching Mods from GitHub... Please be patient..." ShowProgressText="True" IsIndeterminate="true" Height="30"/>
+            <Button Name="InstallButton" Click="OnInstallClicked" Grid.Row="1" Margin="25" HorizontalAlignment="Stretch" Grid.Column="1" Height="30" IsEnabled="false" HorizontalContentAlignment="Center" Content="Install 0 Mods..."/>
+        </Grid>
+    </DockPanel>
+</Window>

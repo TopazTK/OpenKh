@@ -28,6 +28,7 @@
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="LibGit2Sharp" Version="0.32.0" />
+    <PackageReference Include="Octokit" Version="14.0.0" />
     <PackageReference Include="SharpYaml" Version="3.13.0" />
     <PackageReference Include="System.Windows.Extensions" Version="10.0.12" />
     <PackageReference Include="Tomlyn.Signed" Version="2.10.1" />

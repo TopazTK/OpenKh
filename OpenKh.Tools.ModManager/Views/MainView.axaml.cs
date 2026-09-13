@@ -577,6 +577,320 @@ public partial class MainView : Window
         }
     }
 
+    private async void OnCatalogRequested(object? sender, RoutedEventArgs e)
+    {
+        var _fetchContext = DataContext as MainViewModel;
+        var _fetchModsList = _fetchContext != null ? _fetchContext.InstalledMods : null;
+        var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
+
+        if (_fetchConfig != null && _fetchModsList != null)
+        {
+            var _multiProgress = new MultiProgressDialog();
+            var _singleProgress = new SingleProgressDialog();
+
+            var _catalogWindow = new CatalogView();
+            var _fetchResult = await _catalogWindow.ShowDialog<string?>(this);
+
+            var _fetchErroredList = new List<string>();
+            var _fetchSuccessList = new List<string>();
+
+            var _fetchModPath = PathService.ResolveMod(_fetchConfig);
+            var _fetchInstallResult = 0x00;
+
+            if (_fetchResult != null)
+            {
+                var _fetchMultiInstall = _fetchResult.Contains(';') ? _fetchResult.Split(';') : null;
+
+                if (_fetchMultiInstall == null)
+                {
+                    _singleProgress.ShowDialog(this);
+
+                    _fetchInstallResult =
+                    await ModService.InstallGit
+                    (
+                        _fetchResult,
+                        _fetchConfig,
+                        new TransferProgressHandler((progress) =>
+                        {
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                _singleProgress.InstallProgress.Maximum = progress.TotalObjects;
+                                _singleProgress.InstallProgress.Value = progress.ReceivedObjects;
+                            });
+
+                            if (ModService.CancelToken.IsCancellationRequested)
+                                return false;
+
+                            return true;
+                        }
+                    ));
+
+                    _singleProgress.Close(true);
+                }
+
+                else
+                {
+                    _multiProgress.ShowDialog(this);
+
+                    for (int i = 0; i < _fetchMultiInstall.Length; i++)
+                    {
+                        var _fetchMod = _fetchMultiInstall[i];
+
+                        var _fetchInstallStatus =
+                        await ModService.InstallGit
+                        (
+                            _fetchMod,
+                            _fetchConfig,
+                            new TransferProgressHandler((progress) =>
+                            {
+                                Dispatcher.UIThread.Post(() =>
+                                {
+                                    _multiProgress.ModProgress.ProgressTextFormat = $"Processing Mod: {_fetchMod}";
+
+                                    _multiProgress.ModProgress.Value = i + 0x01;
+                                    _multiProgress.ModProgress.Maximum = _fetchMultiInstall.Length;
+
+                                    _multiProgress.InstallProgress.Maximum = progress.TotalObjects;
+                                    _multiProgress.InstallProgress.Value = progress.ReceivedObjects;
+                                });
+
+                                if (ModService.CancelToken.IsCancellationRequested)
+                                    return false;
+
+                                return true;
+                            }
+                        ));
+
+                        if (_fetchInstallStatus == 0x01)
+                            _fetchErroredList.Add(_fetchMod);
+
+                        else
+                            _fetchSuccessList.Add(_fetchMod);
+
+                        if (ModService.CancelToken.IsCancellationRequested)
+                            break;
+                    }
+
+                    _multiProgress.Close(true);
+                    _fetchInstallResult = 0x02;
+                }
+
+                if (ModService.CancelToken.IsCancellationRequested || _fetchInstallResult == 0x03)
+                    return;
+
+                switch (_fetchInstallResult)
+                {
+                    case 0x00:
+                    {
+                        var _fetchModAuthor = _fetchResult.Split('/').First();
+                        var _fetchModName = _fetchResult.Split('/').Last();
+
+                        _fetchModName = _fetchModName.Split(':').First();
+                        _fetchModName = _fetchModName.Split('@').First();
+
+                        var _fetchModFolder = Path.Combine(_fetchModPath, _fetchModAuthor, _fetchModName);
+
+                        var _fetchPathGit = Path.Combine(_fetchModFolder, ".git");
+                        var _fetchYamlName = Path.Combine(_fetchModFolder, "mod.yml");
+                        var _fetchPathIcon = Path.Combine(_fetchModFolder, "icon.png");
+
+                        var _fetchMetadata = Metadata.Read(_fetchYamlName);
+
+                        if (_fetchMetadata.IsValid)
+                        {
+                            var _modModel = new ModModel
+                            {
+                                ModTitle = _fetchMetadata.Title,
+                                ModAuthor = _fetchMetadata.OriginalAuthor,
+                                ModDescription = _fetchMetadata.Description,
+                                ModPath = _fetchModFolder,
+                                ModFilesList = _fetchMetadata.Assets.Select(x => x.Name).ToArray(),
+                                ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
+                                ModActive = true,
+                                ModValid = true
+                            };
+
+                            if (Repository.IsValid(_fetchPathGit))
+                            {
+                                var _fetchGit = new Repository(_fetchPathGit);
+
+                                if (!_fetchGit.Info.IsHeadDetached)
+                                {
+                                    var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+
+                                    _modModel.ModSource = new Uri(_fetchRemote.Url);
+                                    _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+
+                                    _modModel.ModPlatform = _modModel.ModSource.Host;
+
+                                    Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
+
+                                    var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
+                                    _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
+                                }
+
+                                _fetchGit.Dispose();
+
+                                var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
+
+                                foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
+                                    if (_fetchFile.Exists)
+                                        _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                            }
+
+                            var _fetchExistingMod = _fetchModsList.FirstOrDefault(x => x.ModPath == _modModel.ModPath);
+
+                            if (_fetchExistingMod != null)
+                                _fetchModsList.Remove(_fetchExistingMod);
+
+                            var _fetchFirstInvalid = _fetchModsList.FirstOrDefault(x => !x.ModValid);
+                            var _fetchModIndex = _fetchFirstInvalid != null ? _fetchModsList.IndexOf(_fetchFirstInvalid) : 0x00;
+
+                            _fetchModsList.Insert(_fetchModIndex, _modModel);
+                            _fetchContext.HasModsInstalled = true;
+                        }
+
+                        else
+                        {
+                            var uri = new Uri("avares://OpenKh.Tools.ModManager/Assets/invalid_mod.png");
+
+                            var _modModel = new ModModel
+                            {
+                                ModTitle = _fetchMetadata.Title,
+                                ModAuthor = "This mod is invalid!",
+                                ModDescription = "This mod contains errors within its YAML file. Please check the formatting!",
+                                ModIcon = new Bitmap(AssetLoader.Open(uri)),
+                                ModPath = _fetchModFolder,
+                                ModActive = false,
+                                ModValid = false
+                            };
+
+                            var _fetchExistingMod = _fetchModsList.FirstOrDefault(x => x.ModPath == _modModel.ModPath);
+
+                            if (_fetchExistingMod != null)
+                                _fetchModsList.Remove(_fetchExistingMod);
+
+                            _fetchModsList.Add(_modModel);
+                        }
+                    }
+                    break;
+
+                    case 0x01:
+                        await DialogService.ShowMessage(this, "ERROR - Invalid Mod", "This is NOT a valid/compliant Mod Manager Mod. Please make sure it exists and it is valid.", MessageType.ERROR);
+                        break;
+
+                    case 0x02:
+                    {
+                        foreach (var _fetchSuccess in _fetchSuccessList)
+                        {
+                            var _fetchModAuthor = _fetchSuccess.Split('/').First();
+                            var _fetchModName = _fetchSuccess.Split('/').Last();
+
+                            // Just in case we have platform and branch info, lose them.
+                            _fetchModName = _fetchModName.Split(':').First();
+                            _fetchModName = _fetchModName.Split('@').First();
+
+                            var _fetchCurrentPath = Path.Combine(_fetchModPath, _fetchModAuthor, _fetchModName);
+
+                            var _fetchPathGit = Path.Combine(_fetchCurrentPath, ".git");
+                            var _fetchYamlName = Path.Combine(_fetchCurrentPath, "mod.yml");
+                            var _fetchPathIcon = Path.Combine(_fetchCurrentPath, "icon.png");
+
+                            var _fetchMetadata = Metadata.Read(_fetchYamlName);
+
+                            if (_fetchMetadata.IsValid)
+                            {
+                                var _modModel = new ModModel
+                                {
+                                    ModTitle = _fetchMetadata.Title,
+                                    ModAuthor = _fetchMetadata.OriginalAuthor,
+                                    ModDescription = _fetchMetadata.Description,
+                                    ModPath = _fetchCurrentPath,
+                                    ModFilesList = _fetchMetadata.Assets.Select(x => x.Name).ToArray(),
+                                    ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
+                                    ModActive = true,
+                                    ModValid = true
+                                };
+
+                                if (Directory.Exists(_fetchPathGit))
+                                {
+                                    if (Repository.IsValid(_fetchPathGit))
+                                    {
+                                        var _fetchGit = new Repository(_fetchPathGit);
+
+                                        if (!_fetchGit.Info.IsHeadDetached)
+                                        {
+                                            var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+
+                                            _modModel.ModSource = new Uri(_fetchRemote.Url);
+                                            _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+
+                                            _modModel.ModPlatform = _modModel.ModSource.Host;
+
+                                            Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
+
+                                            var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
+                                            _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
+                                        }
+
+                                        _fetchGit.Dispose();
+
+                                        var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
+
+                                        foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
+                                            if (_fetchFile.Exists)
+                                                _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                                    }
+                                }
+
+                                var _fetchExistingMod = _fetchModsList.FirstOrDefault(x => x.ModPath == _modModel.ModPath);
+
+                                if (_fetchExistingMod != null)
+                                    _fetchModsList.Remove(_fetchExistingMod);
+
+                                var _fetchFirstInvalid = _fetchModsList.FirstOrDefault(x => !x.ModValid);
+                                var _fetchModIndex = _fetchFirstInvalid != null ? _fetchModsList.IndexOf(_fetchFirstInvalid) : 0x00;
+
+                                _fetchModsList.Insert(_fetchModIndex, _modModel);
+                                _fetchContext.HasModsInstalled = true;
+                            }
+
+                            else
+                            {
+                                var uri = new Uri("avares://OpenKh.Tools.ModManager/Assets/invalid_mod.png");
+
+                                var _modModel = new ModModel
+                                {
+                                    ModTitle = _fetchMetadata.Title,
+                                    ModAuthor = "This mod is invalid!",
+                                    ModDescription = "This mod contains errors within its YAML file. Please check the formatting!",
+                                    ModIcon = new Bitmap(AssetLoader.Open(uri)),
+                                    ModPath = _fetchCurrentPath,
+                                    ModActive = false,
+                                    ModValid = false
+                                };
+
+                                var _fetchExistingMod = _fetchModsList.FirstOrDefault(x => x.ModPath == _modModel.ModPath);
+
+                                if (_fetchExistingMod != null)
+                                    _fetchModsList.Remove(_fetchExistingMod);
+
+                                _fetchModsList.Add(_modModel);
+                            }
+                        }
+
+                        if (_fetchErroredList.Count > 0)
+                        {
+                            var _fetchError = String.Join('\n', _fetchErroredList);
+                            await DialogService.ShowMessage(this, "Some Mods were invalid!", $"The following mods were invalid and thus were not installed:\n {_fetchError}", MessageType.WARNING);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
     private async void OnOpenFolderClicked(object? sender, RoutedEventArgs e)
     {
         var _fetchContext = DataContext as MainViewModel;
