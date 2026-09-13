@@ -774,7 +774,7 @@ namespace OpenKh.Tools.ModManager.Services
             var _currentModCount = modsList.Where(x => x.ModValid && x.ModActive).Count();
 
             // Check if the game we are patching is the Japanese version of KHPC.
-            var _fetchJapanese = PathService.ResolveRegionJP(currentConfig);
+            var _fetchJapanese = PathService.ResolveRegionJP(currentConfig) ?? false;
 
             // If the callback function isn't null, create a feedback task.
             // This task should NOT be awaited.
@@ -828,7 +828,7 @@ namespace OpenKh.Tools.ModManager.Services
                         _fetchGamePath,
                         (int)currentConfig.Frontend.TargetPlatform,
                         (int)currentConfig.Frontend.TargetGame,
-                        _fetchJapanese.Value,
+                        _fetchJapanese,
                         CancelToken,
                         _fetchPackageMap,
                         reportProgress: reportAssetProgress
