@@ -36,7 +36,7 @@
         <TextBlock TextWrapping="Wrap" Margin="0, 5, 0, 10">
             Please choose what games you want to extract from below:
         </TextBlock>
-            <StackPanel Spacing="5" HorizontalAlignment="Center">
+            <StackPanel Spacing="5" HorizontalAlignment="Center" IsHitTestVisible="{ReflectionBinding #ExtractStartButton.IsVisible}">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
                     <ToggleButton Name="ExtractKH1" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts I [~23GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     <ToggleButton Name="ExtractKH2" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts II [~43GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
@@ -59,9 +59,9 @@
                 <TextBox Grid.Column="0" Name="PathExtractData"
                     Text="{ReflectionBinding CurrentConfig.Frontend.DataPath}"
                     HorizontalAlignment="Stretch" PlaceholderText="Path goes here..."
-                    Margin="0, 0, 10, 0" />
+                    Margin="0, 0, 10, 0" IsEnabled="{ReflectionBinding #ExtractStartButton.IsVisible}"/>
                 <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32"
-                    Background="Transparent" VerticalAlignment="Stretch" Click="OnExtractPathClicked">
+                    Background="Transparent" VerticalAlignment="Stretch" Click="OnExtractPathClicked" IsEnabled="{ReflectionBinding #ExtractStartButton.IsVisible}">
                     <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />
                 </Button>
             </Grid>

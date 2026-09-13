@@ -22,8 +22,10 @@ using static OpenKh.Tools.ModManager.Wizard.WizardPanaceaSetup;
 namespace OpenKh.Tools.ModManager.Views
 {
     public record BlockNextRequest();
-
     public record UnblockNextRequest();
+
+    public record BlockAllRequest();
+    public record UnblockAllRequest();
 
     public class PageRequestMessage : RequestMessage<bool>
     {
@@ -74,21 +76,41 @@ namespace OpenKh.Tools.ModManager.Views
 
             WeakReferenceMessenger.Default.Register<BlockNextRequest>(this, (registrar, message) =>
             {
-                if (_rootModel.FutureWizardPages.Count > 0)
-                    NextButton.IsEnabled = false;
-
+                NextButton.IsEnabled = false;
                 FinishButton.IsEnabled = false;
             });
 
             WeakReferenceMessenger.Default.Register<UnblockNextRequest>(this, (registrar, message) =>
             {
-                if (_rootModel.FutureWizardPages.Count > 0)
-                    NextButton.IsEnabled = true;
+                NextButton.IsEnabled = _rootModel.FutureWizardPages.Count > 0;
+                FinishButton.IsEnabled = true;
+            });
 
+            WeakReferenceMessenger.Default.Register<BlockAllRequest>(this, (registrar, message) =>
+            {
+                NextButton.IsEnabled = false;
+                BackButton.IsEnabled = false;
+                CancelButton.IsEnabled = false;
+                FinishButton.IsEnabled = false;
+            });
+
+            WeakReferenceMessenger.Default.Register<UnblockAllRequest>(this, (registrar, message) =>
+            {
+                NextButton.IsEnabled = _rootModel.FutureWizardPages.Count > 0;
+                BackButton.IsEnabled = _rootModel.PastWizardPages.Count > 0;
+                CancelButton.IsEnabled = true;
                 FinishButton.IsEnabled = true;
             });
 
             InitializeComponent();
+        }
+
+        protected override void OnClosing(WindowClosingEventArgs e)
+        {
+            if (!CancelButton.IsEnabled)
+                e.Cancel = true;
+
+            base.OnClosing(e);
         }
 
         private void OnNextPage(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

@@ -54,7 +54,7 @@ namespace OpenKh.Tools.ModManager.Wizard
             ExtractStartButton.IsVisible = true;
             ExtractStopButton.IsVisible = false;
 
-            WeakReferenceMessenger.Default.Send(new UnblockNextRequest());
+            WeakReferenceMessenger.Default.Send(new UnblockAllRequest());
 
             if (_fetchResult != 0x00)
             {
@@ -100,14 +100,14 @@ namespace OpenKh.Tools.ModManager.Wizard
 
                 var _fetchExtractList = new List<bool>()
                 {
-                    ExtractKH1.IsChecked.HasValue ? ExtractKH1.IsChecked.Value : false,
-                    ExtractKH2.IsChecked.HasValue ? ExtractKH2.IsChecked.Value : false,
-                    ExtractCOM.IsChecked.HasValue ? ExtractCOM.IsChecked.Value : false,
-                    ExtractBBS.IsChecked.HasValue ? ExtractBBS.IsChecked.Value : false,
-                    ExtractDDD.IsChecked.HasValue ? ExtractDDD.IsChecked.Value : false
+                    ExtractKH1.IsChecked ?? false,
+                    ExtractKH2.IsChecked ?? false,
+                    ExtractCOM.IsChecked ?? false,
+                    ExtractBBS.IsChecked ?? false,
+                    ExtractDDD.IsChecked ?? false
                 };
 
-                WeakReferenceMessenger.Default.Send(new BlockNextRequest());
+                WeakReferenceMessenger.Default.Send(new BlockAllRequest());
                 ExtractTask(_fetchExtractList, _fetchConfig);
             }
         }
