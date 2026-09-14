@@ -20,6 +20,9 @@ namespace OpenKh.Tools.ModManager.Views
         public static readonly StyledProperty<ICommand?> BuildRunRequestedProperty = AvaloniaProperty.Register<ModStatusView, ICommand?>(nameof(BuildRunRequested));
         public ICommand? BuildRunRequested { get => GetValue(BuildRunRequestedProperty); set => SetValue(BuildRunRequestedProperty, value); }
 
+        public static readonly StyledProperty<ICommand?> SetupRequestedProperty = AvaloniaProperty.Register<ModStatusView, ICommand?>(nameof(SetupRequested));
+        public ICommand? SetupRequested { get => GetValue(SetupRequestedProperty); set => SetValue(SetupRequestedProperty, value); }
+
         public ModStatusView()
         {
             InitializeComponent();
@@ -29,6 +32,12 @@ namespace OpenKh.Tools.ModManager.Views
         {
             if (RunRequested?.CanExecute(null) == true)
                 RunRequested.Execute(null);
+        }
+
+        private void OnSetupRequested(object? sender, RoutedEventArgs e)
+        {
+            if (SetupRequested?.CanExecute(null) == true)
+                SetupRequested.Execute(null);
         }
 
         private void OnBuildRunRequested(object? sender, RoutedEventArgs e)

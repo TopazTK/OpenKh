@@ -152,7 +152,7 @@
                 </GroupBox>
             </Grid>
 
-            <view:ModStatusView Name="ModStatus" RunRequested="{Binding RunCommand}" BuildRunRequested="{Binding BuildRunCommand}" Grid.Row="1"/>
+            <view:ModStatusView Name="ModStatus" RunRequested="{Binding RunCommand}" BuildRunRequested="{Binding BuildRunCommand}" SetupRequested="{Binding LaunchSetupCommand}" Grid.Row="1"/>
 
         </Grid>
     </DockPanel>
