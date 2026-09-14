@@ -30,15 +30,6 @@ namespace OpenKh.Tools.ModManager.Services
 {
     public static class ModService
     {
-        static Dictionary<string, string> DICT_SHORTHAND = new Dictionary<string, string>()
-        {
-            { "kh1", "kh1" },
-            { "kh2", "kh2" },
-            { "Recom", "com" },
-            { "bbs", "bbs" },
-            { "kh3d", "ddd" },
-        };
-
         // We need a cancellation token to interrupt what we are doing should the user not want to do that anymore.
         public static CancellationTokenSource CancelTokenSource = new CancellationTokenSource();
         public static CancellationToken CancelToken = CancelTokenSource.Token;
@@ -191,7 +182,7 @@ namespace OpenKh.Tools.ModManager.Services
                                         var _fetchFileName = String.IsNullOrEmpty(_fetchNameValue) ? $"{_fetchHashText}.dat" : _fetchNameValue;
 
                                         // Resolve the extraction target for the file and its directory.
-                                        var _fetchFilePath = Path.Combine(_fetchDataPath, DICT_SHORTHAND[_fetchExtractGame], _fetchFileName);
+                                        var _fetchFilePath = Path.Combine(_fetchDataPath, _fetchExtractGame, _fetchFileName);
                                         var _fetchFileDir = Path.GetDirectoryName(_fetchFilePath);
 
                                         // If the target directory does not exist, create it.
@@ -209,7 +200,7 @@ namespace OpenKh.Tools.ModManager.Services
                                         if (_fetchData.Assets.Count() != 0x00)
                                         {
                                             // Construct the remastered extraction path.
-                                            var _fetchRemasterPath = Path.Combine(_fetchDataPath, DICT_SHORTHAND[_fetchExtractGame], "remastered", _fetchFileName);
+                                            var _fetchRemasterPath = Path.Combine(_fetchDataPath, _fetchExtractGame, "remastered", _fetchFileName);
 
                                             foreach (var _fetchAsset in _fetchData.Assets)
                                             {

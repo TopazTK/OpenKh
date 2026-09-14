@@ -93,9 +93,9 @@ namespace OpenKh.Tools.ModManager.Classes
         {
             { Game.KINGDOM_HEARTS, "kh1" },
             { Game.KINGDOM_HEARTS_II, "kh2" },
-            { Game.CHAIN_OF_MEMORIES, "com" },
+            { Game.CHAIN_OF_MEMORIES, "Recom" },
             { Game.BIRTH_BY_SLEEP, "bbs" },
-            { Game.DREAM_DROP_DISTANCE, "ddd" },
+            { Game.DREAM_DROP_DISTANCE, "kh3d" },
         };
 
         public Frontend Frontend { get; set; }
@@ -120,7 +120,7 @@ namespace OpenKh.Tools.ModManager.Classes
                 // Otherwise, check if the game is NOT Dream Drop Distance.
                 // If neither of these are true, the config isn't valid.
 
-                var _isDDDConfigValid = _fetchTargetGame != Game.DREAM_DROP_DISTANCE || (_fetchTargetGame == Game.DREAM_DROP_DISTANCE && Frontend.GamePath.Length < 2);
+                var _isDDDConfigValid = _fetchTargetGame != Game.DREAM_DROP_DISTANCE || (_fetchTargetGame == Game.DREAM_DROP_DISTANCE && Frontend.GamePath.Length == 2 && !String.IsNullOrEmpty(Frontend.GamePath[1]));
 
                 if (!_isDDDConfigValid)
                     return false;
@@ -138,36 +138,13 @@ namespace OpenKh.Tools.ModManager.Classes
                         // Construct the paths for the game executable and Panacea.
                         var _fetchExePath = System.IO.Path.Combine(_fetchGamePath, Config.GameExecutable[Frontend.TargetGame]);
                         var _fetchSettingsPath = System.IO.Path.Combine(_fetchGamePath, "panacea_settings.txt");
-                        var _fetchPanaceaPath = System.IO.Path.Combine(_fetchGamePath, OperatingSystem.IsWindows() ? "DBGHELP.dll" : "version.dll");
 
                         // Verify the game executable and directory exists as configured. If the build type is PANACEA, also verify Panacea's existence.
                         var _isGameConfigValid = Directory.Exists(_fetchGamePath) && File.Exists(_fetchExePath);
-                        var _isPanaceaConfigValid = (Frontend.ModBuildType == BuildType.PANACEA && File.Exists(_fetchPanaceaPath)) || Frontend.ModBuildType == BuildType.PATCH;
+                        var _isPanaceaConfigValid = (Frontend.ModBuildType == BuildType.PANACEA && File.Exists(_fetchSettingsPath)) || Frontend.ModBuildType == BuildType.PATCH;
 
                         if (_isPanaceaConfigValid && Frontend.ModBuildType == BuildType.PANACEA)
-                        {
-                            var _regexModPath = new Regex("mod_path=(.*)", RegexOptions.None, TimeSpan.FromMilliseconds(500));
-
-                            if (File.Exists(_fetchPanaceaPath) && File.Exists(_fetchSettingsPath))
-                            {
-                                var _fetchSettingsRAW = File.ReadAllLines(_fetchSettingsPath);
-                                var _fetchConfigPath = _fetchSettingsRAW.FirstOrDefault(x => _regexModPath.IsMatch(x));
-
-                                if (_fetchConfigPath != null)
-                                {
-                                    var _fetchMatch = _regexModPath.Match(_fetchConfigPath);
-                                    var _fetchValue = _fetchMatch.Groups[1].Value.Replace("\"", "");
-
-                                    var _fetchConfigValue = System.IO.Path.GetFullPath(_fetchValue);
-
-                                    var _fetchManagerPath = PathService.ResolveBuild(this, true);
-                                    var _comparisonRules = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-
-                                    if (!String.Equals(_fetchConfigValue, _fetchManagerPath, _comparisonRules))
-                                        _isPanaceaConfigValid = false;
-                                }
-                            }
-                        }
+                            _isPanaceaConfigValid = PackageService.EnsurePanacea(this);
 
                         // If either are not valid, mark the config as faulty.
                         if (!_isGameConfigValid || !_isPanaceaConfigValid)
