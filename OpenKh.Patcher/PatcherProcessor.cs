@@ -90,7 +90,7 @@ namespace OpenKh.Patcher
             { 1, "kh2" },
             { 2, "Recom" },
             { 3, "bbs" },
-            { 4, "ddd" }
+            { 4, "kh3d" }
         };
 
         public async Task Patch(
@@ -127,7 +127,7 @@ namespace OpenKh.Patcher
                 // If the targeted platform is PS2 and an extraction doesn't exist, throw an exception.
                 // We cannot do extractionless on PS2.
                 if (!_isExtraction && targetPlatform == 0x00)
-                    throw new InvalidDataException("The PlayStation 2 PLatform requires an extraction to be present for builds.");
+                    throw new InvalidDataException("The PlayStation 2 Platform requires an extraction to be present for builds.");
 
                 // If the mod has a game declared and it doesn't match the current game, don't build it.
                 if (modMetadata.Game != null && modMetadata.Game.ToLower() != _fetchGameId)
