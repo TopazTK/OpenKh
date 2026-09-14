@@ -366,7 +366,7 @@ namespace OpenKh.Patcher
                                                     _fetchAssetData = _isFileRAW ? _fetchTargetAsset.OriginalRawData : _fetchTargetAsset.OriginalData;
 
                                                 if (_fetchAssetData != null)
-                                                    await File.WriteAllBytesAsync(_fetchTargetPath, _fetchAssetData);
+                                                    await File.WriteAllBytesAsync(_fetchTargetPath, _fetchAssetData, cancelToken.GetValueOrDefault());
                                             }
                                         }
                                     }

@@ -203,7 +203,7 @@ namespace OpenKh.Tools.ModManager.Services
                                         var _fetchData = new EgsHdAsset(_fetchPkgStream);
 
                                         // Write the file to the disk.
-                                        await File.WriteAllBytesAsync(_fetchFilePath, _fetchData.OriginalData);
+                                        await File.WriteAllBytesAsync(_fetchFilePath, _fetchData.OriginalData, CancelToken);
 
                                         // If the file has any remastered assets:
                                         if (_fetchData.Assets.Count() != 0x00)
@@ -223,7 +223,7 @@ namespace OpenKh.Tools.ModManager.Services
 
                                                 // Fetch the data for the asset and write it.
                                                 var _fetchAssetData = _fetchData.RemasteredAssetsDecompressedData[_fetchAsset];
-                                                await File.WriteAllBytesAsync(_fetchAssetPath, _fetchAssetData);
+                                                await File.WriteAllBytesAsync(_fetchAssetPath, _fetchAssetData, CancelToken);
 
                                                 if (CancelToken.IsCancellationRequested)
                                                     break;
@@ -915,7 +915,7 @@ namespace OpenKh.Tools.ModManager.Services
             if (topLevelObject.Launcher != null && _fetchTargetUri != null)
             {
                 if (!String.IsNullOrEmpty(_fetchArguments))
-                    await File.WriteAllTextAsync(_fetchArgumentPath, _fetchArguments);
+                    await File.WriteAllTextAsync(_fetchArgumentPath, _fetchArguments, CancelToken);
 
                 if (_fetchAPIExists)
                 {
