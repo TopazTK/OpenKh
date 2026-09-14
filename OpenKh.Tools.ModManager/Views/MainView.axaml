@@ -30,27 +30,27 @@
         <Grid DockPanel.Dock="Top" Margin="5">
             <Menu>
                 <MenuItem Header="Mods">
-                    <MenuItem Header="Install a New Mod..." Click="OnInstallClicked" InputGesture="Ctrl+N" HotKey="Ctrl+N"/>
-                    <MenuItem Header="Open Online Catalog..." Click="OnCatalogRequested" InputGesture="Ctrl+M" HotKey="Ctrl+M"/>
+                    <MenuItem Header="Install a New Mod..." Command="{Binding InstallCommand}" InputGesture="Ctrl+N" HotKey="Ctrl+N"/>
+                    <MenuItem Header="Open Online Catalog..." Command="{Binding LaunchCatalogCommand}" InputGesture="Ctrl+M" HotKey="Ctrl+M"/>
                     <Separator/>
-                    <MenuItem Header="Open Folder..." Click="OnOpenFolderClicked" InputGesture="Ctrl+O" HotKey="Ctrl+O" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                    <MenuItem Header="Remove..." Click="OnRemoveClicked" InputGesture="Delete" HotKey="Delete" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                    <MenuItem Header="Move Up" Click="OnUpPriorityClicked" InputGesture="PageUp" HotKey="PageUp" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                    <MenuItem Header="Move Down" Click="OnDownPriorityClicked" InputGesture="PageDown" HotKey="PageDown" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                    <MenuItem Header="Move Highest" Click="OnUtmostClicked" InputGesture="Home" HotKey="Home" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Open Folder..." Command="{Binding OpenFolderCommand}" InputGesture="Ctrl+O" HotKey="Ctrl+O" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Remove..." Command="{Binding RemoveCommand}" InputGesture="Delete" HotKey="Delete" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Move Up" Command="{Binding MoveUpCommand}" InputGesture="PageUp" HotKey="PageUp" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Move Down" Command="{Binding MoveDownCommand}"  InputGesture="PageDown" HotKey="PageDown" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Move Highest" Command="{Binding MoveUtmostCommand}"  InputGesture="Home" HotKey="Home" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                     <Separator/>
                     <MenuItem Header="Exit" InputGesture="F4" HotKey="F4"/>
                 </MenuItem>
                 <MenuItem Header="Build">
-                    <MenuItem Header="Run..." Click="OnRunRequested" InputGesture="F5" HotKey="F5"/>
-                    <MenuItem Header="Build..." Click="OnBuildRequested" InputGesture="Ctrl+B" HotKey="Ctrl+B" IsEnabled="{ReflectionBinding HasModsInstalled}"/>
-                    <MenuItem Header="Build and Run..." Click="OnBuildRunRequested" InputGesture="Ctrl+F5" HotKey="Ctrl+F5" IsEnabled="{ReflectionBinding HasModsInstalled}"/>
+                    <MenuItem Header="Run..." Command="{Binding RunCommand}" InputGesture="F5" HotKey="F5"/>
+                    <MenuItem Header="Build..." Command="{Binding BuildCommand}" InputGesture="Ctrl+B" HotKey="Ctrl+B" IsEnabled="{ReflectionBinding HasModsInstalled}"/>
+                    <MenuItem Header="Build and Run..." Command="{Binding BuildRunCommand}" InputGesture="Ctrl+F5" HotKey="Ctrl+F5" IsEnabled="{ReflectionBinding HasModsInstalled}"/>
                     <Separator/>
-                    <MenuItem Header="Restore..." InputGesture="Ctrl+R" HotKey="Ctrl+R" Click="OnRestoreRequested"/>
+                    <MenuItem Header="Restore..." Command="{Binding RestoreCommand}" InputGesture="Ctrl+R" HotKey="Ctrl+R"/>
                 </MenuItem>
                 <MenuItem Header="Settings"> 
-                    <MenuItem Header="Run the Setup Wizard..." Click="OnSetupRequested" InputGesture="Alt+S" HotKey="Alt+S"/>
-                    <MenuItem Header="Setup Launch Arguments..." Click="OnArgumentsRequested" InputGesture="Alt+A" HotKey="Alt+A">
+                    <MenuItem Header="Run the Setup Wizard..." Command="{Binding LaunchSetupCommand}" InputGesture="Alt+S" HotKey="Alt+S"/>
+                    <MenuItem Header="Setup Launch Arguments..." Command="{Binding PromptArgumentsCommand}" InputGesture="Alt+A" HotKey="Alt+A">
                         <MenuItem.IsEnabled>
                             <MultiBinding Converter="{StaticResource CheckIfEqual}">
                                 <Binding Path="CurrentConfig.Frontend.TargetPlatform" />
@@ -59,7 +59,7 @@
                         </MenuItem.IsEnabled>
                     </MenuItem>
                     <Separator/>
-                    <MenuItem Header="Re/Install Panacea" InputGesture="Alt+P" HotKey="Alt+P" Click="OnPanaceaClicked"> 
+                    <MenuItem Header="Re/Install Panacea" InputGesture="Alt+P" HotKey="Alt+P" Command="{Binding InstallPanaceaCommand}"> 
                         <MenuItem.IsEnabled>
                             <MultiBinding Converter="{StaticResource CheckIfNotEqual}">
                                 <Binding Path="CurrentConfig.Frontend.TargetPlatform" />
@@ -67,7 +67,7 @@
                             </MultiBinding>
                         </MenuItem.IsEnabled>
                     </MenuItem>
-                    <MenuItem Header="Re/Install LuaBackend" InputGesture="Alt+L" HotKey="Alt+L" Click="OnBackendClicked">
+                    <MenuItem Header="Re/Install LuaBackend" InputGesture="Alt+L" HotKey="Alt+L" Command="{Binding InstallBackendCommand}">
                         <MenuItem.IsEnabled>
                             <MultiBinding Converter="{StaticResource CheckIfNotEqual}">
                                 <Binding Path="CurrentConfig.Frontend.TargetPlatform" />
@@ -110,14 +110,14 @@
                     </GroupBox>
 
                     <StackPanel Grid.Row="1" Spacing="5" VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal">
-                        <Button Background="Transparent" Click="OnInstallClicked" ToolTip.Tip="Install Mod...">
+                        <Button Background="Transparent" Command="{Binding InstallCommand}" ToolTip.Tip="Install Mod...">
                             <PathIcon Data="{StaticResource icon_add_mod}" Height="24" Width="24"/>
                         </Button>
-                        <Button Background="Transparent" Click="OnRemoveClicked" ToolTip.Tip="Remove Mod..." IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Button Background="Transparent" Command="{Binding RemoveCommand}" ToolTip.Tip="Remove Mod..." IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <PathIcon Data="{StaticResource icon_remove_mod}" Height="24" Width="24"/>
                         </Button>
                         <Separator Margin="5" Width="1" Height="NaN" VerticalAlignment="Stretch" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                        <Button Background="Transparent" ToolTip.Tip="Move Highest" Click="OnUtmostClicked">
+                        <Button Background="Transparent" ToolTip.Tip="Move Highest" Command="{Binding MoveUtmostCommand}" >
                             <Button.IsEnabled>
                                 <MultiBinding Converter="{StaticResource ModExistsAndValid}">
                                     <Binding Path="CurrentMod"/>
@@ -126,7 +126,7 @@
                             </Button.IsEnabled>
                             <PathIcon Data="{StaticResource icon_pri_utmost}" Height="24" Width="24"/>
                         </Button>
-                        <Button Background="Transparent" ToolTip.Tip="Move Up" Click="OnUpPriorityClicked">
+                        <Button Background="Transparent" ToolTip.Tip="Move Up" Command="{Binding MoveUpCommand}" >
                             <Button.IsEnabled>
                                 <MultiBinding Converter="{StaticResource ModExistsAndValid}">
                                     <Binding Path="CurrentMod"/>
@@ -135,7 +135,7 @@
                             </Button.IsEnabled>
                             <PathIcon Data="{StaticResource icon_pri_up}" Height="24" Width="24"/>
                         </Button>
-                        <Button Background="Transparent" ToolTip.Tip="Move Down" Click="OnDownPriorityClicked">
+                        <Button Background="Transparent" ToolTip.Tip="Move Down" Command="{Binding MoveDownCommand}" >
                             <Button.IsEnabled>
                                 <MultiBinding Converter="{StaticResource ModExistsAndValid}">
                                     <Binding Path="CurrentMod"/>
@@ -152,7 +152,7 @@
                 </GroupBox>
             </Grid>
 
-            <view:ModStatusView Name="ModStatus" SetupRequested="OnSetupRequested" RunRequested="OnRunRequested" BuildRunRequested="OnBuildRunRequested" Grid.Row="1"/>
+            <view:ModStatusView Name="ModStatus" RunRequested="{Binding RunCommand}" BuildRunRequested="{Binding BuildRunCommand}" Grid.Row="1"/>
 
         </Grid>
     </DockPanel>

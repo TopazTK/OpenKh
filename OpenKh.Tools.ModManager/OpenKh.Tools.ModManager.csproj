@@ -46,5 +46,17 @@
     <Compile Update="Views\MainView.axaml.cs">
       <DependentUpon>MainView.axaml</DependentUpon>
     </Compile>
+    <Compile Update="Controls\ModDetailsControl.axaml.cs">
+      <DependentUpon>ModDetailsControl.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Controls\ModListControl.axaml.cs">
+      <DependentUpon>ModListControl.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Controls\ModStatusControl.axaml.cs">
+      <DependentUpon>ModStatusControl.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Controls\ModWrapControl.axaml.cs">
+      <DependentUpon>ModWrapControl.axaml</DependentUpon>
+    </Compile>
   </ItemGroup>
 </Project>
