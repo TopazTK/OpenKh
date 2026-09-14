@@ -13,7 +13,7 @@ static map<string, string> MAP_NAMES =
     {"kh2", "KINGDOM HEARTS II FINAL MIX.exe" },
     {"recom", "KINGDOM HEARTS Re_Chain of Memories.exe" },
     {"bbs", "KINGDOM HEARTS Birth by Sleep FINAL MIX.exe" },
-    {"ddd", "KINGDOM HEARTS Dream Drop Distance.exe" },
+    {"kh3d", "KINGDOM HEARTS Dream Drop Distance.exe" },
 };
 
 static string SELF_NAME = "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe";
@@ -53,6 +53,15 @@ int main(int argc, char* argv[])
 
         if (_fetchArgs.size() >= 0x01)
         {
+            if (_fetchArgs[0] == "kh3d")
+            {
+                SELF_NAME = "KINGDOM HEARTS HD 2.8 Final Chapter Prologue.exe";
+                REAL_NAME = "KINGDOM HEARTS HD 2.8 Final Chapter Prologue.bak";
+
+                _fetchSelfPath = "\"" + _fetchPathFS + "\\" + SELF_NAME + "\"";
+                _fetchRealPath = "\"" + _fetchPathFS + "\\" + REAL_NAME + "\"";
+            }
+
             _makeCommand = "\"" + _fetchPathFS + "\\" + MAP_NAMES[_fetchArgs[0]] + "\"";
 
             for (int i = 1; i < _fetchArgs.size(); i++)
