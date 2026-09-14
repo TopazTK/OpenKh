@@ -324,7 +324,7 @@ namespace OpenKh.Patcher
 
                                 if (_isFileRemastered)
                                 {
-                                    var _fetchMatch = Regex.Match(_fetchTarget, "[\\w,-]+\\.[a-zA-Z0-9]{2,4}");
+                                    var _fetchMatch = Regex.Match(_fetchTarget, "[\\w,-]+\\.[a-zA-Z0-9]{2,4}", RegexOptions.None, TimeSpan.FromMilliseconds(500));
 
                                     var _fetchIndex = _fetchTarget.IndexOf(_fetchMatch.Value);
                                     var _fetchEndPoint = _fetchIndex + _fetchMatch.Value.Length;
@@ -366,7 +366,7 @@ namespace OpenKh.Patcher
                                                     _fetchAssetData = _isFileRAW ? _fetchTargetAsset.OriginalRawData : _fetchTargetAsset.OriginalData;
 
                                                 if (_fetchAssetData != null)
-                                                    File.WriteAllBytes(_fetchTargetPath, _fetchAssetData);
+                                                    await File.WriteAllBytesAsync(_fetchTargetPath, _fetchAssetData);
                                             }
                                         }
                                     }

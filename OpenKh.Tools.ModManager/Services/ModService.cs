@@ -203,7 +203,7 @@ namespace OpenKh.Tools.ModManager.Services
                                         var _fetchData = new EgsHdAsset(_fetchPkgStream);
 
                                         // Write the file to the disk.
-                                        File.WriteAllBytes(_fetchFilePath, _fetchData.OriginalData);
+                                        await File.WriteAllBytesAsync(_fetchFilePath, _fetchData.OriginalData);
 
                                         // If the file has any remastered assets:
                                         if (_fetchData.Assets.Count() != 0x00)
@@ -223,7 +223,7 @@ namespace OpenKh.Tools.ModManager.Services
 
                                                 // Fetch the data for the asset and write it.
                                                 var _fetchAssetData = _fetchData.RemasteredAssetsDecompressedData[_fetchAsset];
-                                                File.WriteAllBytes(_fetchAssetPath, _fetchAssetData);
+                                                await File.WriteAllBytesAsync(_fetchAssetPath, _fetchAssetData);
 
                                                 if (CancelToken.IsCancellationRequested)
                                                     break;
@@ -347,7 +347,7 @@ namespace OpenKh.Tools.ModManager.Services
                 {
                     Directory.Delete(_fetchCurrentModDir, true);
                     Directory.CreateDirectory(_fetchCurrentModDir);
-                });
+                }, CancellationToken.None);
             }
 
             // This is being done with a try-catch because if the git doesn't exist this throws an exception.
@@ -508,7 +508,7 @@ namespace OpenKh.Tools.ModManager.Services
                 {
                     Directory.Delete(_fetchCurrentModDir, true);
                     Directory.CreateDirectory(_fetchCurrentModDir);
-                });
+                }, CancellationToken.None);
             }
 
             // If the file is a ZIP Archive:
@@ -766,7 +766,7 @@ namespace OpenKh.Tools.ModManager.Services
                     Directory.Delete(_fetchBuildPath, true);
                     Directory.CreateDirectory(_fetchBuildPath);
                 }
-            });
+            }, CancellationToken.None);
 
             // Declare all the progress variabled.
             var _currentModName = "";
@@ -915,7 +915,7 @@ namespace OpenKh.Tools.ModManager.Services
             if (topLevelObject.Launcher != null && _fetchTargetUri != null)
             {
                 if (!String.IsNullOrEmpty(_fetchArguments))
-                    File.WriteAllText(_fetchArgumentPath, _fetchArguments);
+                    await File.WriteAllTextAsync(_fetchArgumentPath, _fetchArguments);
 
                 if (_fetchAPIExists)
                 {
