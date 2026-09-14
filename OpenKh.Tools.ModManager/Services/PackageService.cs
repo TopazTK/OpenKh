@@ -143,7 +143,7 @@ namespace OpenKh.Tools.ModManager.Services
 
             InstallOverrides(currentConfig);
         }
-    
+
         public static void RemovePanacea(Config currentConfig)
         {
             var _fetchPath1525 = PathService.ResolvePath1525(currentConfig);
@@ -174,7 +174,7 @@ namespace OpenKh.Tools.ModManager.Services
                 File.Delete(Path.Combine(_fetchPath28, "panacea_settings.txt"));
             }
         }
-    
+
         public static bool EnsureBackend(Config currentConfig)
         {
             var _fetchPath1525 = PathService.ResolvePath1525(currentConfig);
@@ -335,7 +335,7 @@ namespace OpenKh.Tools.ModManager.Services
 
             InstallOverrides(currentConfig);
         }
-    
+
         public static void RemoveBackend(Config currentConfig)
         {
             var _fetchPath1525 = PathService.ResolvePath1525(currentConfig);
@@ -435,63 +435,45 @@ namespace OpenKh.Tools.ModManager.Services
         {
             if (OperatingSystem.IsLinux())
             {
-                var _fetchHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                var _fetchFolders = PathService.FetchSteamLibraries();
 
-                // It is stupid that I have to do this.
-                // If someone knows a better way PLEASE tell me.
-                var _steamPossibleDirs = new List<string>()
+                _fetchFolders.AsParallel().ForAll(_fetchFolder =>
                 {
-                    Path.Combine(_fetchHome, ".steam/steam"),
-                    Path.Combine(_fetchHome, ".local/share/Steam"),
-                    Path.Combine(_fetchHome, ".var/app/com.valvesoftware.Steam/.steam"),
-                    Path.Combine(_fetchHome, ".var/app/com.valvesoftware.Steam/data/Steam")
-                };
+                    var _fetchRegistry1525 = Path.Combine(_fetchFolder, "steamapps", "compatdata", "2552430", "pfx", "user.reg");
+                    var _fetchRegistry28 = Path.Combine(_fetchFolder, "steamapps", "compatdata", "2552440", "pfx", "user.reg");
 
-                var _fetchInstallDir = _steamPossibleDirs.FirstOrDefault(x => Directory.Exists(x));
-
-                var _fetchRegistry1525 = Path.Combine(_fetchInstallDir, "steamapps", "compatdata", "2552430", "pfx", "user.reg");
-                var _fetchRegistry28 = Path.Combine(_fetchInstallDir, "steamapps", "compatdata", "2552440", "pfx", "user.reg");
-
-                if (!File.Exists(_fetchRegistry1525) && !File.Exists(_fetchRegistry28))
-                    return false;
-
-                if (File.Exists(_fetchRegistry1525))
-                {
-                    var _fetchRegistryRAW = new List<string>(File.ReadAllLines(_fetchRegistry1525));
-                    var _fetchOverride = _fetchRegistryRAW.FirstOrDefault(x => x.Contains("\"version\"=\"native,builtin\""));
-
-                    if (_fetchOverride == null)
+                    if (File.Exists(_fetchRegistry1525))
                     {
-                        var _fetchOverridesLine = _fetchRegistryRAW.First(x => x.Contains(@"[Software\\Wine\\DllOverrides]"));
-                        var _fetchOverridesPosition = _fetchRegistryRAW.IndexOf(_fetchOverridesLine);
+                        var _fetchRegistryRAW = new List<string>(File.ReadAllLines(_fetchRegistry1525));
+                        var _fetchOverride = _fetchRegistryRAW.FirstOrDefault(x => x.Contains("\"version\"=\"native,builtin\""));
 
-                        _fetchRegistryRAW.Insert(_fetchOverridesPosition + 0x02, "\"version\"=\"native,builtin\"");
+                        if (_fetchOverride == null)
+                        {
+                            var _fetchOverridesLine = _fetchRegistryRAW.First(x => x.Contains(@"[Software\\Wine\\DllOverrides]"));
+                            var _fetchOverridesPosition = _fetchRegistryRAW.IndexOf(_fetchOverridesLine);
 
-                        File.WriteAllLines(_fetchRegistry1525, _fetchRegistryRAW.ToArray());
+                            _fetchRegistryRAW.Insert(_fetchOverridesPosition + 0x02, "\"version\"=\"native,builtin\"");
+
+                            File.WriteAllLines(_fetchRegistry1525, _fetchRegistryRAW.ToArray());
+                        }
                     }
 
-                    else
-                        return true;
-                }
-
-                if (File.Exists(_fetchRegistry28))
-                {
-                    var _fetchRegistryRAW = new List<string>(File.ReadAllLines(_fetchRegistry28));
-                    var _fetchOverride = _fetchRegistryRAW.FirstOrDefault(x => x.Contains("\"version\"=\"native,builtin\""));
-
-                    if (_fetchOverride == null)
+                    if (File.Exists(_fetchRegistry28))
                     {
-                        var _fetchOverridesLine = _fetchRegistryRAW.First(x => x.Contains(@"[Software\\Wine\\DllOverrides]"));
-                        var _fetchOverridesPosition = _fetchRegistryRAW.IndexOf(_fetchOverridesLine);
+                        var _fetchRegistryRAW = new List<string>(File.ReadAllLines(_fetchRegistry28));
+                        var _fetchOverride = _fetchRegistryRAW.FirstOrDefault(x => x.Contains("\"version\"=\"native,builtin\""));
 
-                        _fetchRegistryRAW.Insert(_fetchOverridesPosition + 0x02, "\"version\"=\"native,builtin\"");
+                        if (_fetchOverride == null)
+                        {
+                            var _fetchOverridesLine = _fetchRegistryRAW.First(x => x.Contains(@"[Software\\Wine\\DllOverrides]"));
+                            var _fetchOverridesPosition = _fetchRegistryRAW.IndexOf(_fetchOverridesLine);
 
-                        File.WriteAllLines(_fetchRegistry1525, _fetchRegistryRAW.ToArray());
+                            _fetchRegistryRAW.Insert(_fetchOverridesPosition + 0x02, "\"version\"=\"native,builtin\"");
+
+                            File.WriteAllLines(_fetchRegistry1525, _fetchRegistryRAW.ToArray());
+                        }
                     }
-
-                    else
-                        return true;
-                }
+                });
 
                 return true;
             }

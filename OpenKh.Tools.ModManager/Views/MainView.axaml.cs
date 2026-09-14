@@ -365,7 +365,7 @@ public partial class MainView : Window
                         var _fetchModName = "";
 
                         if (_fetchFileInfo.Exists)
-                            _fetchModFolder = $"local/{ Path.GetFileNameWithoutExtension(_fetchResult) }";
+                            _fetchModFolder = Path.Combine(_fetchModPath, $"local/{ Path.GetFileNameWithoutExtension(_fetchResult) }");
 
                         else
                         {

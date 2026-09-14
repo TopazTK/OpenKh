@@ -1,4 +1,5 @@
 using HarfBuzzSharp;
+using Microsoft.Win32;
 using OpenKh.Tools.ModManager.Classes;
 using SkiaSharp;
 using System;
@@ -6,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace OpenKh.Tools.ModManager.Services
@@ -151,6 +153,56 @@ namespace OpenKh.Tools.ModManager.Services
 
             else
                 return null;
+        }
+
+        public static string[]? FetchSteamLibraries()
+        {
+            var _fetchConfigPath = "";
+            var _fetchFolders = new List<string>();
+
+            if (OperatingSystem.IsWindows())
+            {
+                var _fetchSteamKey = Registry.LocalMachine.OpenSubKey("Software\\Valve\\Steam") ?? Registry.LocalMachine.OpenSubKey("Software\\Wow6432Node\\Valve\\Steam");
+                var _fetchInstallDir = _fetchSteamKey.GetValue("InstallPath").ToString();
+                _fetchConfigPath = Path.Combine(_fetchInstallDir, "steamapps", "libraryfolders.vdf");
+            }
+
+            else if (OperatingSystem.IsLinux())
+            {
+                var _fetchHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+                // It is stupid that I have to do this.
+                // If someone knows a better way PLEASE tell me.
+                var _steamPossibleDirs = new List<string>()
+                {
+                    Path.Combine(_fetchHome, ".steam/steam"),
+                    Path.Combine(_fetchHome, ".local/share/Steam"),
+                    Path.Combine(_fetchHome, ".var/app/com.valvesoftware.Steam/.steam"),
+                    Path.Combine(_fetchHome, ".var/app/com.valvesoftware.Steam/data/Steam")
+                };
+
+                var _fetchInstallDir = _steamPossibleDirs.FirstOrDefault(x => Directory.Exists(x));
+                _fetchConfigPath = Path.Combine(_fetchInstallDir, "steamapps", "libraryfolders.vdf");
+            }
+
+            if (String.IsNullOrEmpty(_fetchConfigPath))
+                return null;
+
+            var _fetchLibraryConfig = File.ReadAllLines(_fetchConfigPath);
+            var _pathRegex = new Regex("path[^\"]*\"\\s*\"([^\"]*)\"", RegexOptions.None, TimeSpan.FromMilliseconds(500));
+
+            _fetchLibraryConfig.AsParallel().ForAll(_fetchLine =>
+            {
+                var _fetchMatch = _pathRegex.Match(_fetchLine);
+
+                if (_fetchMatch.Success)
+                {
+                    var _fetchValue = Regex.Unescape(_fetchMatch.Groups[1].Value);
+                    _fetchFolders.Add(_fetchValue);
+                }
+            });
+
+            return _fetchFolders.Count != 0x00 ? _fetchFolders.ToArray() : null;
         }
     }
 }

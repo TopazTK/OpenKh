@@ -82,53 +82,13 @@ namespace OpenKh.Tools.ModManager.Wizard
             {
                 if (_fetchConfig.Frontend.TargetPlatform == Platform.STEAM)
                 {
-                    var _fetchFolders = new List<string>();
-                    var _fetchConfigPath = "";
+                    var _fetchFolders = PathService.FetchSteamLibraries();
 
-                    if (OperatingSystem.IsWindows())
-                    {
-                        var _fetchSteamKey = Registry.LocalMachine.OpenSubKey("Software\\Valve\\Steam") ?? Registry.LocalMachine.OpenSubKey("Software\\Wow6432Node\\Valve\\Steam");
-                        var _fetchInstallDir = _fetchSteamKey.GetValue("InstallPath").ToString();
-                        _fetchConfigPath = Path.Combine(_fetchInstallDir, "steamapps", "libraryfolders.vdf");
-                    }
-
-                    else if (OperatingSystem.IsLinux())
-                    {
-                        var _fetchHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
-                        // It is stupid that I have to do this.
-                        // If someone knows a better way PLEASE tell me.
-                        var _steamPossibleDirs = new List<string>()
-                        {
-                            Path.Combine(_fetchHome, ".steam/steam"),
-                            Path.Combine(_fetchHome, ".local/share/Steam"),
-                            Path.Combine(_fetchHome, ".var/app/com.valvesoftware.Steam/.steam"),
-                            Path.Combine(_fetchHome, ".var/app/com.valvesoftware.Steam/data/Steam")
-                        };
-
-                        var _fetchInstallDir = _steamPossibleDirs.FirstOrDefault(x => Directory.Exists(x));
-                        _fetchConfigPath = Path.Combine(_fetchInstallDir, "steamapps", "libraryfolders.vdf");
-                    }
-
-                    if (String.IsNullOrEmpty(_fetchConfigPath))
+                    if (_fetchFolders == null)
                         return;
-
-                    var _fetchLibraryConfig = await File.ReadAllLinesAsync(_fetchConfigPath);
-                    var _pathRegex = new Regex("path[^\"]*\"\\s*\"([^\"]*)\"", RegexOptions.None, TimeSpan.FromMilliseconds(500));
 
                     var _fetchPath1525 = "";
                     var _fetchPath28 = "";
-
-                    _fetchLibraryConfig.AsParallel().ForAll(_fetchLine =>
-                    {
-                        var _fetchMatch = _pathRegex.Match(_fetchLine);
-
-                        if (_fetchMatch.Success)
-                        {
-                            var _fetchValue = Regex.Unescape(_fetchMatch.Groups[1].Value);
-                            _fetchFolders.Add(_fetchValue);
-                        }
-                    });
 
                     _fetchFolders.AsParallel().ForAll(_fetchFolder =>
                     {
@@ -171,7 +131,6 @@ namespace OpenKh.Tools.ModManager.Wizard
                             });
                         }
                     });
-
 
                     _fetchConfig.Frontend.GamePath[0] = !String.IsNullOrEmpty(_fetchPath1525) ? _fetchPath1525 : "";
                     _fetchConfig.Frontend.GamePath[1] = !String.IsNullOrEmpty(_fetchPath28) ? _fetchPath28 : "";
