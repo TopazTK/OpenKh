@@ -19,7 +19,6 @@ static map<string, string> MAP_NAMES =
 static string SELF_NAME = "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe";
 static string REAL_NAME = "KINGDOM HEARTS HD 1.5+2.5 ReMIX.bak";
 
-static string MAIN_LAUNCH = "KINGDOM HEARTS HD 1.5+2.5 Launcher.exe";
 static string ARGUMENT_FETCH = "launch_args.txt";
 
 int main(int argc, char* argv[])
@@ -37,56 +36,36 @@ int main(int argc, char* argv[])
     auto _fetchSelfPath = "\"" + _fetchPathFS + "\\" + SELF_NAME + "\"";
     auto _fetchRealPath = "\"" + _fetchPathFS + "\\" + REAL_NAME + "\"";
 
-    if (argc == 0x01)
+    string _makeCommand;
+
+    if (filesystem::exists(_fetchArgsPath))
     {
-        auto _makeCommand = "\"" + _fetchPathFS + "\\" + MAIN_LAUNCH + "\"";
+        ifstream _fetchFile(_fetchArgsPath);
 
-        if (filesystem::exists(_fetchArgsPath))
-        {
-            ifstream _fetchFile(_fetchArgsPath);
+        stringstream _fetchBuff;
+        _fetchBuff << _fetchFile.rdbuf();
 
-            stringstream _fetchBuff;
-            _fetchBuff << _fetchFile.rdbuf();
+        string _currArg;
+        vector<string> _fetchArgs;
 
-            string _currArg;
-            vector<string> _fetchArgs;
-
-            while (getline(_fetchBuff, _currArg, ' '))
+        while (getline(_fetchBuff, _currArg, ' '))
             _fetchArgs.push_back(_currArg);
-            
-            if (_fetchArgs.size() == 0x01)
-                _makeCommand = "\"" + _fetchPathFS + "\\" + (MAP_NAMES.contains(_fetchArgs[0]) ? MAP_NAMES[_fetchArgs[0]] : MAIN_LAUNCH) + "\"" + (MAP_NAMES.contains(_fetchArgs[0]) ? ' ' + _fetchArgs[0] : "");
 
-            else if (_fetchArgs.size() >= 0x02)
+        if (_fetchArgs.size() >= 0x01)
+        {
+            _makeCommand = "\"" + _fetchPathFS + "\\" + MAP_NAMES[_fetchArgs[0]] + "\"";
+
+            for (int i = 1; i < _fetchArgs.size(); i++)
             {
-                _makeCommand = "\"" + _fetchPathFS + "\\" + (MAP_NAMES.contains(_fetchArgs[0]) ? MAP_NAMES[_fetchArgs[0]] : MAIN_LAUNCH) + "\"";
-
-                for (int i = MAP_NAMES.contains(_fetchArgs[0]) ? 1 : 0; i < _fetchArgs.size(); i++)
-                {
-                    _makeCommand += " ";
-                    _makeCommand += _fetchArgs[i];
-                }
+                _makeCommand += " ";
+                _makeCommand += _fetchArgs[i];
             }
-        }
 
-        system(_makeCommand.c_str());
-    }
-
-    else
-    {
-        if (argc == 0x02)
-        {
-            auto _makeCommand = "\"" + _fetchPathFS + "\\" + (MAP_NAMES.contains(argv[1]) ? MAP_NAMES[argv[1]] : MAIN_LAUNCH) + "\"" + (MAP_NAMES.contains(argv[1]) ? ' ' + argv[1] : "");
-            system(_makeCommand.c_str());
-        }
-
-        else
-        {
-            auto _containsKey = MAP_NAMES.contains(argv[1]);
-            auto _makeCommand = "\"" + _fetchPathFS + "\\" + (_containsKey ? MAP_NAMES[argv[1]] : MAIN_LAUNCH) + "\"";
-
-            for (int i = _containsKey ? 2 : 1; i < argc; i++)
+            for (int i = 1; i < argc; i++)
             {
+                if (argv[i] == "%command%")
+                    continue;
+
                 _makeCommand += " ";
                 _makeCommand += argv[i];
             }
