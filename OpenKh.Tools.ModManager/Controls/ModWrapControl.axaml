@@ -34,6 +34,22 @@
             <ListBox.ItemTemplate >
             <DataTemplate DataType="{x:Type model:ModModel}">
                 <StackPanel Orientation="Horizontal">
+                    <ToolTip.Tip>
+                        <StackPanel MaxWidth="350">
+                            <StackPanel Orientation="Horizontal" >
+                                <TextBlock FontWeight="Bold" Text="Title: " />
+                                <TextBlock Text="{ReflectionBinding ModTitle}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontWeight="Bold" Text="Author: " />
+                                <TextBlock Text="{ReflectionBinding ModAuthor}" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock FontWeight="Bold" Text="Description: " />
+                                <TextBlock MaxWidth="350" TextWrapping="Wrap" FontStyle="Italic" Text="{ReflectionBinding ModDescription}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </ToolTip.Tip>
                     <CheckBox IsChecked="{ReflectionBinding ModActive}" IsEnabled="{ReflectionBinding ModValid}" IsCheckedChanged="OnModCheckChanged"/>
                     <Border Margin="5" VerticalAlignment="Center" CornerRadius="5" ClipToBounds="true">
                         <Image Width="48" Height="48" Source="{ReflectionBinding ModIcon}"/>
@@ -41,7 +57,7 @@
                     <StackPanel Margin="5" VerticalAlignment="Center" HorizontalAlignment="Stretch" Width="{Binding $parent[ListBoxItem].Bounds.Width, Converter={StaticResource SubtractConverter}, ConverterParameter='128'}">
                         <TextBlock Text="{ReflectionBinding ModTitle}" FontSize="12" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="{ReflectionBinding ModAuthor}" FontSize="12" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Text="{ReflectionBinding ModDescription}" FontSize="10" FontStyle="Italic" MaxLines="3" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{ReflectionBinding ModDescription}" FontSize="10" FontStyle="Italic" MaxLines="3" TextWrapping="Wrap" TextTrimming="WordEllipsis"/>
                     </StackPanel>
                 </StackPanel>
             </DataTemplate>

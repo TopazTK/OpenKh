@@ -14,7 +14,7 @@
                 <TextBlock Margin="5, 5, 5, -10" HorizontalAlignment="Center"  FontSize="16" TextWrapping="Wrap">
                     Here are the mods that are available on GitHub for the currently selected game.<LineBreak/>
                 </TextBlock>
-                <Border ClipToBounds="True" Margin="5, -10, 5, 5" Height="30"  CornerRadius="5" Background="#F0C000">
+                <Border ClipToBounds="True" Margin="5, -10, 5, 5" Height="30"  CornerRadius="5" Background="#E0900C">
                     <TextBlock Margin="5" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"  FontSize="16" TextWrapping="Wrap">
                         This list is <Bold>not curated</Bold> and as such OpenKH is <Bold>not responsible</Bold> for the mods present here.
                     </TextBlock>
