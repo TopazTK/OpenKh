@@ -56,40 +56,49 @@ namespace OpenKh.Tools.ModManager.ViewModels
                 var _fetchInquiry = new SearchRepositoriesRequest($"topic:openkh-mod topic:{_fetchGame}");
                 var _fetchResult = await _fetchClient.Search.SearchRepo(_fetchInquiry);
 
-                await Parallel.ForEachAsync(_fetchResult.Items.AsParallel(), async (_fetchMod, _fetchToken) =>
+                await Task.Run(async () =>
                 {
-                    var _fetchMetadataURL = $"https://raw.githubusercontent.com/{_fetchMod.FullName}/{_fetchMod.DefaultBranch}/mod.yml";
-                    var _fetchIconURL = $"https://raw.githubusercontent.com/{_fetchMod.FullName}/{_fetchMod.DefaultBranch}/icon.png";
-
-                    using var _makeClient = new HttpClient();
-
-                    using var _fetchMetadataOK = await _makeClient.GetAsync(_fetchMetadataURL, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
-                    using var _fetchImageOK = await _makeClient.GetAsync(_fetchIconURL, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
-
-                    // If the file doesn't exist, abort.
-                    if (_fetchMetadataOK.StatusCode == HttpStatusCode.OK)
+                    while (_fetchResult.Items != null && _fetchResult.Items.Count != 0)
                     {
-                        var _fetchContent = await _makeClient.GetStringAsync(_fetchMetadataURL, CancellationToken.None);
-                        var _fetchImageRAW = _fetchImageOK.StatusCode == HttpStatusCode.OK ? await _makeClient.GetByteArrayAsync(_fetchIconURL, CancellationToken.None) : null;
-
-                        var _fetchMetadata = Metadata.Read(new StringReader(_fetchContent));
-
-                        if (_fetchMetadata.IsValid)
+                        await Parallel.ForEachAsync(_fetchResult.Items.AsParallel(), async (_fetchMod, _fetchToken) =>
                         {
-                            var _modModel = new ModModel
-                            {
-                                ModTitle = !String.IsNullOrEmpty(_fetchMetadata.Title) ? _fetchMetadata.Title : _fetchMod.Name,
-                                ModAuthor = !String.IsNullOrEmpty(_fetchMetadata.OriginalAuthor) ? _fetchMetadata.OriginalAuthor : _fetchMod.Owner.Login,
-                                ModDescription = !String.IsNullOrEmpty(_fetchMetadata.Description) ? _fetchMetadata.Description : "This mod does not have a description, but we believe it's pretty cool.",
-                                ModFilesList = _fetchMetadata.Assets.Select(x => x.Name).ToArray(),
-                                ModIcon = _fetchImageRAW != null ? new Bitmap(new MemoryStream(_fetchImageRAW)) : null,
-                                ModPath = _fetchMod.FullName,
-                                ModActive = false,
-                                ModValid = true
-                            };
+                            var _fetchMetadataURL = $"https://raw.githubusercontent.com/{_fetchMod.FullName}/{_fetchMod.DefaultBranch}/mod.yml";
+                            var _fetchIconURL = $"https://raw.githubusercontent.com/{_fetchMod.FullName}/{_fetchMod.DefaultBranch}/icon.png";
 
-                            InstalledMods.Add(_modModel);
-                        }
+                            using var _makeClient = new HttpClient();
+
+                            using var _fetchMetadataOK = await _makeClient.GetAsync(_fetchMetadataURL, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+                            using var _fetchImageOK = await _makeClient.GetAsync(_fetchIconURL, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+
+                            // If the file doesn't exist, abort.
+                            if (_fetchMetadataOK.StatusCode == HttpStatusCode.OK)
+                            {
+                                var _fetchContent = await _makeClient.GetStringAsync(_fetchMetadataURL, CancellationToken.None);
+                                var _fetchImageRAW = _fetchImageOK.StatusCode == HttpStatusCode.OK ? await _makeClient.GetByteArrayAsync(_fetchIconURL, CancellationToken.None) : null;
+
+                                var _fetchMetadata = Metadata.Read(new StringReader(_fetchContent));
+
+                                if (_fetchMetadata.IsValid)
+                                {
+                                    var _modModel = new ModModel
+                                    {
+                                        ModTitle = !String.IsNullOrEmpty(_fetchMetadata.Title) ? _fetchMetadata.Title : _fetchMod.Name,
+                                        ModAuthor = !String.IsNullOrEmpty(_fetchMetadata.OriginalAuthor) ? _fetchMetadata.OriginalAuthor : _fetchMod.Owner.Login,
+                                        ModDescription = !String.IsNullOrEmpty(_fetchMetadata.Description) ? _fetchMetadata.Description : "This mod does not have a description, but we believe it's pretty cool.",
+                                        ModFilesList = _fetchMetadata.Assets.Select(x => x.Name).ToArray(),
+                                        ModIcon = _fetchImageRAW != null ? new Bitmap(new MemoryStream(_fetchImageRAW)) : null,
+                                        ModPath = _fetchMod.FullName,
+                                        ModActive = false,
+                                        ModValid = true
+                                    };
+
+                                    InstalledMods.Add(_modModel);
+                                }
+                            }
+                        });
+
+                        _fetchInquiry = new SearchRepositoriesRequest($"topic:openkh-mod topic:{_fetchGame}") { PerPage = 100, Page = _fetchInquiry.Page + 1 };
+                        _fetchResult = await _fetchClient.Search.SearchRepo(_fetchInquiry);
                     }
                 });
 
