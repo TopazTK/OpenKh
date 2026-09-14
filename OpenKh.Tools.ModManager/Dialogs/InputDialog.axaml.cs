@@ -24,7 +24,7 @@ namespace OpenKh.Tools.ModManager.Dialogs
         {
             InputText.Focus();
 
-            InputText.MaxWidth = this.Width;
+            InputText.MaxWidth = this.Bounds.Width;
             MiscButton.IsVisible = MiscButtonCallback == null ? false : true;
         }
 
