@@ -75,12 +75,12 @@ namespace OpenKh.Tools.ModManager.Services
 
                     if ((_fetchCurrent == _fetchMaximum && _fetchMaximum != 0) || cancelToken.IsCancellationRequested)
                     {
-                        if ((secondProgCurr != null && secondProgMax != null) || cancelToken.IsCancellationRequested)
+                        if ((secondProgCurr != null && secondProgMax != null))
                         {
                             var _fetchSecondCurrent = Marshal.ReadInt32(secondProgCurr.Value);
                             var _fetchSecondMaximum = Marshal.ReadInt32(secondProgMax.Value);
 
-                            if (_fetchSecondCurrent == _fetchSecondMaximum && _fetchSecondMaximum != 0)
+                            if ((_fetchSecondCurrent == _fetchSecondMaximum && _fetchSecondMaximum != 0) || cancelToken.IsCancellationRequested)
                             {
                                 Dispatcher.UIThread.Post(() =>
                                 {
@@ -104,14 +104,14 @@ namespace OpenKh.Tools.ModManager.Services
 
                     await Task.Delay(5);
                 }
-            });
+            }, CancellationToken.None);
 
             if (owner != null)
             {
                 var _fetchResult = await _fetchDialog.ShowDialog<bool>(owner);
 
                 if (!_fetchResult)
-                    cancelToken.Cancel();
+                    await cancelToken.CancelAsync();
 
                 return _fetchResult;
             }
@@ -124,10 +124,10 @@ namespace OpenKh.Tools.ModManager.Services
                 {
                     while (_fetchDialog.Result == null)
                     { }
-                });
+                }, CancellationToken.None);
 
                 if (!_fetchDialog.Result.Value)
-                    cancelToken.Cancel();
+                    await cancelToken.CancelAsync();
 
                 return _fetchDialog.Result.Value;
             }
@@ -150,7 +150,7 @@ namespace OpenKh.Tools.ModManager.Services
                 {
                     while (_fetchDialog.Result == null)
                     { }
-                });
+                }, CancellationToken.None);
 
                 return _fetchDialog.Result.Value;
             }
@@ -191,7 +191,7 @@ namespace OpenKh.Tools.ModManager.Services
                 {
                     while (_fetchDialog.Result == null)
                     { }
-                });
+                }, CancellationToken.None);
 
                 return _fetchDialog.Result;
             }
