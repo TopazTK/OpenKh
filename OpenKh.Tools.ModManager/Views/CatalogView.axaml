@@ -33,7 +33,7 @@
             </Grid.RowDefinitions>
 
             <GroupBox Margin="5" Grid.ColumnSpan="2" Header="Mod Catalog">
-                <view:ModWrapView Name="ModList" ModActiveChanged="OnModActiveChanged"/>
+                <view:ModWrapView Name="ModList" ModSelectedChanged="OnModActiveChanged"/>
             </GroupBox>
 
             <ProgressBar Grid.Row="1" Margin="5" Name="MainProgress" ProgressTextFormat="Fetching Mods from GitHub... Please be patient..." ShowProgressText="True" IsIndeterminate="true" Height="30"/>

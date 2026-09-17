@@ -22,7 +22,7 @@ public partial class MainView : Window
         _fetchContext.InitializeView();
     }
 
-    private void OnModActiveChanged(object? sender, ModListView.ModActiveChangedEventArgs e)
+    private void OnModActiveChanged(object? sender, ModActiveChangedEventArgs e)
     {
         var _fetchContext = DataContext as MainViewModel;
 

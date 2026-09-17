@@ -7,32 +7,33 @@ using System;
 
 namespace OpenKh.Tools.ModManager.Views
 {
+    public class ModSelectedChangedEventArgs : RoutedEventArgs
+    {
+        public ModModel TargetMod { get; }
+        public bool IsChecked { get; }
+
+        public ModSelectedChangedEventArgs(RoutedEvent routedEvent, ModModel targetMod, bool? isChecked) : base(routedEvent)
+        {
+            TargetMod = targetMod;
+            IsChecked = isChecked.HasValue ? isChecked.Value : false;
+        }
+    }
+
     public partial class ModWrapView : ContentPage
     {
         #region Custom Events
-        public class ModActiveChangedEventArgs : RoutedEventArgs
-        {
-            public ModModel TargetMod { get; }
-            public bool IsChecked { get; }
 
-            public ModActiveChangedEventArgs(RoutedEvent routedEvent, ModModel targetMod, bool? isChecked) : base(routedEvent)
-            {
-                TargetMod = targetMod;
-                IsChecked = isChecked.HasValue ? isChecked.Value : false;
-            }
+        public static readonly RoutedEvent<ModSelectedChangedEventArgs> ModSelectedChangedEvent = RoutedEvent.Register<ModDetailsView, ModSelectedChangedEventArgs>(nameof(ModSelectedChanged), RoutingStrategies.Direct);
+
+        public event EventHandler<ModSelectedChangedEventArgs> ModSelectedChanged
+        {
+            add => AddHandler(ModSelectedChangedEvent, value);
+            remove => RemoveHandler(ModSelectedChangedEvent, value);
         }
 
-        public static readonly RoutedEvent<ModActiveChangedEventArgs> ModActiveChangedEvent = RoutedEvent.Register<ModDetailsView, ModActiveChangedEventArgs>(nameof(ModActiveChanged), RoutingStrategies.Direct);
-
-        public event EventHandler<ModActiveChangedEventArgs> ModActiveChanged
+        protected virtual void OnModSelectedChanged(ModModel targetMod, bool? isChecked)
         {
-            add => AddHandler(ModActiveChangedEvent, value);
-            remove => RemoveHandler(ModActiveChangedEvent, value);
-        }
-
-        protected virtual void OnModActiveChanged(ModModel targetMod, bool? isChecked)
-        {
-            RoutedEventArgs args = new ModActiveChangedEventArgs(ModActiveChangedEvent, targetMod, isChecked);
+            RoutedEventArgs args = new ModSelectedChangedEventArgs(ModSelectedChangedEvent, targetMod, isChecked);
             RaiseEvent(args);
         }
 
@@ -57,7 +58,7 @@ namespace OpenKh.Tools.ModManager.Views
             if (_fetchParent == null || !CanTriggerEvents)
                 return;
 
-            OnModActiveChanged(_fetchParent, _fetchSender.IsChecked);
+            OnModSelectedChanged(_fetchParent, _fetchSender.IsChecked);
         }
     }
 }

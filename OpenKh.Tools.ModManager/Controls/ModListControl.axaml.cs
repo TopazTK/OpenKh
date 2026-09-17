@@ -9,20 +9,21 @@ using System.Collections.Generic;
 
 namespace OpenKh.Tools.ModManager.Views
 {
+    public class ModActiveChangedEventArgs : RoutedEventArgs
+    {
+        public ModModel TargetMod { get; }
+        public bool IsChecked { get; }
+
+        public ModActiveChangedEventArgs(RoutedEvent routedEvent, ModModel targetMod, bool? isChecked) : base(routedEvent)
+        {
+            TargetMod = targetMod;
+            IsChecked = isChecked.HasValue ? isChecked.Value : false;
+        }
+    }
+
     public partial class ModListView : ContentPage
     {
         #region Custom Events
-        public class ModActiveChangedEventArgs : RoutedEventArgs
-        {
-            public ModModel TargetMod { get; }
-            public bool IsChecked { get; }
-
-            public ModActiveChangedEventArgs(RoutedEvent routedEvent, ModModel targetMod, bool? isChecked) : base(routedEvent)
-            {
-                TargetMod = targetMod;
-                IsChecked = isChecked.HasValue ? isChecked.Value : false;
-            }
-        }
 
         public static readonly RoutedEvent<ModActiveChangedEventArgs> ModActiveChangedEvent = RoutedEvent.Register<ModDetailsView, ModActiveChangedEventArgs>(nameof(ModActiveChanged), RoutingStrategies.Direct);
 
