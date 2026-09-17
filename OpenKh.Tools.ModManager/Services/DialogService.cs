@@ -102,7 +102,7 @@ namespace OpenKh.Tools.ModManager.Services
                         }
                     }
 
-                    await Task.Delay(5);
+                    await Task.Delay(5, CancellationToken.None);
                 }
             }, CancellationToken.None);
 
@@ -169,9 +169,9 @@ namespace OpenKh.Tools.ModManager.Services
                 _fetchDialog.Show();
         }
 
-        public static async Task<string> ShowInput(Window? owner, string title, string message, string mainButtonText, string placeholderText, string? miscButtonMessage = null, Func<Window?, Task<string?>>? miscButtonCallback = null)
+        public static async Task<string> ShowInput(Window? owner, string title, string message, string mainButtonText, string placeholderText, string? currentText = null, string? miscButtonMessage = null, Func<Window?, Task<string?>>? miscButtonCallback = null)
         {
-            var _fetchDialog = new InputDialog { Title = title, MiscButtonCallback = miscButtonCallback };
+            var _fetchDialog = new InputDialog { Title = title, MiscButtonCallback = miscButtonCallback, CurrentText = currentText };
 
             _fetchDialog.MainText.Text = message;
             _fetchDialog.AcceptButton.Content = mainButtonText;

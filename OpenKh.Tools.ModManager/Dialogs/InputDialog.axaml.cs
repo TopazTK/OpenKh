@@ -13,6 +13,7 @@ namespace OpenKh.Tools.ModManager.Dialogs
         public Func<Window?, Task<string?>>? MiscButtonCallback { get; set; }
 
         public string? Result { get; set; }
+        public string? CurrentText { get; set; }
 
         public InputDialog()
         {
@@ -25,6 +26,8 @@ namespace OpenKh.Tools.ModManager.Dialogs
             InputText.Focus();
 
             InputText.MaxWidth = Bounds.Width;
+            InputText.Text = CurrentText;
+
             MiscButton.IsVisible = MiscButtonCallback == null ? false : true;
         }
 

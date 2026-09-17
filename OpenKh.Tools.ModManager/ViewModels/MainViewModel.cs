@@ -360,7 +360,7 @@ public partial class MainViewModel : ViewModelBase
             if (_fetchTopLevel == null)
                 return false;
 
-            var _fetchResult = inputParameter ?? await DialogService.ShowInput(_fetchTopLevel, "Install a new Mod", "Enter the name of the repository to install.", "Install", "Ex. OpenKH/a-very-cool-mod@github.com", "Select and Install an Archive or Script", async (inputParent) =>
+            var _fetchResult = inputParameter ?? await DialogService.ShowInput(_fetchTopLevel, "Install a new Mod", "Enter the name of the repository to install.", "Install", "Ex. OpenKH/a-very-cool-mod@github.com", null, "Select and Install an Archive or Script", async (inputParent) =>
             {
                 var _fetchFiles = await _fetchTopLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                 {
@@ -1232,7 +1232,7 @@ public partial class MainViewModel : ViewModelBase
             if (_fetchTopLevel == null)
                 return false;
 
-            var _fetchResult = await DialogService.ShowInput(_fetchTopLevel, "Declare Launch Aruguments", "Enter the launch arguments to use when launching on Steam.", "Done", "Ex. -fastboot -noaspect");
+            var _fetchResult = await DialogService.ShowInput(_fetchTopLevel, "Declare Launch Aruguments", "Enter the launch arguments to use when launching on Steam.", "Done", "Ex. -fastboot -noaspect", CurrentConfig.Frontend.LaunchArguments);
 
             if (!String.IsNullOrEmpty(_fetchResult))
                 CurrentConfig.Frontend.LaunchArguments = _fetchResult;

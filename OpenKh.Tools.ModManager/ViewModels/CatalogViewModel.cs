@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Data;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -63,6 +64,8 @@ namespace OpenKh.Tools.ModManager.ViewModels
 
             if (CurrentConfig != null)
             {
+                var _lockObject = new object();
+
                 InstalledMods = new ObservableCollection<ModModel>();
                 SelectedMods = new ObservableCollection<string>();
 
@@ -79,8 +82,6 @@ namespace OpenKh.Tools.ModManager.ViewModels
                 {
                     while (_fetchResult.Items != null && _fetchResult.Items.Count != 0)
                     {
-                        var _addedMods = new List<ModModel>();
-
                         await Parallel.ForEachAsync(_fetchResult.Items.AsParallel(), async (_fetchMod, _fetchToken) =>
                         {
                             var _fetchMetadataURL = $"https://raw.githubusercontent.com/{_fetchMod.FullName}/{_fetchMod.DefaultBranch}/mod.yml";
@@ -113,13 +114,11 @@ namespace OpenKh.Tools.ModManager.ViewModels
                                         ModValid = true
                                     };
 
-                                    _addedMods.Add(_modModel);
+                                    lock (_lockObject)
+                                        InstalledMods.Add(_modModel);
                                 }
                             }
                         });
-
-                        foreach (var _fetchMod in _addedMods)
-                            InstalledMods.Add(_fetchMod);
 
                         _fetchInquiry = new SearchRepositoriesRequest($"topic:openkh-mod topic:{_fetchGame}") { PerPage = 100, Page = _fetchInquiry.Page + 1 };
                         _fetchResult = await _fetchClient.Search.SearchRepo(_fetchInquiry);
