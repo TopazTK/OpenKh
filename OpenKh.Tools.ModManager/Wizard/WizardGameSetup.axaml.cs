@@ -92,43 +92,48 @@ namespace OpenKh.Tools.ModManager.Wizard
 
                     _fetchFolders.AsParallel().ForAll(_fetchFolder =>
                     {
-                        var _manifestPath1525 = Path.Combine(_fetchFolder, "steamapps", "appmanifest_2552430.acf");
-                        var _manifestPath28 = Path.Combine(_fetchFolder, "steamapps", "appmanifest_2552440.acf");
+                        var _fetchSteamApps = Path.Combine(_fetchFolder, "steamapps");
 
-                        var _installDirRegex = new Regex("installdir[^\"]*\"\\s*\"([^\"]*)\"", RegexOptions.None, TimeSpan.FromMilliseconds(500));
-
-                        if (File.Exists(_manifestPath1525))
+                        if (Directory.Exists(_fetchSteamApps))
                         {
-                            var _fetchManifest = File.ReadAllLines(_manifestPath1525);
+                            var _manifestPath1525 = Path.Combine(_fetchSteamApps, "appmanifest_2552430.acf");
+                            var _manifestPath28 = Path.Combine(_fetchSteamApps, "appmanifest_2552440.acf");
 
-                            _fetchManifest.AsParallel().ForAll(_fetchLine =>
+                            var _installDirRegex = new Regex("installdir[^\"]*\"\\s*\"([^\"]*)\"", RegexOptions.None, TimeSpan.FromMilliseconds(500));
+
+                            if (File.Exists(_manifestPath1525))
                             {
-                                var _fetchMatch = _installDirRegex.Match(_fetchLine);
+                                var _fetchManifest = File.ReadAllLines(_manifestPath1525);
 
-                                if (_fetchMatch.Success)
+                                _fetchManifest.AsParallel().ForAll(_fetchLine =>
                                 {
-                                    var _fetchValue = Regex.Unescape(_fetchMatch.Groups[1].Value);
-                                    var _fetchLibraryPath = Path.Combine(_fetchFolder, "steamapps", "common", _fetchValue);
-                                    _fetchPath1525 = _fetchLibraryPath.Replace("\\", "/");
-                                }
-                            });
-                        }
+                                    var _fetchMatch = _installDirRegex.Match(_fetchLine);
 
-                        if (File.Exists(_manifestPath28))
-                        {
-                            var _fetchManifest = File.ReadAllLines(_manifestPath28);
+                                    if (_fetchMatch.Success)
+                                    {
+                                        var _fetchValue = Regex.Unescape(_fetchMatch.Groups[1].Value);
+                                        var _fetchLibraryPath = Path.Combine(_fetchSteamApps, "common", _fetchValue);
+                                        _fetchPath1525 = _fetchLibraryPath.Replace("\\", "/");
+                                    }
+                                });
+                            }
 
-                            _fetchManifest.AsParallel().ForAll(_fetchLine =>
+                            if (File.Exists(_manifestPath28))
                             {
-                                var _fetchMatch = _installDirRegex.Match(_fetchLine);
+                                var _fetchManifest = File.ReadAllLines(_manifestPath28);
 
-                                if (_fetchMatch.Success)
+                                _fetchManifest.AsParallel().ForAll(_fetchLine =>
                                 {
-                                    var _fetchValue = Regex.Unescape(_fetchMatch.Groups[1].Value);
-                                    var _fetchLibraryPath = Path.Combine(_fetchFolder, "steamapps", "common", _fetchValue);
-                                    _fetchPath28 = _fetchLibraryPath.Replace("\\", "/");
-                                }
-                            });
+                                    var _fetchMatch = _installDirRegex.Match(_fetchLine);
+
+                                    if (_fetchMatch.Success)
+                                    {
+                                        var _fetchValue = Regex.Unescape(_fetchMatch.Groups[1].Value);
+                                        var _fetchLibraryPath = Path.Combine(_fetchSteamApps, "common", _fetchValue);
+                                        _fetchPath28 = _fetchLibraryPath.Replace("\\", "/");
+                                    }
+                                });
+                            }
                         }
                     });
 

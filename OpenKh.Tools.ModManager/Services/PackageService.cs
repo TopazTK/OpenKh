@@ -439,38 +439,48 @@ namespace OpenKh.Tools.ModManager.Services
 
                 _fetchFolders.AsParallel().ForAll(_fetchFolder =>
                 {
-                    var _fetchRegistry1525 = Path.Combine(_fetchFolder, "steamapps", "compatdata", "2552430", "pfx", "user.reg");
-                    var _fetchRegistry28 = Path.Combine(_fetchFolder, "steamapps", "compatdata", "2552440", "pfx", "user.reg");
+                    var _fetchDirectory1525 = Path.Combine(_fetchFolder, "steamapps", "compatdata", "2552430");
+                    var _fetchDirectory28 = Path.Combine(_fetchFolder, "steamapps", "compatdata", "2552440");
 
-                    if (File.Exists(_fetchRegistry1525))
+                    if (Directory.Exists(_fetchDirectory1525))
                     {
-                        var _fetchRegistryRAW = new List<string>(File.ReadAllLines(_fetchRegistry1525));
-                        var _fetchOverride = _fetchRegistryRAW.FirstOrDefault(x => x.Contains("\"version\"=\"native,builtin\""));
+                        var _fetchRegistry1525 = Path.Combine(_fetchDirectory1525, "pfx", "user.reg");
 
-                        if (_fetchOverride == null)
+                        if (File.Exists(_fetchRegistry1525))
                         {
-                            var _fetchOverridesLine = _fetchRegistryRAW.First(x => x.Contains(@"[Software\\Wine\\DllOverrides]"));
-                            var _fetchOverridesPosition = _fetchRegistryRAW.IndexOf(_fetchOverridesLine);
+                            var _fetchRegistryRAW = new List<string>(File.ReadAllLines(_fetchRegistry1525));
+                            var _fetchOverride = _fetchRegistryRAW.FirstOrDefault(x => x.Contains("\"version\"=\"native,builtin\""));
 
-                            _fetchRegistryRAW.Insert(_fetchOverridesPosition + 0x02, "\"version\"=\"native,builtin\"");
+                            if (_fetchOverride == null)
+                            {
+                                var _fetchOverridesLine = _fetchRegistryRAW.First(x => x.Contains(@"[Software\\Wine\\DllOverrides]"));
+                                var _fetchOverridesPosition = _fetchRegistryRAW.IndexOf(_fetchOverridesLine);
 
-                            File.WriteAllLines(_fetchRegistry1525, _fetchRegistryRAW.ToArray());
+                                _fetchRegistryRAW.Insert(_fetchOverridesPosition + 0x02, "\"version\"=\"native,builtin\"");
+
+                                File.WriteAllLines(_fetchRegistry1525, _fetchRegistryRAW.ToArray());
+                            }
                         }
                     }
 
-                    if (File.Exists(_fetchRegistry28))
+                    if (Directory.Exists(_fetchDirectory28))
                     {
-                        var _fetchRegistryRAW = new List<string>(File.ReadAllLines(_fetchRegistry28));
-                        var _fetchOverride = _fetchRegistryRAW.FirstOrDefault(x => x.Contains("\"version\"=\"native,builtin\""));
+                        var _fetchRegistry28 = Path.Combine(_fetchDirectory28, "pfx", "user.reg");
 
-                        if (_fetchOverride == null)
+                        if (File.Exists(_fetchRegistry28))
                         {
-                            var _fetchOverridesLine = _fetchRegistryRAW.First(x => x.Contains(@"[Software\\Wine\\DllOverrides]"));
-                            var _fetchOverridesPosition = _fetchRegistryRAW.IndexOf(_fetchOverridesLine);
+                            var _fetchRegistryRAW = new List<string>(File.ReadAllLines(_fetchRegistry28));
+                            var _fetchOverride = _fetchRegistryRAW.FirstOrDefault(x => x.Contains("\"version\"=\"native,builtin\""));
 
-                            _fetchRegistryRAW.Insert(_fetchOverridesPosition + 0x02, "\"version\"=\"native,builtin\"");
+                            if (_fetchOverride == null)
+                            {
+                                var _fetchOverridesLine = _fetchRegistryRAW.First(x => x.Contains(@"[Software\\Wine\\DllOverrides]"));
+                                var _fetchOverridesPosition = _fetchRegistryRAW.IndexOf(_fetchOverridesLine);
 
-                            File.WriteAllLines(_fetchRegistry1525, _fetchRegistryRAW.ToArray());
+                                _fetchRegistryRAW.Insert(_fetchOverridesPosition + 0x02, "\"version\"=\"native,builtin\"");
+
+                                File.WriteAllLines(_fetchRegistry28, _fetchRegistryRAW.ToArray());
+                            }
                         }
                     }
                 });
