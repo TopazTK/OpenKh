@@ -160,7 +160,7 @@ namespace OpenKh.Tools.ModManager.Services
             {
                 var _fetchSteamKey = Registry.LocalMachine.OpenSubKey("Software\\Valve\\Steam") ?? Registry.LocalMachine.OpenSubKey("Software\\Wow6432Node\\Valve\\Steam");
                 var _fetchInstallDir = _fetchSteamKey.GetValue("InstallPath").ToString();
-                _fetchConfigPath = Path.Combine(_fetchInstallDir, "steamapps", "libraryfolders.vdf");
+                _fetchFolders = new List<string>() { _fetchInstallDir };
             }
 
             else if (OperatingSystem.IsLinux())
@@ -184,7 +184,7 @@ namespace OpenKh.Tools.ModManager.Services
             {
                 var _fetchConfigPath = Path.Combine(_fetchFolder, "steamapps", "libraryfolders.vdf");
 
-                if (String.IsNullOrEmpty(_fetchConfigPath))
+                if (!String.IsNullOrEmpty(_fetchConfigPath))
                 {
                     var _fetchLibraryConfig = File.ReadAllLines(_fetchConfigPath);
                     var _pathRegex = new Regex("path[^\"]*\"\\s*\"([^\"]*)\"", RegexOptions.None, TimeSpan.FromMilliseconds(500));
