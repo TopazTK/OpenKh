@@ -16,19 +16,17 @@ namespace OpenKh.Tools.ModManager.Services
     {
         public static string ResolveMod(Config input, bool barePath = false)
         {
-            var _fetchConfigPath = input.Frontend.ModPath;
-            var _fetchTargetGame = input.Frontend.TargetGame;
-            var _fetchGameTarget = barePath ? "" : Config.GameShorthand[_fetchTargetGame];
+            var _fetchGameTarget = barePath ? "" : Config.GameShorthand[input.Frontend.TargetGame];
 
             var _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, "mods", _fetchGameTarget);
 
-            if (!String.IsNullOrEmpty(_fetchConfigPath))
+            if (!String.IsNullOrEmpty(input.Frontend.ModPath))
             {
-                if (!Path.IsPathFullyQualified(_fetchConfigPath))
-                    _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, _fetchConfigPath, _fetchGameTarget);
+                if (!Path.IsPathFullyQualified(input.Frontend.ModPath))
+                    _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, input.Frontend.ModPath, _fetchGameTarget);
 
                 else
-                    _fetchTargetPath = Path.Combine(_fetchConfigPath, _fetchGameTarget);
+                    _fetchTargetPath = Path.Combine(input.Frontend.ModPath, _fetchGameTarget);
             }
 
             if (!Directory.Exists(_fetchTargetPath))
@@ -39,19 +37,17 @@ namespace OpenKh.Tools.ModManager.Services
 
         public static string ResolveBuild(Config input, bool barePath = false)
         {
-            var _fetchConfigPath = input.Frontend.BuildPath;
-            var _fetchTargetGame = input.Frontend.TargetGame;
-            var _fetchGameTarget = barePath ? "" : Config.GameShorthand[_fetchTargetGame];
+            var _fetchGameTarget = barePath ? "" : Config.GameShorthand[input.Frontend.TargetGame];
 
             var _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, "build", _fetchGameTarget);
 
-            if (!String.IsNullOrEmpty(_fetchConfigPath))
+            if (!String.IsNullOrEmpty(input.Frontend.BuildPath))
             {
-                if (!Path.IsPathFullyQualified(_fetchConfigPath))
-                    _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, _fetchConfigPath, _fetchGameTarget);
+                if (!Path.IsPathFullyQualified(input.Frontend.BuildPath))
+                    _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, input.Frontend.BuildPath, _fetchGameTarget);
 
                 else
-                    _fetchTargetPath = Path.Combine(_fetchConfigPath, _fetchGameTarget);
+                    _fetchTargetPath = Path.Combine(input.Frontend.BuildPath, _fetchGameTarget);
             }
 
             if (!Directory.Exists(_fetchTargetPath))
@@ -62,19 +58,17 @@ namespace OpenKh.Tools.ModManager.Services
 
         public static string? ResolveData(Config input, bool barePath = false)
         {
-            var _fetchConfigPath = input.Frontend.DataPath;
-            var _fetchTargetGame = input.Frontend.TargetGame;
-            var _fetchGameTarget = barePath ? "" : Config.GameShorthand[_fetchTargetGame];
+            var _fetchGameTarget = barePath ? "" : Config.GameShorthand[input.Frontend.TargetGame];
 
             string? _fetchTargetPath = null;
 
-            if (!String.IsNullOrEmpty(_fetchConfigPath))
+            if (!String.IsNullOrEmpty(input.Frontend.DataPath))
             {
-                if (!Path.IsPathFullyQualified(_fetchConfigPath))
-                    _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, _fetchConfigPath, _fetchGameTarget);
+                if (!Path.IsPathFullyQualified(input.Frontend.DataPath))
+                    _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, input.Frontend.DataPath, _fetchGameTarget);
 
                 else
-                    _fetchTargetPath = Path.Combine(_fetchConfigPath, _fetchGameTarget);
+                    _fetchTargetPath = Path.Combine(input.Frontend.DataPath, _fetchGameTarget);
 
                 if (!Directory.Exists(_fetchTargetPath))
                     Directory.CreateDirectory(_fetchTargetPath);
@@ -116,7 +110,7 @@ namespace OpenKh.Tools.ModManager.Services
             return Path.GetFullPath(_fetchTargetGame);
         }
 
-        public static string? ResolveGame(Config input) => input.Frontend.TargetGame == Game.DREAM_DROP_DISTANCE ? input.Frontend.GamePath[1] : input.Frontend.GamePath[0];
+        public static string? ResolveGame(Config input) => input.Frontend.GamePath != null ? (input.Frontend.TargetGame == Game.DREAM_DROP_DISTANCE ? input.Frontend.GamePath[1] : input.Frontend.GamePath[0]) : null;
 
         public static bool? ResolveRegionJP(Config input)
         {
@@ -158,7 +152,9 @@ namespace OpenKh.Tools.ModManager.Services
         public static string[]? FetchSteamLibraries()
         {
             var _fetchConfigPath = "";
+
             var _fetchFolders = new List<string>();
+            var _fetchGameFolders = new List<string>();
 
             if (OperatingSystem.IsWindows())
             {
@@ -181,28 +177,32 @@ namespace OpenKh.Tools.ModManager.Services
                     Path.Combine(_fetchHome, ".var/app/com.valvesoftware.Steam/data/Steam")
                 };
 
-                var _fetchInstallDir = _steamPossibleDirs.FirstOrDefault(x => Directory.Exists(x));
-                _fetchConfigPath = Path.Combine(_fetchInstallDir, "steamapps", "libraryfolders.vdf");
+                _fetchFolders = _steamPossibleDirs.Where(x => Directory.Exists(x)).ToList();
             }
 
-            if (String.IsNullOrEmpty(_fetchConfigPath))
-                return null;
-
-            var _fetchLibraryConfig = File.ReadAllLines(_fetchConfigPath);
-            var _pathRegex = new Regex("path[^\"]*\"\\s*\"([^\"]*)\"", RegexOptions.None, TimeSpan.FromMilliseconds(500));
-
-            _fetchLibraryConfig.AsParallel().ForAll(_fetchLine =>
+            _fetchFolders.AsParallel().ForAll(_fetchFolder =>
             {
-                var _fetchMatch = _pathRegex.Match(_fetchLine);
+                var _fetchConfigPath = Path.Combine(_fetchFolder, "steamapps", "libraryfolders.vdf");
 
-                if (_fetchMatch.Success)
+                if (String.IsNullOrEmpty(_fetchConfigPath))
                 {
-                    var _fetchValue = Regex.Unescape(_fetchMatch.Groups[1].Value);
-                    _fetchFolders.Add(_fetchValue);
+                    var _fetchLibraryConfig = File.ReadAllLines(_fetchConfigPath);
+                    var _pathRegex = new Regex("path[^\"]*\"\\s*\"([^\"]*)\"", RegexOptions.None, TimeSpan.FromMilliseconds(500));
+
+                    _fetchLibraryConfig.AsParallel().ForAll(_fetchLine =>
+                    {
+                        var _fetchMatch = _pathRegex.Match(_fetchLine);
+
+                        if (_fetchMatch.Success)
+                        {
+                            var _fetchValue = Regex.Unescape(_fetchMatch.Groups[1].Value);
+                            _fetchGameFolders.Add(_fetchValue);
+                        }
+                    });
                 }
             });
 
-            return _fetchFolders.Count != 0x00 ? _fetchFolders.ToArray() : null;
+            return _fetchGameFolders.Count != 0x00 ? _fetchGameFolders.ToArray() : null;
         }
     }
 }
