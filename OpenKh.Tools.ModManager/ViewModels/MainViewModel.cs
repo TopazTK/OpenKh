@@ -23,13 +23,17 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Xe.BinaryMapper;
+using static OpenKh.Kh2.Ard.AreaDataScript;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace OpenKh.Tools.ModManager.ViewModels;
 
@@ -100,7 +104,7 @@ public partial class MainViewModel : ViewModelBase
 
     public TopLevel? FetchTopLevel()
     {
-        var _fetchApplication = Application.Current;
+        var _fetchApplication = Avalonia.Application.Current;
 
         if (_fetchApplication == null)
             return null;
@@ -383,14 +387,26 @@ public partial class MainViewModel : ViewModelBase
 
             if (_fetchResult != null && !string.IsNullOrEmpty(_fetchResult))
             {
-                var _singleProgress = new SingleProgressDialog();
-                var _multiProgress = new MultiProgressDialog();
-
                 var _fetchFileInfo = new FileInfo(@$"{_fetchResult}");
 
                 if (_fetchFileInfo.Exists)
                 {
-                    _singleProgress.ShowDialog(_fetchTopLevel);
+                    IntPtr _progressCurrentPtr = Marshal.AllocHGlobal(4);
+                    IntPtr _progressMaximumPtr = Marshal.AllocHGlobal(4);
+
+                    IntPtr _progressTextPtr = Marshal.AllocHGlobal(256);
+
+                    // Write the default strings to the pointers.
+
+                    var _fetchProgressBytes = Encoding.Default.GetBytes("Processing Local Files: {0} / {3}" + "\x00");
+                    Marshal.Copy(_fetchProgressBytes, 0, _progressTextPtr, _fetchProgressBytes.Length);
+
+                    // Write the default ints to the pointers.
+
+                    Marshal.WriteInt32(_progressCurrentPtr, 0x00);
+                    Marshal.WriteInt32(_progressMaximumPtr, 0x00);
+
+                    var _singleProgress = DialogService.ShowProgress(_fetchTopLevel, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _progressCurrentPtr, _progressMaximumPtr, _progressTextPtr);
 
                     _fetchInstallResult =
                     await ModService.InstallLocal
@@ -399,11 +415,8 @@ public partial class MainViewModel : ViewModelBase
                         CurrentConfig,
                         (int processed, int total) =>
                         {
-                            Dispatcher.UIThread.Post(() =>
-                            {
-                                _singleProgress.InstallProgress.Maximum = total;
-                                _singleProgress.InstallProgress.Value = processed;
-                            });
+                            Marshal.WriteInt32(_progressCurrentPtr, processed);
+                            Marshal.WriteInt32(_progressMaximumPtr, total);
 
                             if (ModService.CancelToken.IsCancellationRequested)
                                 return false;
@@ -412,7 +425,12 @@ public partial class MainViewModel : ViewModelBase
                         }
                     );
 
-                    _singleProgress.Close(true);
+                    // Free all the pointers allocated.
+
+                    Marshal.FreeHGlobal(_progressTextPtr);
+
+                    Marshal.FreeHGlobal(_progressMaximumPtr);
+                    Marshal.FreeHGlobal(_progressCurrentPtr);
                 }
 
                 else
@@ -421,7 +439,25 @@ public partial class MainViewModel : ViewModelBase
 
                     if (_fetchMultiInstall == null)
                     {
-                        _singleProgress.ShowDialog(_fetchTopLevel);
+                        // Allocate the pointers necessary.
+
+                        IntPtr _progressCurrentPtr = Marshal.AllocHGlobal(4);
+                        IntPtr _progressMaximumPtr = Marshal.AllocHGlobal(4);
+
+                        IntPtr _progressTextPtr = Marshal.AllocHGlobal(256);
+
+                        // Write the default strings to the pointers.
+
+                        var _fetchProgressBytes = Encoding.Default.GetBytes("Receiving Git Objects: {0} / {3}" + "\x00");
+                        Marshal.Copy(_fetchProgressBytes, 0, _progressTextPtr, _fetchProgressBytes.Length);
+
+                        // Write the default ints to the pointers.
+
+                        Marshal.WriteInt32(_progressCurrentPtr, 0x00);
+                        Marshal.WriteInt32(_progressMaximumPtr, 0x00);
+
+
+                        var _singleProgress = DialogService.ShowProgress(_fetchTopLevel, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _progressCurrentPtr, _progressMaximumPtr, _progressTextPtr);
 
                         _fetchInstallResult =
                         await ModService.InstallGit
@@ -430,11 +466,8 @@ public partial class MainViewModel : ViewModelBase
                             CurrentConfig,
                             new TransferProgressHandler((progress) =>
                             {
-                                Dispatcher.UIThread.Post(() =>
-                                {
-                                    _singleProgress.InstallProgress.Maximum = progress.TotalObjects;
-                                    _singleProgress.InstallProgress.Value = progress.ReceivedObjects;
-                                });
+                                Marshal.WriteInt32(_progressCurrentPtr, progress.ReceivedObjects);
+                                Marshal.WriteInt32(_progressMaximumPtr, progress.TotalObjects);
 
                                 if (ModService.CancelToken.IsCancellationRequested)
                                     return false;
@@ -443,12 +476,46 @@ public partial class MainViewModel : ViewModelBase
                             }
                         ));
 
-                        _singleProgress.Close(true);
+                        // Free all the pointers allocated.
+
+                        Marshal.FreeHGlobal(_progressTextPtr);
+
+                        Marshal.FreeHGlobal(_progressMaximumPtr);
+                        Marshal.FreeHGlobal(_progressCurrentPtr);
                     }
 
                     else
                     {
-                        _multiProgress.ShowDialog(_fetchTopLevel);
+                        // Allocate all the pointers to use for the progress bars.
+
+                        IntPtr _firstCurrentPtr = Marshal.AllocHGlobal(4);
+                        IntPtr _firstMaximumPtr = Marshal.AllocHGlobal(4);
+
+                        IntPtr _secondCurrentPtr = Marshal.AllocHGlobal(4);
+                        IntPtr _secondMaximumPtr = Marshal.AllocHGlobal(4);
+
+                        IntPtr _firstTextPtr = Marshal.AllocHGlobal(256);
+                        IntPtr _secondTextPtr = Marshal.AllocHGlobal(256);
+
+                        // Write the default strings to the pointers.
+
+                        var _fetchFirstBytes = Encoding.Default.GetBytes($"Processing Mod: N/A" + "\x00");
+                        var _fetchSecondBytes = Encoding.Default.GetBytes("Receiving Git Objects: {0} / {3}" + "\x00");
+
+                        Marshal.Copy(_fetchFirstBytes, 0, _firstTextPtr, _fetchFirstBytes.Length);
+                        Marshal.Copy(_fetchSecondBytes, 0, _secondTextPtr, _fetchSecondBytes.Length);
+
+                        // Write the default ints to the pointers.
+
+                        Marshal.WriteInt32(_firstCurrentPtr, 0x00);
+                        Marshal.WriteInt32(_firstMaximumPtr, 0x00);
+
+                        Marshal.WriteInt32(_secondCurrentPtr, 0x00);
+                        Marshal.WriteInt32(_secondMaximumPtr, 0x00);
+
+                        // Show the dialog.
+
+                        var _multiProgress = DialogService.ShowProgress(_fetchTopLevel, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _firstCurrentPtr, _firstMaximumPtr, _firstTextPtr, _secondCurrentPtr, _secondMaximumPtr, _secondTextPtr);
 
                         for (int i = 0; i < _fetchMultiInstall.Length; i++)
                         {
@@ -461,16 +528,14 @@ public partial class MainViewModel : ViewModelBase
                                 CurrentConfig,
                                 new TransferProgressHandler((progress) =>
                                 {
-                                    Dispatcher.UIThread.Post(() =>
-                                    {
-                                        _multiProgress.ModProgress.ProgressTextFormat = $"Processing Mod: {_fetchMod}";
+                                    var _fetchFirstBytes = Encoding.Default.GetBytes($"Processing Mod: {_fetchMod}" + "\x00");
+                                    Marshal.Copy(_fetchFirstBytes, 0, _firstTextPtr, _fetchFirstBytes.Length);
 
-                                        _multiProgress.ModProgress.Value = i + 0x01;
-                                        _multiProgress.ModProgress.Maximum = _fetchMultiInstall.Length;
+                                    Marshal.WriteInt32(_firstCurrentPtr, i + 0x01);
+                                    Marshal.WriteInt32(_firstMaximumPtr, _fetchMultiInstall.Length);
 
-                                        _multiProgress.InstallProgress.Maximum = progress.TotalObjects;
-                                        _multiProgress.InstallProgress.Value = progress.ReceivedObjects;
-                                    });
+                                    Marshal.WriteInt32(_secondCurrentPtr, progress.ReceivedObjects);
+                                    Marshal.WriteInt32(_secondMaximumPtr, progress.TotalObjects);
 
                                     if (ModService.CancelToken.IsCancellationRequested)
                                         return false;
@@ -489,7 +554,19 @@ public partial class MainViewModel : ViewModelBase
                                 break;
                         }
 
-                        _multiProgress.Close(true);
+                        // Free all the pointers allocated.
+
+                        Marshal.FreeHGlobal(_secondTextPtr);
+                        Marshal.FreeHGlobal(_firstTextPtr);
+
+                        Marshal.FreeHGlobal(_secondMaximumPtr);
+                        Marshal.FreeHGlobal(_secondCurrentPtr);
+
+                        Marshal.FreeHGlobal(_firstMaximumPtr);
+                        Marshal.FreeHGlobal(_firstCurrentPtr);
+
+                        // Return the result.
+
                         _fetchInstallResult = 0x02;
                     }
                 }
@@ -922,11 +999,36 @@ public partial class MainViewModel : ViewModelBase
             if (_fetchTopLevel == null)
                 return false;
 
-            var _progressDialog = new BuildProgressDialog();
-            _progressDialog.ShowDialog(_fetchTopLevel);
+            // Allocate all the pointers to use for the progress bars.
 
-            int _assetTotal = 0;
-            int _assetProcessed = 0;
+            IntPtr _firstCurrentPtr = Marshal.AllocHGlobal(4);
+            IntPtr _firstMaximumPtr = Marshal.AllocHGlobal(4);
+
+            IntPtr _secondCurrentPtr = Marshal.AllocHGlobal(4);
+            IntPtr _secondMaximumPtr = Marshal.AllocHGlobal(4);
+
+            IntPtr _firstTextPtr = Marshal.AllocHGlobal(256);
+            IntPtr _secondTextPtr = Marshal.AllocHGlobal(256);
+
+            // Write the default strings to the pointers.
+
+            var _fetchFirstBytes = Encoding.Default.GetBytes("Currently building: N/A" + "\x00");
+            var _fetchSecondBytes = Encoding.Default.GetBytes("Processing Files: {0} / {3}" + "\x00");
+
+            Marshal.Copy(_fetchFirstBytes, 0, _firstTextPtr, _fetchFirstBytes.Length);
+            Marshal.Copy(_fetchSecondBytes, 0, _secondTextPtr, _fetchSecondBytes.Length);
+
+            // Write the default ints to the pointers.
+
+            Marshal.WriteInt32(_firstCurrentPtr, 0x00);
+            Marshal.WriteInt32(_firstMaximumPtr, 0x00);
+
+            Marshal.WriteInt32(_secondCurrentPtr, 0x00);
+            Marshal.WriteInt32(_secondMaximumPtr, 0x00);
+
+            // Show the dialog.
+
+            var _multiProgress = DialogService.ShowProgress(_fetchTopLevel, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _firstCurrentPtr, _firstMaximumPtr, _firstTextPtr, _secondCurrentPtr, _secondMaximumPtr, _secondTextPtr);
 
             string _currentModName = "N/A";
 
@@ -935,29 +1037,27 @@ public partial class MainViewModel : ViewModelBase
                 (
                     InstalledMods,
                     CurrentConfig,
+
                     (string currModName, int procMod, int totalMod) =>
                     {
-                        Dispatcher.UIThread.Post(() =>
-                        {
-                            _currentModName = currModName;
+                        _currentModName = currModName;
 
-                            _progressDialog.ModProgress.Maximum = totalMod;
-                            _progressDialog.ModProgress.Value = procMod;
-                            _progressDialog.ModProgress.ProgressTextFormat = $"Currently Building: {currModName}";
+                        var _fetchFirstBytes = Encoding.Default.GetBytes($"Currently building: {currModName}" + "\x00");
+                        Marshal.Copy(_fetchFirstBytes, 0, _firstTextPtr, _fetchFirstBytes.Length);
 
-                            _progressDialog.AssetProgress.Maximum = _assetTotal;
-                            _progressDialog.AssetProgress.Value = _assetProcessed;
-                        });
+                        Marshal.WriteInt32(_firstCurrentPtr, procMod);
+                        Marshal.WriteInt32(_firstMaximumPtr, totalMod);
 
                         if (ModService.CancelToken.IsCancellationRequested)
                             return false;
 
                         return true;
                     },
+
                     (int processed, int total) =>
                     {
-                        _assetProcessed = processed;
-                        _assetTotal = total;
+                        Marshal.WriteInt32(_secondCurrentPtr, processed);
+                        Marshal.WriteInt32(_secondMaximumPtr, total);
 
                         if (ModService.CancelToken.IsCancellationRequested)
                             return false;
@@ -966,14 +1066,22 @@ public partial class MainViewModel : ViewModelBase
                     }
                 );
 
-            _progressDialog.Close(true);
+            // Free all the pointers allocated.
+
+            Marshal.FreeHGlobal(_secondTextPtr);
+            Marshal.FreeHGlobal(_firstTextPtr);
+
+            Marshal.FreeHGlobal(_secondMaximumPtr);
+            Marshal.FreeHGlobal(_secondCurrentPtr);
+
+            Marshal.FreeHGlobal(_firstMaximumPtr);
+            Marshal.FreeHGlobal(_firstCurrentPtr);
 
             if (_buildResult == 0x00)
                 return true;
 
             else if (_buildResult == 0x01)
                 await DialogService.ShowMessage(_fetchTopLevel, "ERROR - Failed to build Mod", string.Format("Building failed on this Mod: {0}\nPlease re-install the Mod and try again!", _currentModName), MessageType.ERROR);
-
             return false;
         }
 

@@ -15,8 +15,6 @@ namespace OpenKh.Tools.ModManager.Views
         public static readonly StyledProperty<ICommand?> ModToggledProperty = AvaloniaProperty.Register<ModStatusView, ICommand?>(nameof(ModToggled));
         public ICommand? ModToggled { get => GetValue(ModToggledProperty); set => SetValue(ModToggledProperty, value); }
 
-        public bool CanTriggerEvents = false;
-
         public ModListView()
         {
             InitializeComponent();

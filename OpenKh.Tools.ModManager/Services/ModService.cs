@@ -798,6 +798,11 @@ namespace OpenKh.Tools.ModManager.Services
                         // Fetch the target mod.
                         var _fetchMod = modsList.ElementAt(_modIdx);
 
+                        // Reset asset progress on the mod.
+
+                        if (reportAssetProgress != null)
+                            reportAssetProgress(0, 0);
+
                         // Increase handles mod progress.
                         _currentModIndex++;
 
