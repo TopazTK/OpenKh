@@ -4,61 +4,38 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using OpenKh.Tools.ModManager.Models;
 using System;
+using System.Windows.Input;
 
 namespace OpenKh.Tools.ModManager.Views
 {
-    public class ModSelectedChangedEventArgs : RoutedEventArgs
-    {
-        public ModModel TargetMod { get; }
-        public bool IsChecked { get; }
-
-        public ModSelectedChangedEventArgs(RoutedEvent routedEvent, ModModel targetMod, bool? isChecked) : base(routedEvent)
-        {
-            TargetMod = targetMod;
-            IsChecked = isChecked.HasValue ? isChecked.Value : false;
-        }
-    }
-
     public partial class ModWrapView : ContentPage
     {
-        #region Custom Events
+        public static readonly StyledProperty<ICommand?> ModSelectedRequestedProperty = AvaloniaProperty.Register<ModStatusView, ICommand?>(nameof(ModSelectedRequested));
+        public ICommand? ModSelectedRequested { get => GetValue(ModSelectedRequestedProperty); set => SetValue(ModSelectedRequestedProperty, value); }
 
-        public static readonly RoutedEvent<ModSelectedChangedEventArgs> ModSelectedChangedEvent = RoutedEvent.Register<ModDetailsView, ModSelectedChangedEventArgs>(nameof(ModSelectedChanged), RoutingStrategies.Direct);
-
-        public event EventHandler<ModSelectedChangedEventArgs> ModSelectedChanged
+        private void OnModSelectedRequested(object? sender, RoutedEventArgs e)
         {
-            add => AddHandler(ModSelectedChangedEvent, value);
-            remove => RemoveHandler(ModSelectedChangedEvent, value);
+            if (ModSelectedRequested?.CanExecute(null) == true)
+                ModSelectedRequested.Execute(null);
         }
-
-        protected virtual void OnModSelectedChanged(ModModel targetMod, bool? isChecked)
-        {
-            RoutedEventArgs args = new ModSelectedChangedEventArgs(ModSelectedChangedEvent, targetMod, isChecked);
-            RaiseEvent(args);
-        }
-
-        #endregion
-
-        public bool CanTriggerEvents = false;
 
         public ModWrapView()
         {
             InitializeComponent();
-
-            Loaded += OnViewLoaded;
         }
 
-        private void OnViewLoaded(object? sender, RoutedEventArgs e) => CanTriggerEvents = true;
-
-        private void OnModCheckChanged(object? sender, RoutedEventArgs e)
+        private void OnModSelectedChanged(object? sender, RoutedEventArgs e)
         {
             var _fetchSender = sender as CheckBox;
             var _fetchParent = _fetchSender.Parent.DataContext as ModModel;
 
-            if (_fetchParent == null || !CanTriggerEvents)
+            if (_fetchParent == null)
                 return;
 
-            OnModSelectedChanged(_fetchParent, _fetchSender.IsChecked);
+            var _targetTuple = new Tuple<ModModel, bool>(_fetchParent, _fetchSender.IsChecked ?? false);
+
+            if (ModSelectedRequested?.CanExecute(_targetTuple) == true)
+                ModSelectedRequested.Execute(_targetTuple);
         }
     }
 }

@@ -70,8 +70,8 @@
                     <MenuItem Header="Setup Launch Arguments..." Command="{Binding PromptArgumentsCommand}" InputGesture="Alt+A">
                         <MenuItem.IsEnabled>
                             <MultiBinding Converter="{StaticResource CheckIfEqual}">
-                                <Binding Path="CurrentConfig.Frontend.TargetPlatform" />
-                                <Binding Source="{x:Static class:Platform.STEAM}" />
+                                <Binding Path="CurrentConfig.Frontend.TargetPlatform" FallbackValue=""/>
+                                <Binding Source="{x:Static class:Platform.STEAM}" FallbackValue="" />
                             </MultiBinding>
                         </MenuItem.IsEnabled>
                     </MenuItem>

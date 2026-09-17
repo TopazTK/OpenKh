@@ -1,5 +1,7 @@
+using Avalonia.Data;
 using Avalonia.Data.Converters;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -26,21 +28,6 @@ namespace OpenKh.Tools.ModManager.Converters
 
             return values.All(x => x is bool) && values.All(x => (bool)x);
         }
-    }
-
-    public class IsListNotEmptyConverter : IValueConverter
-    {
-        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        {
-            if (value is not IEnumerable<object?>)
-                return false;
-
-            var _fetchValue = value as ObservableCollection<object?>;
-            var _fetchCount = _fetchValue.Count();
-
-            return _fetchCount != 0;
-        }
-        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
     }
 
     public class PropertyNotEqualConverter : IMultiValueConverter

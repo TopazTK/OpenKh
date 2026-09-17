@@ -21,6 +21,7 @@ namespace OpenKh.Tools.ModManager.Views
         public CatalogView()
         {
             InitializeComponent();
+            DataContext = new CatalogViewModel();
             Loaded += OnViewLoaded;
         }
 
@@ -28,7 +29,11 @@ namespace OpenKh.Tools.ModManager.Views
         {
             if (!Design.IsDesignMode)
             {
-                var _fetchContext = new CatalogViewModel();
+                var _fetchContext = DataContext as CatalogViewModel;
+                
+                if (_fetchContext == null)
+                    return; 
+
                 var _fetchApplication = Application.Current;
 
                 // Uhh how the fuck?
@@ -45,50 +50,13 @@ namespace OpenKh.Tools.ModManager.Views
                         if (_fetchReference != null)
                         {
                             _referenceModel = (MainViewModel)_fetchReference;
-
-                            DataContext = _fetchContext;
                             _fetchContext.CurrentConfig = _referenceModel.CurrentConfig;
 
                             await _fetchContext.InitializeView();
-
                             MainProgress.IsVisible = false;
                         }
                     }
                 }
-            }
-        }
-
-        private void OnModActiveChanged(object? sender, ModSelectedChangedEventArgs e)
-        {
-            var _fetchContext = DataContext as CatalogViewModel;
-            var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
-            var _fetchSelectList = _fetchContext != null ? _fetchContext.SelectedMods : null;
-
-            if (_fetchConfig != null && _fetchSelectList != null)
-            {
-                var _fetchSenderURL = e.TargetMod.ModPath;
-                var _fetchFromList = _fetchSelectList.FirstOrDefault(x => x == _fetchSenderURL);
-
-                if (_fetchFromList != null && !e.IsChecked)
-                    _fetchSelectList.Remove(_fetchSenderURL);
-
-                else if (_fetchFromList == null && e.IsChecked)
-                    _fetchSelectList.Add(_fetchSenderURL);
-
-                InstallButton.Content = $"Install {_fetchSelectList.Count} Mods...";
-                InstallButton.IsEnabled = _fetchSelectList.Count > 0;
-            }
-        }
-
-        private async void OnInstallClicked(object? sender, RoutedEventArgs e)
-        {
-            var _fetchContext = DataContext as CatalogViewModel;
-            var _fetchSelectList = _fetchContext != null ? _fetchContext.SelectedMods : null;
-
-            if (_fetchSelectList != null)
-            {
-                var _fetchReturn = _fetchSelectList.Count > 0 ? String.Join(';', _fetchSelectList) : null;
-                Close(_fetchReturn);
             }
         }
     }

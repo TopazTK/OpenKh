@@ -10,11 +10,6 @@
         x:Name="Root"
         Title="OpenKH - Mod Manager | Setup Wizard">
 
-    <Window.Resources>
-        <convert:IsListNotEmptyConverter x:Key="CheckEmptyList" />
-        <convert:PropertyIsEqualConverter x:Key="CheckIfEqual" />
-    </Window.Resources>
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>

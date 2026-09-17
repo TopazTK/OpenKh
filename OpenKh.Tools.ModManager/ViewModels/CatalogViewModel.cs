@@ -1,9 +1,15 @@
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Octokit;
 using OpenKh.Patcher;
 using OpenKh.Tools.ModManager.Classes;
 using OpenKh.Tools.ModManager.Models;
+using OpenKh.Tools.ModManager.Services;
+using OpenKh.Tools.ModManager.Views;
+using SharpYaml;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -33,6 +39,19 @@ namespace OpenKh.Tools.ModManager.ViewModels
 
         [ObservableProperty]
         private Config? _currentConfig = null;
+
+        public TopLevel? FetchTopLevel()
+        {
+            var _fetchApplication = Avalonia.Application.Current;
+
+            if (_fetchApplication == null)
+                return null;
+
+            var _fetchLifetime = _fetchApplication.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
+            var _fetchMainView = _fetchLifetime != null ? _fetchLifetime.Windows.FirstOrDefault(x => x.GetType() == typeof(CatalogView)) : null;
+
+            return _fetchMainView;
+        }
 
         public async Task<bool> InitializeView(bool selectLast = false)
         {
@@ -106,6 +125,36 @@ namespace OpenKh.Tools.ModManager.ViewModels
             }
 
             return false;
+        }
+
+        [RelayCommand]
+        private void Toggle(Tuple<ModModel, bool> inputParameter)
+        {
+            if (CurrentConfig != null && SelectedMods != null)
+            {
+                var _fetchTargetMod = inputParameter.Item1;
+                var _fetchIsChecked = inputParameter.Item2;
+
+                var _fetchSenderURL = _fetchTargetMod.ModPath;
+                var _fetchFromList = SelectedMods.FirstOrDefault(x => x == _fetchSenderURL);
+
+                if (_fetchFromList != null && !_fetchIsChecked)
+                    SelectedMods.Remove(_fetchSenderURL);
+
+                else if (_fetchFromList == null && _fetchIsChecked)
+                    SelectedMods.Add(_fetchSenderURL);
+            }
+        }
+
+        [RelayCommand]
+        private void Install()
+        {
+            var _fetchTopLevel = FetchTopLevel() as Window;
+            if (SelectedMods != null && _fetchTopLevel != null)
+            {
+                var _fetchReturn = SelectedMods.Count > 0 ? String.Join(';', SelectedMods) : null;
+                _fetchTopLevel.Close(_fetchReturn);
+            }
         }
     }
 }

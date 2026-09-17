@@ -50,7 +50,7 @@
                             </StackPanel>
                         </StackPanel>
                     </ToolTip.Tip>
-                    <CheckBox IsChecked="{ReflectionBinding ModActive}" IsEnabled="{ReflectionBinding ModValid}" IsCheckedChanged="OnModCheckChanged"/>
+                    <CheckBox IsChecked="{ReflectionBinding ModActive}" IsEnabled="{ReflectionBinding ModValid}" IsCheckedChanged="OnModSelectedChanged"/>
                     <Border Margin="5" VerticalAlignment="Center" CornerRadius="5" ClipToBounds="true">
                         <Image Width="48" Height="48" Source="{ReflectionBinding ModIcon}"/>
                     </Border>
