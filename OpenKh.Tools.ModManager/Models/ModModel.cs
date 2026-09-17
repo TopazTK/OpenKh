@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using static OpenKh.Patcher.Metadata;
 
 namespace OpenKh.Tools.ModManager.Models
 {
@@ -14,6 +15,7 @@ namespace OpenKh.Tools.ModManager.Models
         public string? ModTitle { get; set; }
         public string? ModAuthor { get; set; }
         public string? ModPlatform { get; set; }
+        public List<PreferenceModel>? ModPreferences { get; set; }
         public string? ModDescription { get; set; }
         public string[]? ModFilesList { get; set; }
         public Bitmap? ModIcon { get; set; }

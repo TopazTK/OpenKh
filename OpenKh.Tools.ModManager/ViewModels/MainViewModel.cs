@@ -214,6 +214,26 @@ public partial class MainViewModel : ViewModelBase
                         ModValid = true
                     };
 
+                    if (_metadata.Preferences != null)
+                    {
+                        _modModel.ModPreferences = new List<PreferenceModel>();
+
+                        foreach (var _preference in _metadata.Preferences)
+                        {
+                            var _fetchPref = new PreferenceModel
+                            {
+                                Title = _preference.Title,
+                                Key = _preference.Key,
+                                Description = _preference.Description,
+                                Type = _preference.Type,
+                                Options = _preference.Options,
+                                Value = _preference.Value
+                            };
+
+                            _modModel.ModPreferences.Add(_fetchPref);
+                        }
+                    }
+
                     // We have found a Git Repository, let's see what's up.
 
                     Task.Run(() =>
@@ -617,6 +637,26 @@ public partial class MainViewModel : ViewModelBase
                                 ModValid = true
                             };
 
+                            if (_fetchMetadata.Preferences != null)
+                            {
+                                _modModel.ModPreferences = new List<PreferenceModel>();
+
+                                foreach (var _preference in _fetchMetadata.Preferences)
+                                {
+                                    var _fetchPref = new PreferenceModel
+                                    {
+                                        Title = _preference.Title,
+                                        Key = _preference.Key,
+                                        Description = _preference.Description,
+                                        Type = _preference.Type,
+                                        Options = _preference.Options,
+                                        Value = _preference.Value
+                                    };
+
+                                    _modModel.ModPreferences.Add(_fetchPref);
+                                }
+                            }
+
                             if (Directory.Exists(_fetchPathGit))
                             {
                                 if (Repository.IsValid(_fetchPathGit))
@@ -722,6 +762,26 @@ public partial class MainViewModel : ViewModelBase
                                     ModActive = true,
                                     ModValid = true
                                 };
+
+                                if (_fetchMetadata.Preferences != null)
+                                {
+                                    _modModel.ModPreferences = new List<PreferenceModel>();
+
+                                    foreach (var _preference in _fetchMetadata.Preferences)
+                                    {
+                                        var _fetchPref = new PreferenceModel
+                                        {
+                                            Title = _preference.Title,
+                                            Key = _preference.Key,
+                                            Description = _preference.Description,
+                                            Type = _preference.Type,
+                                            Options = _preference.Options,
+                                            Value = _preference.Value
+                                        };
+
+                                        _modModel.ModPreferences.Add(_fetchPref);
+                                    }
+                                }
 
                                 if (Directory.Exists(_fetchPathGit))
                                 {

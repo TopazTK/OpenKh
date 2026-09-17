@@ -817,6 +817,28 @@ namespace OpenKh.Tools.ModManager.Services
                         var _fetchYamlPath = Path.Combine(_fetchMod.ModPath, "mod.yml");
                         var _fetchMetadata = Metadata.Read(_fetchYamlPath);
 
+                        if (_fetchMod.ModPreferences != null)
+                        {
+                            var _fetchListMetadata = new List<Preference>();
+
+                            foreach (var _fetchPref in _fetchMod.ModPreferences)
+                            {
+                                var _fetchPrefMetadata = new Preference()
+                                {
+                                    Title = _fetchPref.Title,
+                                    Key = _fetchPref.Key,
+                                    Description = _fetchPref.Description,
+                                    Options = _fetchPref.Options,
+                                    Category = _fetchPref.Category,
+                                    Value = _fetchPref.Value
+                                };
+
+                                _fetchListMetadata.Add(_fetchPrefMetadata);
+                            }
+
+                            _fetchMetadata.Preferences = _fetchListMetadata;
+                        }
+
                         // Await the patcher process for this mod.
                         await _fetchPatcher.Patch
                         (

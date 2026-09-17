@@ -14,17 +14,36 @@ using System.Text.RegularExpressions;
 namespace OpenKh.Patcher
 {
     [YamlSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, DefaultIgnoreCondition = YamlIgnoreCondition.WhenWritingDefault)]
+
+    public class Dependency
+    {
+        public string Name { get; set; }
+    }
+
+    public class Preference
+    {
+        public string Title { get; set; }
+        public string Key { get; set; }
+        public string Type { get; set; }
+        public string Description { get; set; }
+        public string Category { get; set; }
+        public string[]? Options { get; set; }
+        public object Value { get; set; }
+    }
+
+    public class Condition
+    {
+        public string Key { get; set; }
+        public object Value { get; set; }
+    }
+
     public class Metadata
     {
-        public class Dependency
-        {
-            public string Name { get; set; }
-        }
-
         public string Title { get; set; }
         public string OriginalAuthor { get; set; }
         public string Description { get; set; }
-         public string Game { get; set; }
+        public List<Preference>? Preferences { get; set; }
+        public string Game { get; set; }
         public int Specifications { get; set; }
         public List<Dependency>? Dependencies { get; set; }
         public bool IsCollection { get; set; }
@@ -62,7 +81,7 @@ namespace OpenKh.Patcher
                 return _fetchSerial;
             }
 
-            catch (SharpYaml.YamlException ex)
+            catch (YamlException ex)
             {
                 // Handle YAML parsing errors
                 Debug.WriteLine($"Error deserializing YAML: {ex.Message}");
@@ -152,6 +171,7 @@ namespace OpenKh.Patcher
         /// Theater
         /// </summary>
         public string Package { get; set; }
+        public Condition Condition { get; set; }
         public List<Multi> Multi { get; set; }
         public List<AssetFile> Source { get; set; }
 

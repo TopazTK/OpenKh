@@ -176,6 +176,9 @@ namespace OpenKh.Patcher
                 // Start a parallel for all the assets:
                 await Parallel.ForEachAsync(modMetadata.Assets.AsParallel(), new ParallelOptions() { CancellationToken = cancelToken ?? new CancellationToken() }, async (_fetchAsset, _fetchCancelToken) =>
                 {
+                    // Process callback for progress.
+                    _assetProcessCount++;
+
                     // If the asset has a game declared and it doesn't match the current game, skip it.
                     if (_fetchAsset.Game != null && _fetchAsset.Game != _fetchGameId)
                         return;
@@ -183,6 +186,17 @@ namespace OpenKh.Patcher
                     // I don't know what this does but it is here for compat.
                     if (_fetchAsset.CollectionOptional == true && (!_fetchCollectionMods.ContainsKey(_fetchAsset.Name) || !_fetchCollectionMods[_fetchAsset.Name]))
                         return;
+
+                    if (_fetchAsset.Condition != null)
+                    {
+                        var _fetchConditionKey = _fetchAsset.Condition.Key;
+                        var _fetchConditionValue = _fetchAsset.Condition.Value;
+
+                        var _fetchConditionMain = modMetadata.Preferences.FirstOrDefault(x => x.Key == _fetchConditionKey);
+
+                        if (_fetchConditionMain != null && !Object.Equals(_fetchConditionValue, _fetchConditionMain.Value))
+                            return;
+                    }
 
                     // Fetch all the target names to be used.
                     var _fetchFileNames = new List<string>();
@@ -380,9 +394,6 @@ namespace OpenKh.Patcher
                         }
                     }
 
-                    // Process callback for progress.
-                    _assetProcessCount++;
-
                     if (reportProgress != null)
                         reportProgress(_assetProcessCount, _assetTotalCount);
                 });
@@ -502,6 +513,17 @@ namespace OpenKh.Patcher
 
             foreach (var file in assetFile.Source)
             {
+                if (file.Condition != null)
+                {
+                    var _fetchConditionKey = file.Condition.Key;
+                    var _fetchConditionValue = file.Condition.Value;
+
+                    var _fetchConditionMain = context.Metadata.Preferences.FirstOrDefault(x => x.Key == _fetchConditionKey);
+
+                    if (_fetchConditionMain != null && !Object.Equals(_fetchConditionValue, _fetchConditionMain.Value))
+                        return;
+                }
+
                 if (!Enum.TryParse<Bar.EntryType>(file.Type, true, out var barEntryType))
                     throw new Exception($"BinArc type {file.Type} not recognized");
 

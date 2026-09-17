@@ -19,17 +19,42 @@
                 <HyperlinkButton FontSize="12" NavigateUri="{ReflectionBinding ModIssues}" IsVisible="{ReflectionBinding ModIssues, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Content="Report Bugs..."/>
             </StackPanel>
             <Separator Margin="5" IsVisible="{ReflectionBinding ModValid}"/>
-            <Expander Header="Mod Contents" HorizontalAlignment="Stretch" IsVisible="{ReflectionBinding ModValid}">  
-                <ScrollViewer Margin="-15" MaxHeight="470">
-                        <ItemsRepeater ItemsSource="{ReflectionBinding ModFilesList}"> 
-                            <ItemsRepeater.ItemTemplate> 
-                                <DataTemplate> 
-                                    <TextBlock Text="{Binding}" Margin="2" FontSize="12" /> 
-                                </DataTemplate> 
-                            </ItemsRepeater.ItemTemplate> 
-                        </ItemsRepeater> 
-                </ScrollViewer>
-            </Expander>
+            <StackPanel Margin="5" Spacing="5">
+                <Expander Header="Mod Preferences" MinHeight="10" HorizontalAlignment="Stretch" IsVisible="{ReflectionBinding ModPreferences, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">  
+                    <ScrollViewer Margin="-15" MaxHeight="470">
+                            <ItemsRepeater ItemsSource="{ReflectionBinding ModPreferences}"> 
+                                <ItemsRepeater.ItemTemplate> 
+                                    <DataTemplate x:DataType="model:PreferenceModel"> 
+                                    <StackPanel>
+                                            <Grid Margin="10, 0, 10, 0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="1.25*"/>
+                                                    <ColumnDefinition Width="1.75*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <Label Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" Content="{Binding Title}" FontSize="12" ToolTip.Tip="{Binding Description}" /> 
+                                                <CheckBox Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" IsChecked="{Binding Value}" IsVisible="{Binding IsValueBoolean}"/>
+                                                <ComboBox Grid.Column="1" FontSize="12" ItemsSource="{Binding Options}" VerticalAlignment="Center" HorizontalAlignment="Stretch" SelectedItem="{Binding Value}" IsVisible="{Binding IsValueComboBox}"/>
+                                            </Grid>
+                                            <Separator HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataTemplate> 
+                                </ItemsRepeater.ItemTemplate> 
+                            </ItemsRepeater> 
+                    </ScrollViewer>
+                </Expander>
+                <Expander Header="Mod Contents" MinHeight="10" HorizontalAlignment="Stretch" IsVisible="{ReflectionBinding ModValid}">  
+                    <ScrollViewer Margin="-15" MaxHeight="470">
+                            <ItemsRepeater ItemsSource="{ReflectionBinding ModFilesList}"> 
+                                <ItemsRepeater.ItemTemplate> 
+                                    <DataTemplate > 
+                                        <TextBlock Text="{Binding}" Margin="2" FontSize="12" /> 
+                                    </DataTemplate> 
+                                </ItemsRepeater.ItemTemplate> 
+                            </ItemsRepeater> 
+                    </ScrollViewer>
+                </Expander>
+            </StackPanel>
         </StackPanel>
 
 </ContentPage>
