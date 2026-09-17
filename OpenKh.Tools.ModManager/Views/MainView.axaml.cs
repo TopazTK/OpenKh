@@ -22,19 +22,6 @@ public partial class MainView : Window
         _fetchContext.InitializeView();
     }
 
-    private void OnModActiveChanged(object? sender, ModActiveChangedEventArgs e)
-    {
-        var _fetchContext = DataContext as MainViewModel;
-
-        if (_fetchContext != null)
-        {
-            var _inputParameter = new Tuple<ModModel, bool>(e.TargetMod, e.IsChecked);
-
-            if (_fetchContext.ToggleCommand.CanExecute(_inputParameter))
-                _fetchContext.ToggleCommand.Execute(_inputParameter);
-        }
-    }
-
     public MainView()
     {
         InitializeComponent();

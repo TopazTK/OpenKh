@@ -13,12 +13,6 @@ namespace OpenKh.Tools.ModManager.Views
         public static readonly StyledProperty<ICommand?> ModSelectedRequestedProperty = AvaloniaProperty.Register<ModStatusView, ICommand?>(nameof(ModSelectedRequested));
         public ICommand? ModSelectedRequested { get => GetValue(ModSelectedRequestedProperty); set => SetValue(ModSelectedRequestedProperty, value); }
 
-        private void OnModSelectedRequested(object? sender, RoutedEventArgs e)
-        {
-            if (ModSelectedRequested?.CanExecute(null) == true)
-                ModSelectedRequested.Execute(null);
-        }
-
         public ModWrapView()
         {
             InitializeComponent();

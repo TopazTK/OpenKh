@@ -6,61 +6,34 @@ using OpenKh.Tools.ModManager.Models;
 using OpenKh.Tools.ModManager.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Windows.Input;
 
 namespace OpenKh.Tools.ModManager.Views
 {
-    public class ModActiveChangedEventArgs : RoutedEventArgs
-    {
-        public ModModel TargetMod { get; }
-        public bool IsChecked { get; }
-
-        public ModActiveChangedEventArgs(RoutedEvent routedEvent, ModModel targetMod, bool? isChecked) : base(routedEvent)
-        {
-            TargetMod = targetMod;
-            IsChecked = isChecked.HasValue ? isChecked.Value : false;
-        }
-    }
-
     public partial class ModListView : ContentPage
     {
-        #region Custom Events
-
-        public static readonly RoutedEvent<ModActiveChangedEventArgs> ModActiveChangedEvent = RoutedEvent.Register<ModDetailsView, ModActiveChangedEventArgs>(nameof(ModActiveChanged), RoutingStrategies.Direct);
-
-        public event EventHandler<ModActiveChangedEventArgs> ModActiveChanged
-        {
-            add => AddHandler(ModActiveChangedEvent, value);
-            remove => RemoveHandler(ModActiveChangedEvent, value);
-        }
-
-        protected virtual void OnModActiveChanged(ModModel targetMod, bool? isChecked)
-        {
-            RoutedEventArgs args = new ModActiveChangedEventArgs(ModActiveChangedEvent, targetMod, isChecked);
-            RaiseEvent(args);
-        }
-
-        #endregion
+        public static readonly StyledProperty<ICommand?> ModToggledProperty = AvaloniaProperty.Register<ModStatusView, ICommand?>(nameof(ModToggled));
+        public ICommand? ModToggled { get => GetValue(ModToggledProperty); set => SetValue(ModToggledProperty, value); }
 
         public bool CanTriggerEvents = false;
 
         public ModListView()
         {
             InitializeComponent();
-
-            Loaded += OnViewLoaded;
         }
-
-        private void OnViewLoaded(object? sender, RoutedEventArgs e) => CanTriggerEvents = true;
 
         private void OnModCheckChanged(object? sender, RoutedEventArgs e)
         {
             var _fetchSender = sender as CheckBox;
             var _fetchParent = _fetchSender.Parent.DataContext as ModModel;
 
-            if (_fetchParent == null || !CanTriggerEvents)
+            if (_fetchParent == null)
                 return;
 
-            OnModActiveChanged(_fetchParent, _fetchSender.IsChecked);
+            var _targetTuple = new Tuple<ModModel, bool>(_fetchParent, _fetchSender.IsChecked ?? false);
+
+            if (ModToggled?.CanExecute(_targetTuple) == true)
+                ModToggled.Execute(_targetTuple);
         }
     }
 }
