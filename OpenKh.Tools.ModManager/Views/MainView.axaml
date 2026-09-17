@@ -26,31 +26,48 @@
         <convert:PropertyNotEqualConverter x:Key="CheckIfNotEqual"/>
     </Window.Resources>
 
+    <Window.KeyBindings>
+        <KeyBinding Command="{Binding InstallCommand}" Gesture="Ctrl+N"/>
+        <KeyBinding Command="{Binding LaunchCatalogCommand}" Gesture="Ctrl+M"/>
+        <KeyBinding Command="{Binding OpenFolderCommand}" Gesture="Ctrl+O"/>
+        <KeyBinding Command="{Binding RemoveCommand}" Gesture="Delete"/>
+        <KeyBinding Command="{Binding MoveUpCommand}" Gesture="PageUp"/>
+        <KeyBinding Command="{Binding MoveDownCommand}" Gesture="PageDown"/>
+        <KeyBinding Command="{Binding MoveUtmostCommand}" Gesture="Home"/>
+        <KeyBinding Command="{Binding RunCommand}" Gesture="F5"/>
+        <KeyBinding Command="{Binding BuildCommand}" Gesture="Ctrl+B"/>
+        <KeyBinding Command="{Binding BuildRunCommand}" Gesture="Ctrl+F5"/>
+        <KeyBinding Command="{Binding LaunchSetupCommand}" Gesture="Alt+S"/>
+        <KeyBinding Command="{Binding PromptArgumentsCommand}" Gesture="Alt+A"/>
+        <KeyBinding Command="{Binding InstallPanaceaCommand}" Gesture="Alt+P"/>
+        <KeyBinding Command="{Binding InstallBackendCommand}" Gesture="Alt+L"/>
+    </Window.KeyBindings>
+
     <DockPanel>
         <Grid DockPanel.Dock="Top" Margin="5">
             <Menu>
                 <MenuItem Header="Mods">
-                    <MenuItem Header="Install a New Mod..." Command="{Binding InstallCommand}" InputGesture="Ctrl+N" HotKey="Ctrl+N"/>
-                    <MenuItem Header="Open Online Catalog..." Command="{Binding LaunchCatalogCommand}" InputGesture="Ctrl+M" HotKey="Ctrl+M"/>
+                    <MenuItem Header="Install a New Mod..." Command="{Binding InstallCommand}" InputGesture="Ctrl+N"/>
+                    <MenuItem Header="Open Online Catalog..." Command="{Binding LaunchCatalogCommand}" InputGesture="Ctrl+M"/>
                     <Separator/>
-                    <MenuItem Header="Open Folder..." Command="{Binding OpenFolderCommand}" InputGesture="Ctrl+O" HotKey="Ctrl+O" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                    <MenuItem Header="Remove..." Command="{Binding RemoveCommand}" InputGesture="Delete" HotKey="Delete" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                    <MenuItem Header="Move Up" Command="{Binding MoveUpCommand}" InputGesture="PageUp" HotKey="PageUp" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                    <MenuItem Header="Move Down" Command="{Binding MoveDownCommand}"  InputGesture="PageDown" HotKey="PageDown" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                    <MenuItem Header="Move Highest" Command="{Binding MoveUtmostCommand}"  InputGesture="Home" HotKey="Home" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Open Folder..." Command="{Binding OpenFolderCommand}" InputGesture="Ctrl+O" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Remove..." Command="{Binding RemoveCommand}" InputGesture="Delete" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Move Up" Command="{Binding MoveUpCommand}" InputGesture="PageUp" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Move Down" Command="{Binding MoveDownCommand}"  InputGesture="PageDown" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <MenuItem Header="Move Highest" Command="{Binding MoveUtmostCommand}"  InputGesture="Home" IsEnabled="{Binding CurrentMod, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                     <Separator/>
-                    <MenuItem Header="Exit" InputGesture="F4" HotKey="F4"/>
+                    <MenuItem Header="Exit" InputGesture="F4"/>
                 </MenuItem>
                 <MenuItem Header="Build">
-                    <MenuItem Header="Run..." Command="{Binding RunCommand}" InputGesture="F5" HotKey="F5"/>
-                    <MenuItem Header="Build..." Command="{Binding BuildCommand}" InputGesture="Ctrl+B" HotKey="Ctrl+B" IsEnabled="{ReflectionBinding HasModsInstalled}"/>
-                    <MenuItem Header="Build and Run..." Command="{Binding BuildRunCommand}" InputGesture="Ctrl+F5" HotKey="Ctrl+F5" IsEnabled="{ReflectionBinding HasModsInstalled}"/>
+                    <MenuItem Header="Run..." Command="{Binding RunCommand}" InputGesture="F5"/>
+                    <MenuItem Header="Build..." Command="{Binding BuildCommand}" InputGesture="Ctrl+B" IsEnabled="{ReflectionBinding HasModsInstalled}"/>
+                    <MenuItem Header="Build and Run..." Command="{Binding BuildRunCommand}" InputGesture="Ctrl+F5" IsEnabled="{ReflectionBinding HasModsInstalled}"/>
                     <Separator/>
-                    <MenuItem Header="Restore..." Command="{Binding RestoreCommand}" InputGesture="Ctrl+R" HotKey="Ctrl+R"/>
+                    <MenuItem Header="Restore..." Command="{Binding RestoreCommand}" InputGesture="Ctrl+R"/>
                 </MenuItem>
                 <MenuItem Header="Settings"> 
-                    <MenuItem Header="Run the Setup Wizard..." Command="{Binding LaunchSetupCommand}" InputGesture="Alt+S" HotKey="Alt+S"/>
-                    <MenuItem Header="Setup Launch Arguments..." Command="{Binding PromptArgumentsCommand}" InputGesture="Alt+A" HotKey="Alt+A">
+                    <MenuItem Header="Run the Setup Wizard..." Command="{Binding LaunchSetupCommand}" InputGesture="Alt+S"/>
+                    <MenuItem Header="Setup Launch Arguments..." Command="{Binding PromptArgumentsCommand}" InputGesture="Alt+A">
                         <MenuItem.IsEnabled>
                             <MultiBinding Converter="{StaticResource CheckIfEqual}">
                                 <Binding Path="CurrentConfig.Frontend.TargetPlatform" />
@@ -59,7 +76,7 @@
                         </MenuItem.IsEnabled>
                     </MenuItem>
                     <Separator/>
-                    <MenuItem Header="Re/Install Panacea" InputGesture="Alt+P" HotKey="Alt+P" Command="{Binding InstallPanaceaCommand}"> 
+                    <MenuItem Header="Re/Install Panacea" InputGesture="Alt+P" Command="{Binding InstallPanaceaCommand}"> 
                         <MenuItem.IsEnabled>
                             <MultiBinding Converter="{StaticResource CheckIfNotEqual}">
                                 <Binding Path="CurrentConfig.Frontend.TargetPlatform" />
@@ -67,7 +84,7 @@
                             </MultiBinding>
                         </MenuItem.IsEnabled>
                     </MenuItem>
-                    <MenuItem Header="Re/Install LuaBackend" InputGesture="Alt+L" HotKey="Alt+L" Command="{Binding InstallBackendCommand}">
+                    <MenuItem Header="Re/Install LuaBackend" InputGesture="Alt+L" Command="{Binding InstallBackendCommand}">
                         <MenuItem.IsEnabled>
                             <MultiBinding Converter="{StaticResource CheckIfNotEqual}">
                                 <Binding Path="CurrentConfig.Frontend.TargetPlatform" />

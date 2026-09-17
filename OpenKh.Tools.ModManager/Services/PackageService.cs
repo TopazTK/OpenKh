@@ -437,6 +437,9 @@ namespace OpenKh.Tools.ModManager.Services
             {
                 var _fetchFolders = PathService.FetchSteamLibraries();
 
+                if (_fetchFolders == null)
+                    return false;
+
                 _fetchFolders.AsParallel().ForAll(_fetchFolder =>
                 {
                     var _fetchDirectory1525 = Path.Combine(_fetchFolder, "steamapps", "compatdata", "2552430");

@@ -151,8 +151,6 @@ namespace OpenKh.Tools.ModManager.Services
 
         public static string[]? FetchSteamLibraries()
         {
-            var _fetchConfigPath = "";
-
             var _fetchFolders = new List<string>();
             var _fetchGameFolders = new List<string>();
 
