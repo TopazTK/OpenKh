@@ -75,7 +75,7 @@ namespace OpenKh.Patcher
 
                 // A single mod should not be able to patch a file more than once.
                 // Ignore any and all duplicates that target the same file.
-                var _fetchAssetUnique = _fetchSerial.Assets.DistinctBy(x => new { x.Name, x.Platform });
+                var _fetchAssetUnique = _fetchSerial.Assets.DistinctBy(x => new { x.Name, x.Platform, x.Condition });
                 _fetchSerial.Assets = _fetchAssetUnique.ToList();
 
                 return _fetchSerial;

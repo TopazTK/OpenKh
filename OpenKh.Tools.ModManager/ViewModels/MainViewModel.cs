@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
+using Avalonia.Input;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -59,6 +60,9 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _hasModsInstalled = false;
+
+    [ObservableProperty]
+    private ObservableCollection<object> _presetItems;
 
     /// <summary>
     /// Activates whenever InstalledMods has a property change.
@@ -156,7 +160,8 @@ public partial class MainViewModel : ViewModelBase
                         GamePath = new string[2],
                         TargetPlatform = Platform.STEAM,
                         ModBuildType = BuildType.PANACEA,
-                        TargetGame = Game.KINGDOM_HEARTS_II
+                        TargetGame = Game.KINGDOM_HEARTS_II,
+                        TargetPreset = new string[5]
                     },
 
                     Emulator = new Emulator()
@@ -171,6 +176,87 @@ public partial class MainViewModel : ViewModelBase
         }
 
         ConfigurationValid = CurrentConfig.IsValid();
+
+        // === Preset Parsing and Verification === //
+
+        PresetItems = new ObservableCollection<object>();
+
+        PresetItems.Add(new MenuItem()
+        {
+            Header = "Create New Preset...",
+            Command = CreatePresetCommand,
+            InputGesture = new KeyGesture(Key.N, KeyModifiers.Alt)
+        });
+
+        PresetItems.Add(new Separator());
+
+        var _fetchGame = (int)CurrentConfig.Frontend.TargetGame;
+        var _fetchPreset = CurrentConfig.Frontend.TargetPreset[_fetchGame];
+
+        var _fetchPresetPath = Path.Combine(AppContext.BaseDirectory, "preset.yml");
+
+        if (File.Exists(_fetchPresetPath))
+        {
+            var _fetchPresetRAW = File.ReadAllText(_fetchPresetPath);
+            var _fetchPresetList = YamlSerializer.Deserialize<List<PresetModel>>(_fetchPresetRAW);
+
+            if (_fetchPresetList.Count > 0)
+            {
+                var _fetchKeyIndex = 34;
+
+                PresetItems.Add(new MenuItem()
+                {
+                    Header = "Default",
+                    ToggleType = MenuItemToggleType.Radio,
+                    IsChecked = String.IsNullOrEmpty(_fetchPreset),
+                    Command = SwitchPresetCommand,
+                    CommandParameter = "",
+                    InputGesture = new KeyGesture(Key.D, KeyModifiers.Alt)
+                });
+
+                foreach (var _preset in _fetchPresetList)
+                {
+                    var _fetchKey = (Key)_fetchKeyIndex;
+
+                    var _fetchMenuItem = new MenuItem()
+                    {
+                        Header = _preset.PresetName,
+                        ToggleType = MenuItemToggleType.Radio,
+                        IsChecked = _fetchPreset == _preset.PresetName,
+                        Command = SwitchPresetCommand,
+                        CommandParameter = _preset.PresetName,
+                        InputGesture = new KeyGesture(_fetchKey, KeyModifiers.Alt)
+                    };
+
+                    PresetItems.Add(_fetchMenuItem);
+
+                    _fetchKeyIndex++;
+                }
+            }
+
+            if (CurrentConfig.Frontend.TargetPreset != null)
+            {
+                var _tryFetchPreset = _fetchPresetList.FirstOrDefault(x => x.PresetName == _fetchPreset);
+
+                if (_tryFetchPreset == null)
+                    CurrentConfig.Frontend.TargetPreset[_fetchGame] = "";
+            }
+        }
+
+        else
+            File.WriteAllText(_fetchPresetPath, "[]");
+
+        if (PresetItems.Count == 0x02)
+        {
+            PresetItems.Add(new MenuItem()
+            {
+                Header = "No Presets Available.",
+                IsEnabled = false
+            });
+
+            if (CurrentConfig.Frontend.TargetPreset != null)
+                CurrentConfig.Frontend.TargetPreset[_fetchGame] = "";
+        }
 
         // === Mod Parsing and Verification === //
 
@@ -1305,6 +1391,101 @@ public partial class MainViewModel : ViewModelBase
             return false;
     }
 
+    [RelayCommand]
+    private async Task<bool> CreatePreset()
+    {
+        if (CurrentConfig != null)
+        {
+            var _fetchGame = (int)CurrentConfig.Frontend.TargetGame;
+            var _fetchPreset = CurrentConfig.Frontend.TargetPreset[_fetchGame];
+
+            var _fetchTopLevel = FetchTopLevel() as Window;
+
+            if (_fetchTopLevel == null)
+                return false;
+
+            var _fetchResult = await DialogService.ShowInput(_fetchTopLevel, "Create New Preset", "Please enter a name for the new preset.", "OK", "Ex. \"Some Very Cool Preset\"");
+
+            if (!String.IsNullOrEmpty(_fetchResult))
+            {
+                var _isPresetPresent = PresetItems.OfType<MenuItem>().FirstOrDefault(x => x.Header as string == "Default") != null;
+
+                if (!_isPresetPresent)
+                {
+                    PresetItems.RemoveAt(0x02);
+
+                    PresetItems.Add(new MenuItem()
+                    {
+                        Header = "Default",
+                        ToggleType = MenuItemToggleType.Radio,
+                        IsChecked = true,
+                        Command = SwitchPresetCommand,
+                        CommandParameter = "",
+                        InputGesture = new KeyGesture(Key.D, KeyModifiers.Alt)
+                    });
+
+                    PresetItems.Add(new MenuItem()
+                    {
+                        Header = _fetchResult,
+                        ToggleType = MenuItemToggleType.Radio,
+                        IsChecked = false,
+                        Command = SwitchPresetCommand,
+                        CommandParameter = _fetchResult,
+                        InputGesture = new KeyGesture(Key.D0, KeyModifiers.Alt)
+                    });
+                }
+
+                else
+                {
+                    PresetItems.Add(new MenuItem()
+                    {
+                        Header = _fetchResult,
+                        ToggleType = MenuItemToggleType.Radio,
+                        IsChecked = false,
+                        Command = SwitchPresetCommand,
+                        CommandParameter = _fetchResult,
+                        InputGesture = new KeyGesture((Key)(34 + PresetItems.Count - 0x03), KeyModifiers.Alt)
+                    });
+                }
+
+                var _fetchPresetPath = Path.Combine(AppContext.BaseDirectory, "preset.yml");
+
+                var _fetchPresetRAW = File.ReadAllText(_fetchPresetPath);
+                var _fetchPresetList = YamlSerializer.Deserialize<List<PresetModel>>(_fetchPresetRAW);
+
+                _fetchPresetList.Add(new PresetModel
+                {
+                    PresetName = _fetchResult,
+                    PresetGame = CurrentConfig.Frontend.TargetGame
+                });
+
+                _fetchPresetRAW = YamlSerializer.Serialize(_fetchPresetList);
+                File.WriteAllText(_fetchPresetPath, _fetchPresetRAW);
+            }
+        }
+
+        return false;
+    }
+
+    [RelayCommand]
+    private async Task<bool> SwitchPreset(string input)
+    {
+        if (CurrentConfig != null)
+        {
+            var _fetchGame = (int)CurrentConfig.Frontend.TargetGame;
+            var _fetchPreset = CurrentConfig.Frontend.TargetPreset[_fetchGame];
+
+            if (_fetchPreset == input)
+                return false;
+
+            CurrentConfig.Frontend.TargetPreset[_fetchGame] = input;
+            InitializeView();
+
+            return true;
+        }
+
+        return false;
+    }
 }
 
 #pragma warning restore CS4014

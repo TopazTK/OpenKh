@@ -49,13 +49,15 @@ namespace OpenKh.Tools.ModManager.Classes
 
         public string? BuildPath { get; set; }
 
+        public string[]? TargetPreset { get; set; }
+
+        public string? PresetPath { get; set; }
+
         public bool UpdateMods { get; set; }
 
         public string? DataPath { get; set; }
 
-        public string[]? GamePath { 
-            get; 
-            set; }
+        public string[]? GamePath { get; set; }
     }
 
     // Panacea Configuration

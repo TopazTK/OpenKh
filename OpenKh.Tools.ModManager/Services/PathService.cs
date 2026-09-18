@@ -17,22 +17,41 @@ namespace OpenKh.Tools.ModManager.Services
         public static string ResolveMod(Config input, bool barePath = false)
         {
             var _fetchGameTarget = barePath ? "" : Config.GameShorthand[input.Frontend.TargetGame];
+            var _fetchGamePreset = (barePath || input.Frontend.TargetPreset == null) ? "" : input.Frontend.TargetPreset[(int)input.Frontend.TargetGame];
 
-            var _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, "mods", _fetchGameTarget);
-
-            if (!String.IsNullOrEmpty(input.Frontend.ModPath))
+            if (String.IsNullOrEmpty(_fetchGamePreset))
             {
-                if (!Path.IsPathFullyQualified(input.Frontend.ModPath))
-                    _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, input.Frontend.ModPath, _fetchGameTarget);
+                var _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, "mods", _fetchGameTarget);
 
-                else
-                    _fetchTargetPath = Path.Combine(input.Frontend.ModPath, _fetchGameTarget);
+                if (!String.IsNullOrEmpty(input.Frontend.ModPath))
+                {
+                    if (!Path.IsPathFullyQualified(input.Frontend.ModPath))
+                        _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, input.Frontend.ModPath, _fetchGameTarget);
+
+                    else
+                        _fetchTargetPath = Path.Combine(input.Frontend.ModPath, _fetchGameTarget);
+                }
+
+                if (!Directory.Exists(_fetchTargetPath))
+                    Directory.CreateDirectory(_fetchTargetPath);
+
+                return _fetchTargetPath;
             }
 
-            if (!Directory.Exists(_fetchTargetPath))
-                Directory.CreateDirectory(_fetchTargetPath);
+            else
+            {
+                var _fetchNormalStr = _fetchGamePreset.ToLower().Replace(" ", "_");
 
-            return _fetchTargetPath;
+                foreach (var _fetchChar in Path.GetInvalidFileNameChars())
+                    _fetchNormalStr = _fetchNormalStr.Replace(_fetchChar, '-');
+
+                var _fetchFinalPath = Path.Combine(ResolvePreset(input, false), _fetchNormalStr);
+
+                if (!Directory.Exists(_fetchFinalPath))
+                    Directory.CreateDirectory(_fetchFinalPath);
+
+                return _fetchFinalPath;
+            }
         }
 
         public static string ResolveBuild(Config input, bool barePath = false)
@@ -48,6 +67,27 @@ namespace OpenKh.Tools.ModManager.Services
 
                 else
                     _fetchTargetPath = Path.Combine(input.Frontend.BuildPath, _fetchGameTarget);
+            }
+
+            if (!Directory.Exists(_fetchTargetPath))
+                Directory.CreateDirectory(_fetchTargetPath);
+
+            return _fetchTargetPath;
+        }
+
+        public static string ResolvePreset(Config input, bool barePath = false)
+        {
+            var _fetchGameTarget = barePath ? "" : Config.GameShorthand[input.Frontend.TargetGame];
+
+            var _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, "preset", _fetchGameTarget);
+
+            if (!String.IsNullOrEmpty(input.Frontend.PresetPath))
+            {
+                if (!Path.IsPathFullyQualified(input.Frontend.PresetPath))
+                    _fetchTargetPath = Path.Combine(AppContext.BaseDirectory, input.Frontend.PresetPath, _fetchGameTarget);
+
+                else
+                    _fetchTargetPath = Path.Combine(input.Frontend.PresetPath, _fetchGameTarget);
             }
 
             if (!Directory.Exists(_fetchTargetPath))
