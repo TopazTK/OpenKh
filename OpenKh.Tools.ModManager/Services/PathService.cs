@@ -182,7 +182,7 @@ namespace OpenKh.Tools.ModManager.Services
             {
                 var _fetchConfigPath = Path.Combine(_fetchFolder, "steamapps", "libraryfolders.vdf");
 
-                if (!String.IsNullOrEmpty(_fetchConfigPath))
+                if (File.Exists(_fetchConfigPath))
                 {
                     var _fetchLibraryConfig = File.ReadAllLines(_fetchConfigPath);
                     var _pathRegex = new Regex("path[^\"]*\"\\s*\"([^\"]*)\"", RegexOptions.None, TimeSpan.FromMilliseconds(500));

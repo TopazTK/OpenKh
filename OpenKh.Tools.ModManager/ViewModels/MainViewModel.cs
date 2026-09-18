@@ -498,10 +498,11 @@ public partial class MainViewModel : ViewModelBase
 
                         // Free all the pointers allocated.
 
-                        Marshal.FreeHGlobal(_progressTextPtr);
 
-                        Marshal.FreeHGlobal(_progressMaximumPtr);
-                        Marshal.FreeHGlobal(_progressCurrentPtr);
+                        Marshal.FreeHGlobal(_progressTextPtr); _progressTextPtr = IntPtr.Zero;
+
+                        Marshal.FreeHGlobal(_progressMaximumPtr); _progressMaximumPtr = IntPtr.Zero;
+                        Marshal.FreeHGlobal(_progressCurrentPtr); _progressCurrentPtr = IntPtr.Zero;
                     }
 
                     else
@@ -576,14 +577,14 @@ public partial class MainViewModel : ViewModelBase
 
                         // Free all the pointers allocated.
 
-                        Marshal.FreeHGlobal(_secondTextPtr);
-                        Marshal.FreeHGlobal(_firstTextPtr);
+                        Marshal.FreeHGlobal(_secondTextPtr); _secondTextPtr = IntPtr.Zero;
+                        Marshal.FreeHGlobal(_firstTextPtr); _firstTextPtr = IntPtr.Zero;
 
-                        Marshal.FreeHGlobal(_secondMaximumPtr);
-                        Marshal.FreeHGlobal(_secondCurrentPtr);
+                        Marshal.FreeHGlobal(_secondMaximumPtr); _secondMaximumPtr = IntPtr.Zero;
+                        Marshal.FreeHGlobal(_secondCurrentPtr); _secondCurrentPtr = IntPtr.Zero;
 
-                        Marshal.FreeHGlobal(_firstMaximumPtr);
-                        Marshal.FreeHGlobal(_firstCurrentPtr);
+                        Marshal.FreeHGlobal(_firstMaximumPtr); _firstCurrentPtr = IntPtr.Zero;
+                        Marshal.FreeHGlobal(_firstCurrentPtr); _firstCurrentPtr = IntPtr.Zero;
 
                         // Return the result.
 
@@ -1061,14 +1062,14 @@ public partial class MainViewModel : ViewModelBase
 
             // Allocate all the pointers to use for the progress bars.
 
-            IntPtr _firstCurrentPtr = Marshal.AllocHGlobal(4);
-            IntPtr _firstMaximumPtr = Marshal.AllocHGlobal(4);
-
-            IntPtr _secondCurrentPtr = Marshal.AllocHGlobal(4);
-            IntPtr _secondMaximumPtr = Marshal.AllocHGlobal(4);
-
-            IntPtr _firstTextPtr = Marshal.AllocHGlobal(256);
-            IntPtr _secondTextPtr = Marshal.AllocHGlobal(256);
+            var _firstCurrentPtr = Marshal.AllocHGlobal(4);
+            var _firstMaximumPtr = Marshal.AllocHGlobal(4);
+            
+            var _secondCurrentPtr = Marshal.AllocHGlobal(4);
+            var _secondMaximumPtr = Marshal.AllocHGlobal(4);
+            
+            var _firstTextPtr = Marshal.AllocHGlobal(256);
+            var _secondTextPtr = Marshal.AllocHGlobal(256);
 
             // Write the default strings to the pointers.
 
@@ -1128,14 +1129,14 @@ public partial class MainViewModel : ViewModelBase
 
             // Free all the pointers allocated.
 
-            Marshal.FreeHGlobal(_secondTextPtr);
-            Marshal.FreeHGlobal(_firstTextPtr);
+            Marshal.FreeHGlobal(_secondTextPtr); _secondTextPtr = IntPtr.Zero;
+            Marshal.FreeHGlobal(_firstTextPtr); _firstTextPtr = IntPtr.Zero;
 
-            Marshal.FreeHGlobal(_secondMaximumPtr);
-            Marshal.FreeHGlobal(_secondCurrentPtr);
+            Marshal.FreeHGlobal(_secondMaximumPtr); _secondMaximumPtr = IntPtr.Zero;
+            Marshal.FreeHGlobal(_secondCurrentPtr); _secondCurrentPtr = IntPtr.Zero;
 
-            Marshal.FreeHGlobal(_firstMaximumPtr);
-            Marshal.FreeHGlobal(_firstCurrentPtr);
+            Marshal.FreeHGlobal(_firstMaximumPtr); _firstCurrentPtr = IntPtr.Zero;
+            Marshal.FreeHGlobal(_firstCurrentPtr); _firstCurrentPtr = IntPtr.Zero;
 
             if (_buildResult == 0x00)
                 return true;
