@@ -3,6 +3,7 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Octokit;
+using OpenKh.Tools.ModManager.Classes;
 using OpenKh.Tools.ModManager.Dialogs;
 using System;
 using System.Collections.Generic;
@@ -17,7 +18,7 @@ namespace OpenKh.Tools.ModManager.Services
 {
     public static class DialogService
     {
-        public async static Task<bool> ShowProgress(Window? owner, string title, string message, CancellationTokenSource cancelToken, IntPtr firstProgCurr, IntPtr firstProgMax, IntPtr? firstProgText = null, IntPtr? secondProgCurr = null, IntPtr? secondProgMax = null, IntPtr? secondProgText = null)
+        public async static Task<bool> ShowProgress(Window? owner, string title, string message, CancellationTokenSource cancelToken, SafePtr firstProgCurr, SafePtr firstProgMax, SafePtr? firstProgText = null, SafePtr? secondProgCurr = null, SafePtr? secondProgMax = null, SafePtr? secondProgText = null)
         {
             var _fetchDialog = new ProgressDialog 
             { 
@@ -29,78 +30,41 @@ namespace OpenKh.Tools.ModManager.Services
             {
                 while (true)
                 {
-                    var _fetchCurrent = Marshal.ReadInt32(firstProgCurr);
-                    var _fetchMaximum = Marshal.ReadInt32(firstProgMax);
+                    var _fetchFirstCurrent = firstProgCurr.GetValue() as int?;
+                    var _fetchFirstMaximum = firstProgMax.GetValue() as int?;
+
+                    if (_fetchFirstCurrent == null || _fetchFirstMaximum == null)
+                    {
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            _fetchDialog.Close(_fetchDialog.Result = true);
+                        });
+
+                        break;
+                    }
+
+                    var _fetchSecondCurrent = secondProgCurr != null ? secondProgCurr.GetValue() as int? : null;
+                    var _fetchSecondMaximum = secondProgMax != null ? secondProgMax.GetValue() as int? : null;
+
+                    var _fetchFirstString = firstProgText != null ? firstProgText.GetValue() as string : null;
+                    var _fetchSecondString = secondProgText != null ? secondProgText.GetValue() as string : null;
 
                     Dispatcher.UIThread.Post(() =>
                     {
-                        _fetchDialog.MainProgress.Maximum = _fetchMaximum;
-                        _fetchDialog.MainProgress.Value = _fetchCurrent;
+                        _fetchDialog.MainProgress.Maximum = _fetchFirstMaximum.Value;
+                        _fetchDialog.MainProgress.Value = _fetchFirstCurrent.Value;
 
-                        if (firstProgText != null)
-                        {
-                            var _fetchValue = new byte[0x100];
-                            Marshal.Copy(firstProgText.Value, _fetchValue, 0, 0x100);
+                        _fetchDialog.MainProgress.ShowProgressText = _fetchFirstString != null;
+                        _fetchDialog.MainProgress.ProgressTextFormat = _fetchFirstString ?? "";
 
-                            _fetchDialog.MainProgress.ShowProgressText = true;
-                            _fetchDialog.MainProgress.ProgressTextFormat = Encoding.Default.GetString(_fetchValue, 0x00, _fetchValue.IndexOf<byte>(0x00));
-                        }
+                        _fetchDialog.MiscProgress.Maximum = _fetchSecondMaximum ?? 0;
+                        _fetchDialog.MiscProgress.Value = _fetchSecondCurrent ?? 0;
 
-                        else
-                            _fetchDialog.MainProgress.ShowProgressText = false;
+                        _fetchDialog.MiscProgress.ShowProgressText = _fetchSecondString != null;
+                        _fetchDialog.MiscProgress.ProgressTextFormat = _fetchSecondString ?? "";
 
-                        if (secondProgCurr != null && secondProgMax != null)
-                        {
-                            var _fetchSecondCurrent = Marshal.ReadInt32(secondProgCurr.Value);
-                            var _fetchSecondMaximum = Marshal.ReadInt32(secondProgMax.Value);
-
-                            _fetchDialog.MiscProgress.Maximum = _fetchSecondMaximum;
-                            _fetchDialog.MiscProgress.Value = _fetchSecondCurrent;
-
-                            _fetchDialog.MiscProgress.IsVisible = true;
-                        }
-
-                        else
-                            _fetchDialog.MiscProgress.IsVisible = false;
-
-                        if (secondProgText != null)
-                        {
-                            var _fetchValue = new byte[0x100];
-                            Marshal.Copy(secondProgText.Value, _fetchValue, 0, 0x100);
-
-                            _fetchDialog.MiscProgress.ShowProgressText = true;
-                            _fetchDialog.MiscProgress.ProgressTextFormat = Encoding.Default.GetString(_fetchValue, 0x00, _fetchValue.IndexOf<byte>(0x00));
-                        }
+                        _fetchDialog.MiscProgress.IsVisible = _fetchSecondCurrent != null && _fetchSecondMaximum != null;
                     });
-
-                    if ((_fetchCurrent == _fetchMaximum && _fetchMaximum != 0) || cancelToken.IsCancellationRequested)
-                    {
-                        if ((secondProgCurr != null && secondProgMax != null))
-                        {
-                            var _fetchSecondCurrent = Marshal.ReadInt32(secondProgCurr.Value);
-                            var _fetchSecondMaximum = Marshal.ReadInt32(secondProgMax.Value);
-
-                            if ((_fetchSecondCurrent == _fetchSecondMaximum && _fetchSecondMaximum != 0) || cancelToken.IsCancellationRequested)
-                            {
-                                Dispatcher.UIThread.Post(() =>
-                                {
-                                    _fetchDialog.Close(_fetchDialog.Result = true);
-                                });
-
-                                break;
-                            }
-                        }
-
-                        else
-                        {
-                            Dispatcher.UIThread.Post(() =>
-                            {
-                                _fetchDialog.Close(_fetchDialog.Result = true);
-                            });
-
-                            break;
-                        }
-                    }
 
                     await Task.Delay(5, CancellationToken.None);
                 }

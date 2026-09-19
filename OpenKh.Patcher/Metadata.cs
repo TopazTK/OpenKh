@@ -15,11 +15,6 @@ namespace OpenKh.Patcher
 {
     [YamlSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, DefaultIgnoreCondition = YamlIgnoreCondition.WhenWritingDefault)]
 
-    public class Dependency
-    {
-        public string Name { get; set; }
-    }
-
     public class Preference
     {
         public string Title { get; set; }
@@ -45,9 +40,9 @@ namespace OpenKh.Patcher
         public List<Preference>? Preferences { get; set; }
         public string Game { get; set; }
         public int Specifications { get; set; }
-        public List<Dependency>? Dependencies { get; set; }
+        public List<string>? Dependencies { get; set; }
         public bool IsCollection { get; set; }
-        public List<string> CollectionGames { get; set; }
+        public List<string>? CollectionGames { get; set; }
         public List<AssetFile> Assets { get; set; }
 
         [YamlIgnore]

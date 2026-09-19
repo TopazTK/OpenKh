@@ -97,7 +97,7 @@
                 <MenuItem Header="Info"/>
             </Menu>
             
-            <ComboBox Margin="0,0,10,0" Width="200" HorizontalAlignment="Right" SelectedIndex="{ReflectionBinding CurrentConfig.Frontend.TargetGame}" SelectionChanged="OnTargetGameChanged">
+            <ComboBox Name="GameBox" Margin="0,0,10,0" Width="200" HorizontalAlignment="Right" SelectedIndex="{ReflectionBinding CurrentConfig.Frontend.TargetGame}" SelectionChanged="OnTargetGameChanged">
                 <ComboBoxItem Content="Kingdom Hearts"/>
                 <ComboBoxItem Content="Kingdom Hearts II"/>
                 <ComboBoxItem Content="Re:Chain of Memories"/>

@@ -545,7 +545,7 @@ namespace OpenKh.Tools.ModManager.Services
                             if (reportProgress != null)
                             {
                                 // Feedback to the progress and see the result.
-                                var _fetchProgress = reportProgress(i, _fetchArchive.Entries.Count);
+                                var _fetchProgress = reportProgress(i + 1, _fetchArchive.Entries.Count);
 
                                 // If the result is false, meaning cancellation requested, break out immediately.
                                 if (!_fetchProgress)
@@ -659,7 +659,7 @@ namespace OpenKh.Tools.ModManager.Services
 
                             _fetchEntry.ExtractToFile(_fetchFileTarget, true);
 
-                            var _fetchProgress = reportProgress(i, _fetchArchive.Entries.Count);
+                            var _fetchProgress = reportProgress(i + 1, _fetchArchive.Entries.Count);
 
                             if (!_fetchProgress)
                                 break;

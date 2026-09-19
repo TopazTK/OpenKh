@@ -461,7 +461,7 @@ public partial class MainViewModel : ViewModelBase
 
         if (CurrentConfig != null && InstalledMods != null)
         {
-            var _fetchTopLevel = FetchTopLevel() as Window;
+            var _fetchTopLevel = FetchTopLevel() as MainView;
 
             if (_fetchTopLevel == null)
                 return false;
@@ -497,20 +497,13 @@ public partial class MainViewModel : ViewModelBase
 
                 if (_fetchFileInfo.Exists)
                 {
-                    IntPtr _progressCurrentPtr = Marshal.AllocHGlobal(4);
-                    IntPtr _progressMaximumPtr = Marshal.AllocHGlobal(4);
+                    var _progressCurrentPtr = new SafePtr(0x04);
+                    var _progressMaximumPtr = new SafePtr(0x04);
+                    
+                    var _progressTextPtr = new SafePtr(0xFF);
 
-                    IntPtr _progressTextPtr = Marshal.AllocHGlobal(256);
-
-                    // Write the default strings to the pointers.
-
-                    var _fetchProgressBytes = Encoding.Default.GetBytes("Processing Local Files: {0} / {3}" + "\x00");
-                    Marshal.Copy(_fetchProgressBytes, 0, _progressTextPtr, _fetchProgressBytes.Length);
-
-                    // Write the default ints to the pointers.
-
-                    Marshal.WriteInt32(_progressCurrentPtr, 0x00);
-                    Marshal.WriteInt32(_progressMaximumPtr, 0x00);
+                    // Write the default string to the pointer.
+                    _progressTextPtr.WriteValue("Processing Local Files: {0} / {3}");
 
                     var _singleProgress = DialogService.ShowProgress(_fetchTopLevel, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _progressCurrentPtr, _progressMaximumPtr, _progressTextPtr);
 
@@ -521,8 +514,8 @@ public partial class MainViewModel : ViewModelBase
                         CurrentConfig,
                         (int processed, int total) =>
                         {
-                            Marshal.WriteInt32(_progressCurrentPtr, processed);
-                            Marshal.WriteInt32(_progressMaximumPtr, total);
+                           _progressCurrentPtr.WriteValue(processed);
+                           _progressMaximumPtr.WriteValue(total);
 
                             if (ModService.CancelToken.IsCancellationRequested)
                                 return false;
@@ -533,10 +526,10 @@ public partial class MainViewModel : ViewModelBase
 
                     // Free all the pointers allocated.
 
-                    Marshal.FreeHGlobal(_progressTextPtr);
+                    _progressTextPtr.Dispose();
 
-                    Marshal.FreeHGlobal(_progressMaximumPtr);
-                    Marshal.FreeHGlobal(_progressCurrentPtr);
+                    _progressMaximumPtr.Dispose();
+                    _progressCurrentPtr.Dispose();
                 }
 
                 else
@@ -547,21 +540,13 @@ public partial class MainViewModel : ViewModelBase
                     {
                         // Allocate the pointers necessary.
 
-                        IntPtr _progressCurrentPtr = Marshal.AllocHGlobal(4);
-                        IntPtr _progressMaximumPtr = Marshal.AllocHGlobal(4);
+                        var _progressCurrentPtr = new SafePtr(0x04);
+                        var _progressMaximumPtr = new SafePtr(0x04);
 
-                        IntPtr _progressTextPtr = Marshal.AllocHGlobal(256);
+                        var _progressTextPtr = new SafePtr(0xFF);
 
-                        // Write the default strings to the pointers.
-
-                        var _fetchProgressBytes = Encoding.Default.GetBytes("Receiving Git Objects: {0} / {3}" + "\x00");
-                        Marshal.Copy(_fetchProgressBytes, 0, _progressTextPtr, _fetchProgressBytes.Length);
-
-                        // Write the default ints to the pointers.
-
-                        Marshal.WriteInt32(_progressCurrentPtr, 0x00);
-                        Marshal.WriteInt32(_progressMaximumPtr, 0x00);
-
+                        // Write the default string to the pointer.
+                        _progressTextPtr.WriteValue("Receiving Git Objects: {0} / {3}");
 
                         var _singleProgress = DialogService.ShowProgress(_fetchTopLevel, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _progressCurrentPtr, _progressMaximumPtr, _progressTextPtr);
 
@@ -572,8 +557,8 @@ public partial class MainViewModel : ViewModelBase
                             CurrentConfig,
                             new TransferProgressHandler((progress) =>
                             {
-                                Marshal.WriteInt32(_progressCurrentPtr, progress.ReceivedObjects);
-                                Marshal.WriteInt32(_progressMaximumPtr, progress.TotalObjects);
+                                _progressCurrentPtr.WriteValue(progress.ReceivedObjects);
+                                _progressMaximumPtr.WriteValue(progress.TotalObjects);
 
                                 if (ModService.CancelToken.IsCancellationRequested)
                                     return false;
@@ -584,41 +569,29 @@ public partial class MainViewModel : ViewModelBase
 
                         // Free all the pointers allocated.
 
+                        _progressTextPtr.Dispose();
 
-                        Marshal.FreeHGlobal(_progressTextPtr); _progressTextPtr = IntPtr.Zero;
-
-                        Marshal.FreeHGlobal(_progressMaximumPtr); _progressMaximumPtr = IntPtr.Zero;
-                        Marshal.FreeHGlobal(_progressCurrentPtr); _progressCurrentPtr = IntPtr.Zero;
+                        _progressMaximumPtr.Dispose();
+                        _progressCurrentPtr.Dispose();
                     }
 
                     else
                     {
                         // Allocate all the pointers to use for the progress bars.
 
-                        IntPtr _firstCurrentPtr = Marshal.AllocHGlobal(4);
-                        IntPtr _firstMaximumPtr = Marshal.AllocHGlobal(4);
+                        var _firstCurrentPtr = new SafePtr(0x04);
+                        var _firstMaximumPtr = new SafePtr(0x04);
 
-                        IntPtr _secondCurrentPtr = Marshal.AllocHGlobal(4);
-                        IntPtr _secondMaximumPtr = Marshal.AllocHGlobal(4);
+                        var _secondCurrentPtr = new SafePtr(0x04);
+                        var _secondMaximumPtr = new SafePtr(0x04);
 
-                        IntPtr _firstTextPtr = Marshal.AllocHGlobal(256);
-                        IntPtr _secondTextPtr = Marshal.AllocHGlobal(256);
+                        var _firstTextPtr = new SafePtr(0xFF);
+                        var _secondTextPtr = new SafePtr(0xFF);
 
                         // Write the default strings to the pointers.
 
-                        var _fetchFirstBytes = Encoding.Default.GetBytes($"Processing Mod: N/A" + "\x00");
-                        var _fetchSecondBytes = Encoding.Default.GetBytes("Receiving Git Objects: {0} / {3}" + "\x00");
-
-                        Marshal.Copy(_fetchFirstBytes, 0, _firstTextPtr, _fetchFirstBytes.Length);
-                        Marshal.Copy(_fetchSecondBytes, 0, _secondTextPtr, _fetchSecondBytes.Length);
-
-                        // Write the default ints to the pointers.
-
-                        Marshal.WriteInt32(_firstCurrentPtr, 0x00);
-                        Marshal.WriteInt32(_firstMaximumPtr, 0x00);
-
-                        Marshal.WriteInt32(_secondCurrentPtr, 0x00);
-                        Marshal.WriteInt32(_secondMaximumPtr, 0x00);
+                        _firstTextPtr.WriteValue($"Processing Mod: N/A");
+                        _secondTextPtr.WriteValue("Receiving Git Objects: {0} / {3}");
 
                         // Show the dialog.
 
@@ -635,14 +608,13 @@ public partial class MainViewModel : ViewModelBase
                                 CurrentConfig,
                                 new TransferProgressHandler((progress) =>
                                 {
-                                    var _fetchFirstBytes = Encoding.Default.GetBytes($"Processing Mod: {_fetchMod}" + "\x00");
-                                    Marshal.Copy(_fetchFirstBytes, 0, _firstTextPtr, _fetchFirstBytes.Length);
+                                    _firstTextPtr.WriteValue($"Processing Mod: {_fetchMod}");
 
-                                    Marshal.WriteInt32(_firstCurrentPtr, i + 0x01);
-                                    Marshal.WriteInt32(_firstMaximumPtr, _fetchMultiInstall.Length);
+                                    _firstCurrentPtr.WriteValue(i + 0x01);
+                                    _firstMaximumPtr.WriteValue(_fetchMultiInstall.Length);
 
-                                    Marshal.WriteInt32(_secondCurrentPtr, progress.ReceivedObjects);
-                                    Marshal.WriteInt32(_secondMaximumPtr, progress.TotalObjects);
+                                    _secondCurrentPtr.WriteValue( progress.ReceivedObjects);
+                                    _secondMaximumPtr.WriteValue( progress.TotalObjects);
 
                                     if (ModService.CancelToken.IsCancellationRequested)
                                         return false;
@@ -663,14 +635,14 @@ public partial class MainViewModel : ViewModelBase
 
                         // Free all the pointers allocated.
 
-                        Marshal.FreeHGlobal(_secondTextPtr); _secondTextPtr = IntPtr.Zero;
-                        Marshal.FreeHGlobal(_firstTextPtr); _firstTextPtr = IntPtr.Zero;
+                        _secondTextPtr.Dispose();
+                        _firstTextPtr.Dispose();
 
-                        Marshal.FreeHGlobal(_secondMaximumPtr); _secondMaximumPtr = IntPtr.Zero;
-                        Marshal.FreeHGlobal(_secondCurrentPtr); _secondCurrentPtr = IntPtr.Zero;
+                        _secondMaximumPtr.Dispose();
+                        _secondCurrentPtr.Dispose();
 
-                        Marshal.FreeHGlobal(_firstMaximumPtr); _firstCurrentPtr = IntPtr.Zero;
-                        Marshal.FreeHGlobal(_firstCurrentPtr); _firstCurrentPtr = IntPtr.Zero;
+                        _firstMaximumPtr.Dispose();
+                        _firstCurrentPtr.Dispose();
 
                         // Return the result.
 
@@ -681,6 +653,10 @@ public partial class MainViewModel : ViewModelBase
                 if (ModService.CancelToken.IsCancellationRequested || _fetchInstallResult == 0x03)
                     return false;
 
+                var _fetchGameNames = _fetchTopLevel.GameBox.Items.OfType<ComboBoxItem>()
+                                                                  .Select(x => x.Content as string)
+                                                                  .ToList();
+
                 switch (_fetchInstallResult)
                 {
                     case 0x00:
@@ -689,6 +665,8 @@ public partial class MainViewModel : ViewModelBase
 
                         var _fetchModAuthor = "";
                         var _fetchModName = "";
+
+                        var _fetchGitMod = false;
 
                         if (_fetchFileInfo.Exists)
                             _fetchModFolder = Path.Combine(_fetchModPath, $"local/{Path.GetFileNameWithoutExtension(_fetchResult)}");
@@ -702,6 +680,7 @@ public partial class MainViewModel : ViewModelBase
                             _fetchModName = _fetchModName.Split('@').First();
 
                             _fetchModFolder = Path.Combine(_fetchModPath, _fetchModAuthor, _fetchModName);
+                            _fetchGitMod = true;
                         }
 
                         var _fetchPathGit = Path.Combine(_fetchModFolder, ".git");
@@ -710,12 +689,74 @@ public partial class MainViewModel : ViewModelBase
 
                         var _fetchMetadata = Metadata.Read(_fetchYamlName);
 
+                        if (_fetchMetadata.Game != null)
+                        { 
+                            var _fetchMetadataGame = Config.GameShorthand.FirstOrDefault(x => x.Value == _fetchMetadata.Game).Key;
+
+                            var _fullNameMetadata = _fetchGameNames[(int)_fetchMetadataGame];
+                            var _fullNameCurrent = _fetchGameNames[(int)CurrentConfig.Frontend.TargetGame];
+
+                            if (_fetchMetadataGame != CurrentConfig.Frontend.TargetGame)
+                            {
+                                if (Directory.Exists(_fetchModFolder))
+                                    Directory.Delete(_fetchModFolder, true);
+
+                                await DialogService.ShowMessage(_fetchTopLevel, "Unsupported Game", $"This mod is made for {_fullNameMetadata} but you are trying to install it for {_fullNameCurrent}!\nPlease check to make sure the selected game matches the mod's requirements.", MessageType.ERROR);
+
+                                return false;
+                            }
+                        }
+
+                        if (_fetchMetadata.Dependencies != null)
+                        {
+                            var _fetchDependencies = _fetchMetadata.Dependencies;
+                            var _fetchMissingDeps = new List<string>();
+
+                            foreach (var _fetchDependency in _fetchDependencies)
+                            {
+                                var _doesHaveDependency = InstalledMods.FirstOrDefault(x => x.ModGitAddress != null && x.ModGitAddress.ToLower() == _fetchDependency.ToLower());
+
+                                if (_doesHaveDependency == null)
+                                    _fetchMissingDeps.Add(_fetchDependency);
+                            }
+
+                            if (_fetchMissingDeps.Count > 0)
+                            {
+                                var _fetchDepString = String.Join("\n- ", _fetchMissingDeps);
+                                var _fetchDepQuestion = await DialogService.ShowQuestion(_fetchTopLevel, "Missing Dependencies", $"This Mod has some dependencies that are not installed.\nTo proceed, all the following dependencies must be installed:\n\n- {_fetchDepString}\n\nDo you want to proceed? [Not doing so will cancel this mod's install.]");
+
+                                if (!_fetchDepQuestion)
+                                {
+                                    if (Directory.Exists(_fetchModFolder))
+                                        Directory.Delete(_fetchModFolder, true);
+
+                                    return false;
+                                }
+
+                                else
+                                {
+                                    var _fetchInstallStr = String.Join(";", _fetchMissingDeps);
+
+                                    var _fetchInstall = await Install(_fetchInstallStr);
+
+                                    if (!_fetchInstall)
+                                    {
+                                        if (Directory.Exists(_fetchModFolder))
+                                            Directory.Delete(_fetchModFolder, true);
+
+                                        return false;
+                                    }
+                                }
+                            }
+                        }
+
                         if (_fetchMetadata.IsValid)
                         {
                             var _modModel = new ModModel
                             {
                                 ModTitle = !String.IsNullOrEmpty(_fetchMetadata.Title) ? _fetchMetadata.Title : _fetchModName,
                                 ModAuthor = !String.IsNullOrEmpty(_fetchMetadata.OriginalAuthor) ? _fetchMetadata.OriginalAuthor : _fetchModAuthor,
+                                ModGitAddress = _fetchGitMod ? _fetchResult : null,
                                 ModDescription = !String.IsNullOrEmpty(_fetchMetadata.Description) ? _fetchMetadata.Description : "This mod does not have a description, but we believe it's pretty cool.",
                                 ModPath = _fetchModFolder,
                                 ModFilesList = _fetchMetadata.Assets.Select(x => x.Name).ToArray(),
@@ -819,6 +860,9 @@ public partial class MainViewModel : ViewModelBase
 
                     case 0x02:
                     {
+                        var _fetchIncompatibleList = new List<Tuple<string, string>>();
+                        var _fetchNoDependencyList = new List<string>();
+
                         foreach (var _fetchSuccess in _fetchSuccessList)
                         {
                             var _fetchModAuthor = _fetchSuccess.Split('/').First();
@@ -836,6 +880,69 @@ public partial class MainViewModel : ViewModelBase
 
                             var _fetchMetadata = Metadata.Read(_fetchYamlName);
 
+                            if (_fetchMetadata.Game != null)
+                            {
+                                var _fetchMetadataGame = Config.GameShorthand.FirstOrDefault(x => x.Value == _fetchMetadata.Game).Key;
+
+                                var _fullNameMetadata = _fetchGameNames[(int)_fetchMetadataGame];
+                                var _fullNameCurrent = _fetchGameNames[(int)CurrentConfig.Frontend.TargetGame];
+
+                                if (_fetchMetadataGame != CurrentConfig.Frontend.TargetGame)
+                                {
+                                    if (Directory.Exists(_fetchCurrentPath))
+                                        Directory.Delete(_fetchCurrentPath, true);
+
+                                    var _fetchGameTuple = new Tuple<string, string>(_fetchSuccess, _fullNameMetadata);
+                                    _fetchIncompatibleList.Add(_fetchGameTuple);
+
+                                    continue;
+                                }
+                            }
+
+                            if (_fetchMetadata.Dependencies != null)
+                            {
+                                var _fetchDependencies = _fetchMetadata.Dependencies;
+                                var _fetchMissingDeps = new List<string>();
+
+                                foreach (var _fetchDependency in _fetchDependencies)
+                                {
+                                    var _doesHaveDependency = InstalledMods.FirstOrDefault(x => x.ModGitAddress != null && x.ModGitAddress.ToLower() == _fetchDependency.ToLower());
+
+                                    if (_doesHaveDependency == null)
+                                        _fetchMissingDeps.Add(_fetchDependency);
+                                }
+
+                                if (_fetchMissingDeps.Count > 0)
+                                {
+                                    var _fetchDepString = String.Join("\n- ", _fetchMissingDeps);
+                                    var _fetchDepQuestion = await DialogService.ShowQuestion(_fetchTopLevel, "Missing Dependencies", $"This Mod has some dependencies that are not installed.\nTo proceed, all the following dependencies must be installed:\n\n- {_fetchDepString}\n\nDo you want to proceed? [Not doing so will cancel this mod's install.]");
+
+                                    if (!_fetchDepQuestion)
+                                    {
+                                        if (Directory.Exists(_fetchCurrentPath))
+                                            Directory.Delete(_fetchCurrentPath, true);
+
+                                        _fetchNoDependencyList.Add(_fetchSuccess);
+                                        continue;
+                                    }
+
+                                    else
+                                    {
+                                        var _fetchInstallStr = String.Join(";", _fetchMissingDeps);
+                                        var _fetchInstall = await Install(_fetchInstallStr);
+
+                                        if (!_fetchInstall)
+                                        {
+                                            if (Directory.Exists(_fetchCurrentPath))
+                                                Directory.Delete(_fetchCurrentPath, true);
+
+                                            _fetchNoDependencyList.Add(_fetchSuccess);
+                                            continue;
+                                        }
+                                    }
+                                }
+                            }
+
                             if (_fetchMetadata.IsValid)
                             {
                                 var _modModel = new ModModel
@@ -843,6 +950,7 @@ public partial class MainViewModel : ViewModelBase
                                     ModTitle = _fetchMetadata.Title,
                                     ModAuthor = _fetchMetadata.OriginalAuthor,
                                     ModDescription = _fetchMetadata.Description,
+                                    ModGitAddress = _fetchSuccess,
                                     ModPath = _fetchCurrentPath,
                                     ModFilesList = _fetchMetadata.Assets.Select(x => x.Name).ToArray(),
                                     ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
@@ -1148,30 +1256,19 @@ public partial class MainViewModel : ViewModelBase
 
             // Allocate all the pointers to use for the progress bars.
 
-            var _firstCurrentPtr = Marshal.AllocHGlobal(4);
-            var _firstMaximumPtr = Marshal.AllocHGlobal(4);
+            var _firstCurrentPtr = new SafePtr(0x04);
+            var _firstMaximumPtr = new SafePtr(0x04);
             
-            var _secondCurrentPtr = Marshal.AllocHGlobal(4);
-            var _secondMaximumPtr = Marshal.AllocHGlobal(4);
+            var _secondCurrentPtr = new SafePtr(0x04);
+            var _secondMaximumPtr = new SafePtr(0x04);
             
-            var _firstTextPtr = Marshal.AllocHGlobal(256);
-            var _secondTextPtr = Marshal.AllocHGlobal(256);
+            var _firstTextPtr =  new SafePtr(0xFF);
+            var _secondTextPtr = new SafePtr(0xFF);
 
             // Write the default strings to the pointers.
 
-            var _fetchFirstBytes = Encoding.Default.GetBytes("Currently building: N/A" + "\x00");
-            var _fetchSecondBytes = Encoding.Default.GetBytes("Processing Files: {0} / {3}" + "\x00");
-
-            Marshal.Copy(_fetchFirstBytes, 0, _firstTextPtr, _fetchFirstBytes.Length);
-            Marshal.Copy(_fetchSecondBytes, 0, _secondTextPtr, _fetchSecondBytes.Length);
-
-            // Write the default ints to the pointers.
-
-            Marshal.WriteInt32(_firstCurrentPtr, 0x00);
-            Marshal.WriteInt32(_firstMaximumPtr, 0x00);
-
-            Marshal.WriteInt32(_secondCurrentPtr, 0x00);
-            Marshal.WriteInt32(_secondMaximumPtr, 0x00);
+            _firstTextPtr.WriteValue("Currently building: N/A");
+            _secondTextPtr.WriteValue("Processing Files: {0} / {3}");
 
             // Show the dialog.
 
@@ -1189,11 +1286,10 @@ public partial class MainViewModel : ViewModelBase
                     {
                         _currentModName = currModName;
 
-                        var _fetchFirstBytes = Encoding.Default.GetBytes($"Currently building: {currModName}" + "\x00");
-                        Marshal.Copy(_fetchFirstBytes, 0, _firstTextPtr, _fetchFirstBytes.Length);
+                        _firstTextPtr.WriteValue($"Currently building: {currModName}");
 
-                        Marshal.WriteInt32(_firstCurrentPtr, procMod);
-                        Marshal.WriteInt32(_firstMaximumPtr, totalMod);
+                        _firstCurrentPtr.WriteValue(procMod);
+                        _firstMaximumPtr.WriteValue(totalMod);
 
                         if (ModService.CancelToken.IsCancellationRequested)
                             return false;
@@ -1203,8 +1299,8 @@ public partial class MainViewModel : ViewModelBase
 
                     (int processed, int total) =>
                     {
-                        Marshal.WriteInt32(_secondCurrentPtr, processed);
-                        Marshal.WriteInt32(_secondMaximumPtr, total);
+                        _secondCurrentPtr.WriteValue(processed);
+                        _secondMaximumPtr.WriteValue(total);
 
                         if (ModService.CancelToken.IsCancellationRequested)
                             return false;
@@ -1215,14 +1311,14 @@ public partial class MainViewModel : ViewModelBase
 
             // Free all the pointers allocated.
 
-            Marshal.FreeHGlobal(_secondTextPtr); _secondTextPtr = IntPtr.Zero;
-            Marshal.FreeHGlobal(_firstTextPtr); _firstTextPtr = IntPtr.Zero;
+            _secondTextPtr.Dispose();
+            _firstTextPtr.Dispose();
 
-            Marshal.FreeHGlobal(_secondMaximumPtr); _secondMaximumPtr = IntPtr.Zero;
-            Marshal.FreeHGlobal(_secondCurrentPtr); _secondCurrentPtr = IntPtr.Zero;
+            _secondMaximumPtr.Dispose();
+            _secondCurrentPtr.Dispose();
 
-            Marshal.FreeHGlobal(_firstMaximumPtr); _firstCurrentPtr = IntPtr.Zero;
-            Marshal.FreeHGlobal(_firstCurrentPtr); _firstCurrentPtr = IntPtr.Zero;
+            _firstMaximumPtr.Dispose();
+            _firstCurrentPtr.Dispose();
 
             if (_buildResult == 0x00)
                 return true;
