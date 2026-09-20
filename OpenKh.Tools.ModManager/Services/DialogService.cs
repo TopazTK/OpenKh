@@ -30,8 +30,8 @@ namespace OpenKh.Tools.ModManager.Services
             {
                 while (true)
                 {
-                    var _fetchFirstCurrent = firstProgCurr.GetValue() as int?;
-                    var _fetchFirstMaximum = firstProgMax.GetValue() as int?;
+                    int? _fetchFirstCurrent = firstProgCurr;
+                    int? _fetchFirstMaximum = firstProgMax;
 
                     if (_fetchFirstCurrent == null || _fetchFirstMaximum == null)
                     {
@@ -43,11 +43,11 @@ namespace OpenKh.Tools.ModManager.Services
                         break;
                     }
 
-                    var _fetchSecondCurrent = secondProgCurr != null ? secondProgCurr.GetValue() as int? : null;
-                    var _fetchSecondMaximum = secondProgMax != null ? secondProgMax.GetValue() as int? : null;
+                    int? _fetchSecondCurrent = secondProgCurr != null ? secondProgCurr : null;
+                    int? _fetchSecondMaximum = secondProgMax != null ? secondProgMax : null;
 
-                    var _fetchFirstString = firstProgText != null ? firstProgText.GetValue() as string : null;
-                    var _fetchSecondString = secondProgText != null ? secondProgText.GetValue() as string : null;
+                    string? _fetchFirstString = firstProgText != null ? firstProgText : null;
+                    string? _fetchSecondString = secondProgText != null ? secondProgText : null;
 
                     Dispatcher.UIThread.Post(() =>
                     {

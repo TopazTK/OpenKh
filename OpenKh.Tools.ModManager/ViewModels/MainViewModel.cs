@@ -3,16 +3,17 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
-using Avalonia.Input;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LibGit2Sharp;
 using LibGit2Sharp.Handlers;
+using OpenKh.Bbs.SystemData;
 using OpenKh.Patcher;
 using OpenKh.Tools.ModManager.Classes;
 using OpenKh.Tools.ModManager.Dialogs;
@@ -225,6 +226,25 @@ public partial class MainViewModel : ViewModelBase
                         IsChecked = _fetchPreset == _preset.PresetName,
                         Command = SwitchPresetCommand,
                         CommandParameter = _preset.PresetName,
+                        ContextMenu = new ContextMenu
+                        {
+                            ItemsSource = new[]
+                            {
+                                new MenuItem
+                                {
+                                    Header = "Rename Preset...",
+                                    Command = RenamePresetCommand,
+                                    CommandParameter = _preset.PresetName
+                                },
+
+                                new MenuItem
+                                {
+                                    Header = "Delete Preset...",
+                                    Command = DeletePresetCommand,
+                                    CommandParameter = _preset.PresetName
+                                }
+                            }
+                        },
                         InputGesture = new KeyGesture(_fetchKey, KeyModifiers.Alt)
                     };
 
@@ -497,13 +517,10 @@ public partial class MainViewModel : ViewModelBase
 
                 if (_fetchFileInfo.Exists)
                 {
-                    var _progressCurrentPtr = new SafePtr(0x04);
-                    var _progressMaximumPtr = new SafePtr(0x04);
-                    
-                    var _progressTextPtr = new SafePtr(0xFF);
+                    SafePtr _progressCurrentPtr = 0x00;
+                    SafePtr _progressMaximumPtr = 0x00;
 
-                    // Write the default string to the pointer.
-                    _progressTextPtr.WriteValue("Processing Local Files: {0} / {3}");
+                    SafePtr _progressTextPtr = "Processing Local Files: {0} / {3}";
 
                     var _singleProgress = DialogService.ShowProgress(_fetchTopLevel, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _progressCurrentPtr, _progressMaximumPtr, _progressTextPtr);
 
@@ -514,8 +531,8 @@ public partial class MainViewModel : ViewModelBase
                         CurrentConfig,
                         (int processed, int total) =>
                         {
-                           _progressCurrentPtr.WriteValue(processed);
-                           _progressMaximumPtr.WriteValue(total);
+                           _progressCurrentPtr /= processed;
+                           _progressMaximumPtr /= total;
 
                             if (ModService.CancelToken.IsCancellationRequested)
                                 return false;
@@ -540,13 +557,10 @@ public partial class MainViewModel : ViewModelBase
                     {
                         // Allocate the pointers necessary.
 
-                        var _progressCurrentPtr = new SafePtr(0x04);
-                        var _progressMaximumPtr = new SafePtr(0x04);
+                        SafePtr _progressCurrentPtr = 0x00;
+                        SafePtr _progressMaximumPtr = 0x00;
 
-                        var _progressTextPtr = new SafePtr(0xFF);
-
-                        // Write the default string to the pointer.
-                        _progressTextPtr.WriteValue("Receiving Git Objects: {0} / {3}");
+                        SafePtr _progressTextPtr = "Receiving Git Objects: {0} / {3}";
 
                         var _singleProgress = DialogService.ShowProgress(_fetchTopLevel, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _progressCurrentPtr, _progressMaximumPtr, _progressTextPtr);
 
@@ -557,8 +571,8 @@ public partial class MainViewModel : ViewModelBase
                             CurrentConfig,
                             new TransferProgressHandler((progress) =>
                             {
-                                _progressCurrentPtr.WriteValue(progress.ReceivedObjects);
-                                _progressMaximumPtr.WriteValue(progress.TotalObjects);
+                                _progressCurrentPtr /= progress.ReceivedObjects;
+                                _progressMaximumPtr /= progress.TotalObjects;
 
                                 if (ModService.CancelToken.IsCancellationRequested)
                                     return false;
@@ -579,19 +593,14 @@ public partial class MainViewModel : ViewModelBase
                     {
                         // Allocate all the pointers to use for the progress bars.
 
-                        var _firstCurrentPtr = new SafePtr(0x04);
-                        var _firstMaximumPtr = new SafePtr(0x04);
+                        SafePtr _firstCurrentPtr = 0x00;
+                        SafePtr _firstMaximumPtr = 0x00;
 
-                        var _secondCurrentPtr = new SafePtr(0x04);
-                        var _secondMaximumPtr = new SafePtr(0x04);
+                        SafePtr _secondCurrentPtr = 0x00;
+                        SafePtr _secondMaximumPtr = 0x00;
 
-                        var _firstTextPtr = new SafePtr(0xFF);
-                        var _secondTextPtr = new SafePtr(0xFF);
-
-                        // Write the default strings to the pointers.
-
-                        _firstTextPtr.WriteValue($"Processing Mod: N/A");
-                        _secondTextPtr.WriteValue("Receiving Git Objects: {0} / {3}");
+                        SafePtr _firstTextPtr = $"Processing Mod: N/A";
+                        SafePtr _secondTextPtr = "Receiving Git Objects: {0} / {3}";
 
                         // Show the dialog.
 
@@ -608,13 +617,13 @@ public partial class MainViewModel : ViewModelBase
                                 CurrentConfig,
                                 new TransferProgressHandler((progress) =>
                                 {
-                                    _firstTextPtr.WriteValue($"Processing Mod: {_fetchMod}");
+                                    _firstTextPtr /= $"Processing Mod: {_fetchMod}";
 
-                                    _firstCurrentPtr.WriteValue(i + 0x01);
-                                    _firstMaximumPtr.WriteValue(_fetchMultiInstall.Length);
+                                    _firstCurrentPtr /= i + 0x01;
+                                    _firstMaximumPtr /= _fetchMultiInstall.Length;
 
-                                    _secondCurrentPtr.WriteValue( progress.ReceivedObjects);
-                                    _secondMaximumPtr.WriteValue( progress.TotalObjects);
+                                    _secondCurrentPtr /= progress.ReceivedObjects;
+                                    _secondMaximumPtr /= progress.TotalObjects;
 
                                     if (ModService.CancelToken.IsCancellationRequested)
                                         return false;
@@ -1256,19 +1265,14 @@ public partial class MainViewModel : ViewModelBase
 
             // Allocate all the pointers to use for the progress bars.
 
-            var _firstCurrentPtr = new SafePtr(0x04);
-            var _firstMaximumPtr = new SafePtr(0x04);
-            
-            var _secondCurrentPtr = new SafePtr(0x04);
-            var _secondMaximumPtr = new SafePtr(0x04);
-            
-            var _firstTextPtr =  new SafePtr(0xFF);
-            var _secondTextPtr = new SafePtr(0xFF);
+            SafePtr _firstCurrentPtr = 0x00;
+            SafePtr _firstMaximumPtr = 0x00;
 
-            // Write the default strings to the pointers.
+            SafePtr _secondCurrentPtr = 0x00;
+            SafePtr _secondMaximumPtr = 0x00;
 
-            _firstTextPtr.WriteValue("Currently building: N/A");
-            _secondTextPtr.WriteValue("Processing Files: {0} / {3}");
+            SafePtr _firstTextPtr = "Currently building: N/A";
+            SafePtr _secondTextPtr = "Processing Files: {0} / {3}";
 
             // Show the dialog.
 
@@ -1286,10 +1290,10 @@ public partial class MainViewModel : ViewModelBase
                     {
                         _currentModName = currModName;
 
-                        _firstTextPtr.WriteValue($"Currently building: {currModName}");
+                        _firstTextPtr /= $"Currently building: {currModName}";
 
-                        _firstCurrentPtr.WriteValue(procMod);
-                        _firstMaximumPtr.WriteValue(totalMod);
+                        _firstCurrentPtr /= procMod;
+                        _firstMaximumPtr /= totalMod;
 
                         if (ModService.CancelToken.IsCancellationRequested)
                             return false;
@@ -1299,8 +1303,8 @@ public partial class MainViewModel : ViewModelBase
 
                     (int processed, int total) =>
                     {
-                        _secondCurrentPtr.WriteValue(processed);
-                        _secondMaximumPtr.WriteValue(total);
+                        _secondCurrentPtr /= processed;
+                        _secondMaximumPtr /= total;
 
                         if (ModService.CancelToken.IsCancellationRequested)
                             return false;
@@ -1527,6 +1531,25 @@ public partial class MainViewModel : ViewModelBase
                         IsChecked = false,
                         Command = SwitchPresetCommand,
                         CommandParameter = _fetchResult,
+                        ContextMenu = new ContextMenu
+                        {
+                            ItemsSource = new[]
+                            {
+                                new MenuItem
+                                {
+                                    Header = "Rename Preset...",
+                                    Command = RenamePresetCommand,
+                                    CommandParameter = _fetchResult
+                                },
+
+                                new MenuItem
+                                {
+                                    Header = "Delete Preset...",
+                                    Command = DeletePresetCommand,
+                                    CommandParameter = _fetchResult
+                                }
+                            }
+                        },
                         InputGesture = new KeyGesture(Key.D0, KeyModifiers.Alt)
                     });
                 }
@@ -1540,6 +1563,25 @@ public partial class MainViewModel : ViewModelBase
                         IsChecked = false,
                         Command = SwitchPresetCommand,
                         CommandParameter = _fetchResult,
+                        ContextMenu = new ContextMenu
+                        {
+                            ItemsSource = new[]
+                            {
+                                new MenuItem
+                                {
+                                    Header = "Rename Preset...",
+                                    Command = RenamePresetCommand,
+                                    CommandParameter = _fetchResult
+                                },
+
+                                new MenuItem
+                                {
+                                    Header = "Delete Preset...",
+                                    Command = DeletePresetCommand,
+                                    CommandParameter = _fetchResult
+                                }
+                            }
+                        },
                         InputGesture = new KeyGesture((Key)(34 + PresetItems.Count - 0x03), KeyModifiers.Alt)
                     });
                 }
@@ -1576,6 +1618,34 @@ public partial class MainViewModel : ViewModelBase
 
             CurrentConfig.Frontend.TargetPreset[_fetchGame] = input;
             InitializeView();
+
+            return true;
+        }
+
+        return false;
+    }
+
+    [RelayCommand]
+    private async Task<bool> DeletePreset(string input)
+    {
+        if (CurrentConfig != null)
+        {
+            var _fetchGame = (int)CurrentConfig.Frontend.TargetGame;
+            var _fetchPreset = CurrentConfig.Frontend.TargetPreset[_fetchGame];
+
+            return true;
+        }
+
+        return false;
+    }
+
+    [RelayCommand]
+    private async Task<bool> RenamePreset(string input)
+    {
+        if (CurrentConfig != null)
+        {
+            var _fetchGame = (int)CurrentConfig.Frontend.TargetGame;
+            var _fetchPreset = CurrentConfig.Frontend.TargetPreset[_fetchGame];
 
             return true;
         }

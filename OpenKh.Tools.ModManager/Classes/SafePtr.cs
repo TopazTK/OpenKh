@@ -11,80 +11,63 @@ namespace OpenKh.Tools.ModManager.Classes
     public class SafePtr : IDisposable
     {
         protected IntPtr _internalPtr;
-        protected int _internalSize;
+        protected Type _internalType;
 
-        public SafePtr(int size)
+        public SafePtr(object value)
         {
-            _internalSize = size;
-            _internalPtr = Marshal.AllocHGlobal(_internalSize);
+            _internalType = value.GetType();
+            _internalPtr = Marshal.AllocHGlobal(value is string ? 255 : Marshal.SizeOf(_internalType));
 
-            if (_internalSize == 0x04)
-                Marshal.WriteInt32(_internalPtr, 0x00);
+            if (value is byte)
+                Marshal.WriteByte(_internalPtr, (byte)value);
 
-            else if (_internalSize == 0xFF)
-                Marshal.Copy(new byte[0xFF], 0, _internalPtr, 0xFF);
+            else if (value is short)
+                Marshal.WriteInt16(_internalPtr, (short)value);
 
-            else
-                throw new InvalidCastException("Invalid pointer length! Supported values are 0x04 [Int] and 0xFF [String]");
+            else if (value is int)
+                Marshal.WriteInt32(_internalPtr, (int)value);
+
+            else if (value is long)
+                Marshal.WriteInt64(_internalPtr, (long)value);
+
+            else if (value is string)
+            {
+                var _fetchString = (value as string) + "\x00";
+                var _fetchEncoding = Encoding.Default.GetBytes(_fetchString);
+                Marshal.Copy(_fetchEncoding, 0, _internalPtr, _fetchEncoding.Length);
+            }
         }
 
-        public object? GetValue()
+        public static implicit operator SafePtr(byte value) => new SafePtr(value);
+        public static implicit operator SafePtr(short value) => new SafePtr(value);
+        public static implicit operator SafePtr(int value) => new SafePtr(value);
+        public static implicit operator SafePtr(long value) => new SafePtr(value);
+        public static implicit operator SafePtr(string value) => new SafePtr(value);
+
+        public void operator /= (byte value) => Marshal.WriteByte(_internalPtr, value);
+        public void operator /= (short value) => Marshal.WriteInt16(_internalPtr, value);
+        public void operator /= (int value) => Marshal.WriteInt32(_internalPtr, value);
+        public void operator /= (long value) => Marshal.WriteInt64(_internalPtr, value);
+        public void operator /= (string value)
         {
-            if (_internalPtr == IntPtr.Zero)
+            var _fetchString = value + "\x00";
+            var _fetchEncoding = Encoding.Default.GetBytes(_fetchString);
+            Marshal.Copy(_fetchEncoding, 0, _internalPtr, _fetchEncoding.Length);
+        }
+
+        public static implicit operator byte?(SafePtr value) => value == null || value._internalPtr == IntPtr.Zero ? null : Marshal.ReadByte(value._internalPtr);
+        public static implicit operator short?(SafePtr value) => value == null || value._internalPtr == IntPtr.Zero ? null : Marshal.ReadInt16(value._internalPtr);
+        public static implicit operator int?(SafePtr value) => value == null || value._internalPtr == IntPtr.Zero ? null : Marshal.ReadInt32(value._internalPtr);
+        public static implicit operator long?(SafePtr value) => value == null || value._internalPtr == IntPtr.Zero ? null : Marshal.ReadInt64(value._internalPtr);
+        public static implicit operator string?(SafePtr value)
+        {
+            var _fetchValue = new byte[0xFF];
+
+            if (value == null || value._internalPtr == IntPtr.Zero)
                 return null;
 
-            switch (_internalSize)
-            {
-                case 0x04:
-                    return Marshal.ReadInt32(_internalPtr);
-
-                case 0xFF:
-                {
-                    var _fetchValue = new byte[0xFF];
-                    Marshal.Copy(_internalPtr, _fetchValue, 0, 0xFF);
-                    return Encoding.Default.GetString(_fetchValue, 0x00, _fetchValue.IndexOf<byte>(0x00));
-                }
-
-                default:
-                    return null;
-            }
-        }
-
-        public bool WriteValue(object value)
-        {
-            if (_internalPtr == IntPtr.Zero)
-                return false;
-
-            switch (_internalSize)
-            {
-                case 0x04:
-                {
-                    if (value is int)
-                    {
-                        Marshal.WriteInt32(_internalPtr, (int)value);
-                        return true;
-                    }
-
-                    else
-                        return false;
-                }
-
-                case 0xFF:
-                {
-                    if (value is string)
-                    {
-                        var _fetchTextBytes = Encoding.Default.GetBytes((value as string) + "\x00");
-                        Marshal.Copy(_fetchTextBytes, 0, _internalPtr, _fetchTextBytes.Length);
-                        return true;
-                    }
-
-                    else
-                        return false;
-                }
-
-                default:
-                    return false;
-            }
+            Marshal.Copy(value._internalPtr, _fetchValue, 0, 0xFF);
+            return Encoding.Default.GetString(_fetchValue, 0x00, _fetchValue.IndexOf<byte>(0x00));
         }
 
         public void Dispose()
