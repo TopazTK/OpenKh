@@ -36,6 +36,9 @@ namespace OpenKh.Tools.ModManager.Classes
                 var _fetchEncoding = Encoding.Default.GetBytes(_fetchString);
                 Marshal.Copy(_fetchEncoding, 0, _internalPtr, _fetchEncoding.Length);
             }
+
+            else
+                throw new InvalidCastException("SafePtr does not support this type!");
         }
 
         public static implicit operator SafePtr(byte value) => new SafePtr(value);
