@@ -18,8 +18,8 @@ public partial class MainView : Window
         if (_fetchContext == null)
             return;
 
-        // Re-Initialize the view.
-        _fetchContext.InitializeView();
+        // Re-Initialize the viewmodel.
+        _fetchContext.InitViewModel();
     }
 
     public MainView()

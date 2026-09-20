@@ -39,34 +39,8 @@ namespace OpenKh.Tools.ModManager.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
-    [ObservableProperty]
-    private bool _initialized = false;
+    #region EVENT HANDLERS
 
-    [ObservableProperty]
-    private ModModel? _currentMod = null;
-
-    [ObservableProperty]
-    private ObservableCollection<ModModel>? _installedMods = null;
-
-    [ObservableProperty]
-    private bool _configurationValid = true;
-
-    [ObservableProperty]
-    private Config? _currentConfig = null;
-
-    [ObservableProperty]
-    private bool _doesConfigExist = false;
-
-    [ObservableProperty]
-    private bool _hasModsInstalled = false;
-
-    [ObservableProperty]
-    private ObservableCollection<object> _presetItems;
-
-    /// <summary>
-    /// Activates whenever InstalledMods has a property change.
-    /// It commits said changes to the targeted game's mod memory.
-    /// </summary>
     protected void OnModPropertyChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         // Fetch the modlist from the sender.
@@ -105,7 +79,149 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    public TopLevel? FetchTopLevel()
+    protected void OnPresetChanged(object? sender, NotifyCollectionChangedEventArgs? e)
+    {
+        if (CurrentConfig != null)
+        {
+            var _fetchTargetGame = CurrentConfig.Frontend.TargetGame;
+            var _fetchPresetConfig = CurrentConfig.Frontend.TargetPreset;
+
+            if (_fetchPresetConfig != null)
+            {
+                var _fetchCurrent = _fetchPresetConfig[(int)_fetchTargetGame];
+
+                var _fetchPresetPath = Path.Combine(AppContext.BaseDirectory, "preset.yml");
+
+                var _fetchPresetList = sender as ObservableCollection<PresetModel>;
+                var _fetchGameList = _fetchPresetList.Where(x => x.TargetGame == CurrentConfig.Frontend.TargetGame);
+
+                if (PresetMenu == null)
+                {
+                    PresetMenu = new ObservableCollection<object>()
+                {
+                    new MenuItem()
+                    {
+                        Header = "Create New Preset...",
+                        Command = CreatePresetCommand,
+                        InputGesture = new KeyGesture(Key.N, KeyModifiers.Alt)
+                    },
+
+                    new Separator(),
+
+                    new MenuItem()
+                    {
+                        Header = "No Presets Available",
+                        IsEnabled = false
+                    },
+                };
+                }
+
+                PresetMenu = new ObservableCollection<object>(PresetMenu.Take(0x03));
+
+                var _fetchMenu = PresetMenu.OfType<MenuItem>();
+                var _doesDefaultExist = _fetchMenu.FirstOrDefault(x => x.Header as string == "Default") != null;
+
+                if (_fetchGameList.Count() > 0x00)
+                {
+                    if (!_doesDefaultExist)
+                    {
+                        PresetMenu[0x02] = new MenuItem
+                        {
+                            Header = "Default",
+                            ToggleType = MenuItemToggleType.Radio,
+                            IsChecked = _fetchCurrent == "",
+                            Command = SwitchPresetCommand,
+                            CommandParameter = null,
+                            InputGesture = new KeyGesture(Key.D, KeyModifiers.Alt)
+                        };
+                    }
+
+                    for (int i = 0; i < _fetchGameList.Count(); i++)
+                    {
+                        var _fetchPreset = _fetchGameList.ElementAt(i);
+
+                        PresetMenu.Add(new MenuItem
+                        {
+                            Header = _fetchPreset.Name,
+                            ToggleType = MenuItemToggleType.Radio,
+                            Command = SwitchPresetCommand,
+                            IsChecked = _fetchCurrent == _fetchPreset.Name,
+                            CommandParameter = _fetchPreset,
+                            InputGesture = new KeyGesture(Key.D0 + i, KeyModifiers.Alt),
+                            ContextMenu = new ContextMenu
+                            {
+                                ItemsSource = new[]
+                                {
+                                new MenuItem
+                                {
+                                    Header = "Rename Preset...",
+                                    Command = RenamePresetCommand,
+                                    CommandParameter = _fetchPreset
+                                },
+
+                                new MenuItem
+                                {
+                                    Header = "Delete Preset...",
+                                    Command = DeletePresetCommand,
+                                    CommandParameter = _fetchPreset
+                                }
+                            }
+                            }
+                        });
+                    }
+                }
+
+                else
+                {
+                    PresetMenu[0x02] = new MenuItem
+                    {
+                        Header = "No Presets Available",
+                        IsEnabled = false
+                    };
+                }
+
+                var _fetchSerial = YamlSerializer.Serialize(_fetchPresetList);
+                File.WriteAllText(_fetchPresetPath, _fetchSerial);
+            }
+        }
+    }
+
+    #endregion
+
+    #region PROPERTIES
+
+    [ObservableProperty]
+    private bool _initialized = false;
+
+    [ObservableProperty]
+    private ModModel? _currentMod = null;
+
+    [ObservableProperty]
+    private ObservableCollection<ModModel>? _installedMods = null;
+
+    [ObservableProperty]
+    private bool _configurationValid = true;
+
+    [ObservableProperty]
+    private Config? _currentConfig = null;
+
+    [ObservableProperty]
+    private bool _doesConfigExist = false;
+
+    [ObservableProperty]
+    private bool _hasModsInstalled = false;
+
+    [ObservableProperty]
+    private ObservableCollection<object>? _presetMenu;
+
+    [ObservableProperty]
+    private ObservableCollection<PresetModel>? _presetMemory;
+
+    #endregion
+
+    #region HELPER FUNCTIONS
+
+    public MainView? FetchMainWindow()
     {
         var _fetchApplication = Avalonia.Application.Current;
 
@@ -115,12 +231,127 @@ public partial class MainViewModel : ViewModelBase
         var _fetchLifetime = _fetchApplication.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
         var _fetchMainView = _fetchLifetime != null ? _fetchLifetime.MainWindow : null;
 
-        return _fetchMainView;
+        return _fetchMainView as MainView;
     }
 
-    public MainViewModel() => InitializeView();
+    #endregion
 
-    public void InitializeMods()
+    #region VIEWMODEL INITIALIZATION
+
+    public MainViewModel() => InitViewModel();
+
+    public void InitViewModel()
+    {
+        Initialized = false;
+
+        CurrentMod = null;
+        InstalledMods = null;
+        HasModsInstalled = false;
+        ConfigurationValid = true;
+
+        PresetMenu = null;
+        PresetMemory = null;
+
+        // === Configuration Parsing and Verification === //
+
+        // If the config is null, parse it.
+        // If it does not exist, pop-up the setup wizard.
+
+        if (CurrentConfig == null)
+        {
+            var CurrentConfigFile = Path.Combine(AppContext.BaseDirectory, "config.yml");
+
+            if (File.Exists(CurrentConfigFile))
+            {
+                var CurrentConfigRAW = File.ReadAllText(CurrentConfigFile);
+
+                DoesConfigExist = true;
+                CurrentConfig = Config.Load();
+            }
+
+            else
+            {
+                DoesConfigExist = false;
+
+                CurrentConfig = new Config
+                {
+                    Panacea = new Panacea(),
+
+                    Frontend = new Frontend()
+                    {
+                        GamePath = new string[2],
+                        TargetPlatform = Platform.STEAM,
+                        ModBuildType = BuildType.PANACEA,
+                        TargetGame = Game.KINGDOM_HEARTS_II,
+                        TargetPreset = new string[5]
+                    },
+
+                    Emulator = new Emulator()
+                    {
+                        EmuPath = new string[1],
+                        RomPath = new string[3],
+                    }
+                };
+
+                CurrentConfig.Commit();
+            }
+        }
+
+        ConfigurationValid = CurrentConfig.IsValid();
+
+        // === Preset Parsing and Verification === //
+
+        var _fetchPresetConfig = CurrentConfig.Frontend.TargetPreset;
+
+        if (_fetchPresetConfig != null)
+        {
+            var _fetchTargetGame = CurrentConfig.Frontend.TargetGame;
+            var _fetchTargetPreset = _fetchPresetConfig[(int)_fetchTargetGame];
+
+            var _fetchPresetPath = Path.Combine(AppContext.BaseDirectory, "preset.yml");
+
+            if (File.Exists(_fetchPresetPath))
+            {
+                var _fetchPresetRAW = File.ReadAllText(_fetchPresetPath);
+                var _fetchPresetList = YamlSerializer.Deserialize<List<PresetModel>>(_fetchPresetRAW);
+
+                if (_fetchPresetList != null)
+                {
+                    PresetMemory = new ObservableCollection<PresetModel>();
+                    PresetMemory.CollectionChanged += OnPresetChanged;
+
+                    OnPresetChanged(PresetMemory, null);
+
+                    foreach (var _fetchPreset in _fetchPresetList)
+                        PresetMemory.Add(_fetchPreset);
+
+                    if (_fetchTargetPreset != null && PresetMenu != null)
+                    {
+                        var _fetchMenu = PresetMenu.OfType<MenuItem>();
+                        var _fetchPresetItem = _fetchMenu.FirstOrDefault(x => x.Header as string == _fetchTargetPreset);
+
+                        if (_fetchPresetItem == null)
+                            _fetchPresetConfig[(int)_fetchTargetGame] = "";
+                    }
+                }
+            }
+
+            else
+                File.WriteAllText(_fetchPresetPath, "[]");
+        }
+
+        IterateModlist();
+
+        // Initialization is complete.
+        Initialized = true;
+    }
+
+    #endregion
+
+    #region MOD COMMANDS
+
+    [RelayCommand]
+    public async Task<bool> IterateModlist()
     {
         if (CurrentConfig != null)
         {
@@ -315,169 +546,11 @@ public partial class MainViewModel : ViewModelBase
                 HasModsInstalled = true;
                 CurrentMod = InstalledMods.First();
             }
-        }
-    }
 
-    public void InitializeView()
-    {
-        Initialized = false;
-
-        CurrentMod = null;
-        InstalledMods = null;
-        HasModsInstalled = false;
-        ConfigurationValid = true;
-
-        // === Configuration Parsing and Verification === //
-
-        // If the config is null, parse it.
-        // TODO: If it does not exist, pop-up the setup wizard.
-
-        if (CurrentConfig == null)
-        {
-            var CurrentConfigFile = Path.Combine(AppContext.BaseDirectory, "config.yml");
-
-            if (File.Exists(CurrentConfigFile))
-            {
-                var CurrentConfigRAW = File.ReadAllText(CurrentConfigFile);
-
-                DoesConfigExist = true;
-                CurrentConfig = Config.Load();
-            }
-
-            else
-            {
-                DoesConfigExist = false;
-
-                CurrentConfig = new Config
-                {
-                    Panacea = new Panacea(),
-
-                    Frontend = new Frontend()
-                    {
-                        GamePath = new string[2],
-                        TargetPlatform = Platform.STEAM,
-                        ModBuildType = BuildType.PANACEA,
-                        TargetGame = Game.KINGDOM_HEARTS_II,
-                        TargetPreset = new string[5]
-                    },
-
-                    Emulator = new Emulator()
-                    {
-                        EmuPath = new string[1],
-                        RomPath = new string[3],
-                    }
-                };
-
-                CurrentConfig.Commit();
-            }
+            return true;
         }
 
-        ConfigurationValid = CurrentConfig.IsValid();
-
-        // === Preset Parsing and Verification === //
-
-        PresetItems = new ObservableCollection<object>();
-
-        PresetItems.Add(new MenuItem()
-        {
-            Header = "Create New Preset...",
-            Command = CreatePresetCommand,
-            InputGesture = new KeyGesture(Key.N, KeyModifiers.Alt)
-        });
-
-        PresetItems.Add(new Separator());
-
-        var _fetchGame = (int)CurrentConfig.Frontend.TargetGame;
-        var _fetchPreset = CurrentConfig.Frontend.TargetPreset[_fetchGame];
-
-        var _fetchPresetPath = Path.Combine(AppContext.BaseDirectory, "preset.yml");
-
-        if (File.Exists(_fetchPresetPath))
-        {
-            var _fetchPresetRAW = File.ReadAllText(_fetchPresetPath);
-            var _fetchPresetList = YamlSerializer.Deserialize<List<PresetModel>>(_fetchPresetRAW);
-
-            if (_fetchPresetList.Count > 0)
-            {
-                var _fetchKeyIndex = 34;
-
-                PresetItems.Add(new MenuItem()
-                {
-                    Header = "Default",
-                    ToggleType = MenuItemToggleType.Radio,
-                    IsChecked = String.IsNullOrEmpty(_fetchPreset),
-                    Command = SwitchPresetCommand,
-                    CommandParameter = "",
-                    InputGesture = new KeyGesture(Key.D, KeyModifiers.Alt)
-                });
-
-                foreach (var _preset in _fetchPresetList)
-                {
-                    var _fetchKey = (Key)_fetchKeyIndex;
-
-                    var _fetchMenuItem = new MenuItem()
-                    {
-                        Header = _preset.PresetName,
-                        ToggleType = MenuItemToggleType.Radio,
-                        IsChecked = _fetchPreset == _preset.PresetName,
-                        Command = SwitchPresetCommand,
-                        CommandParameter = _preset.PresetName,
-                        ContextMenu = new ContextMenu
-                        {
-                            ItemsSource = new[]
-                            {
-                                new MenuItem
-                                {
-                                    Header = "Rename Preset...",
-                                    Command = RenamePresetCommand,
-                                    CommandParameter = _preset.PresetName
-                                },
-
-                                new MenuItem
-                                {
-                                    Header = "Delete Preset...",
-                                    Command = DeletePresetCommand,
-                                    CommandParameter = _preset.PresetName
-                                }
-                            }
-                        },
-                        InputGesture = new KeyGesture(_fetchKey, KeyModifiers.Alt)
-                    };
-
-                    PresetItems.Add(_fetchMenuItem);
-
-                    _fetchKeyIndex++;
-                }
-            }
-
-            if (CurrentConfig.Frontend.TargetPreset != null)
-            {
-                var _tryFetchPreset = _fetchPresetList.FirstOrDefault(x => x.PresetName == _fetchPreset);
-
-                if (_tryFetchPreset == null)
-                    CurrentConfig.Frontend.TargetPreset[_fetchGame] = "";
-            }
-        }
-
-        else
-            File.WriteAllText(_fetchPresetPath, "[]");
-
-        if (PresetItems.Count == 0x02)
-        {
-            PresetItems.Add(new MenuItem()
-            {
-                Header = "No Presets Available.",
-                IsEnabled = false
-            });
-
-            if (CurrentConfig.Frontend.TargetPreset != null)
-                CurrentConfig.Frontend.TargetPreset[_fetchGame] = "";
-        }
-
-        InitializeMods();
-
-        // Initialization is complete.
-        Initialized = true;
+        return false;
     }
 
     [RelayCommand]
@@ -488,14 +561,14 @@ public partial class MainViewModel : ViewModelBase
 
         if (CurrentConfig != null && InstalledMods != null)
         {
-            var _fetchTopLevel = FetchTopLevel() as MainView;
+            var _fetchMainView = FetchMainWindow();
 
-            if (_fetchTopLevel == null)
+            if (_fetchMainView == null)
                 return false;
 
-            var _fetchResult = inputParameter ?? await DialogService.ShowInput(_fetchTopLevel, "Install a new Mod", "Enter the name of the repository to install.", "Install", "Ex. OpenKH/a-very-cool-mod@github.com", null, "Select and Install an Archive or Script", async (inputParent) =>
+            var _fetchResult = inputParameter ?? await DialogService.ShowInput(_fetchMainView, "Install a new Mod", "Enter the name of the repository to install.", "Install", "Ex. OpenKH/a-very-cool-mod@github.com", null, "Select and Install an Archive or Script", async (inputParent) =>
             {
-                var _fetchFiles = await _fetchTopLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                var _fetchFiles = await _fetchMainView.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                 {
                     Title = "Select an Archive or Script File...",
                     AllowMultiple = false,
@@ -529,7 +602,7 @@ public partial class MainViewModel : ViewModelBase
 
                     SafePtr _progressTextPtr = "Processing Local Files: {0} / {3}";
 
-                    var _singleProgress = DialogService.ShowProgress(_fetchTopLevel, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _progressCurrentPtr, _progressMaximumPtr, _progressTextPtr);
+                    var _singleProgress = DialogService.ShowProgress(_fetchMainView, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _progressCurrentPtr, _progressMaximumPtr, _progressTextPtr);
 
                     _fetchInstallResult =
                     await ModService.InstallLocal
@@ -569,7 +642,7 @@ public partial class MainViewModel : ViewModelBase
 
                         SafePtr _progressTextPtr = "Receiving Git Objects: {0} / {3}";
 
-                        var _singleProgress = DialogService.ShowProgress(_fetchTopLevel, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _progressCurrentPtr, _progressMaximumPtr, _progressTextPtr);
+                        var _singleProgress = DialogService.ShowProgress(_fetchMainView, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _progressCurrentPtr, _progressMaximumPtr, _progressTextPtr);
 
                         _fetchInstallResult =
                         await ModService.InstallGit
@@ -611,7 +684,7 @@ public partial class MainViewModel : ViewModelBase
 
                         // Show the dialog.
 
-                        var _multiProgress = DialogService.ShowProgress(_fetchTopLevel, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _firstCurrentPtr, _firstMaximumPtr, _firstTextPtr, _secondCurrentPtr, _secondMaximumPtr, _secondTextPtr);
+                        var _multiProgress = DialogService.ShowProgress(_fetchMainView, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _firstCurrentPtr, _firstMaximumPtr, _firstTextPtr, _secondCurrentPtr, _secondMaximumPtr, _secondTextPtr);
 
                         for (int i = 0; i < _fetchMultiInstall.Length; i++)
                         {
@@ -669,7 +742,7 @@ public partial class MainViewModel : ViewModelBase
                 if (ModService.CancelToken.IsCancellationRequested || _fetchInstallResult == 0x03)
                     return false;
 
-                var _fetchGameNames = _fetchTopLevel.GameBox.Items.OfType<ComboBoxItem>()
+                var _fetchGameNames = _fetchMainView.GameBox.Items.OfType<ComboBoxItem>()
                                                                   .Select(x => x.Content as string)
                                                                   .ToList();
 
@@ -717,7 +790,7 @@ public partial class MainViewModel : ViewModelBase
                                 if (Directory.Exists(_fetchModFolder))
                                     Directory.Delete(_fetchModFolder, true);
 
-                                await DialogService.ShowMessage(_fetchTopLevel, "Unsupported Game", $"This mod is made for {_fullNameMetadata} but you are trying to install it for {_fullNameCurrent}!\nPlease check to make sure the selected game matches the mod's requirements.", MessageType.ERROR);
+                                await DialogService.ShowMessage(_fetchMainView, "Unsupported Game", $"This mod is made for {_fullNameMetadata} but you are trying to install it for {_fullNameCurrent}!\nPlease check to make sure the selected game matches the mod's requirements.", MessageType.ERROR);
 
                                 return false;
                             }
@@ -739,7 +812,7 @@ public partial class MainViewModel : ViewModelBase
                             if (_fetchMissingDeps.Count > 0)
                             {
                                 var _fetchDepString = String.Join("\n- ", _fetchMissingDeps);
-                                var _fetchDepQuestion = await DialogService.ShowQuestion(_fetchTopLevel, "Missing Dependencies", $"This Mod has some dependencies that are not installed.\nTo proceed, all the following dependencies must be installed:\n\n- {_fetchDepString}\n\nDo you want to proceed? [Not doing so will cancel this mod's install.]");
+                                var _fetchDepQuestion = await DialogService.ShowQuestion(_fetchMainView, "Missing Dependencies", $"This Mod has some dependencies that are not installed.\nTo proceed, all the following dependencies must be installed:\n\n- {_fetchDepString}\n\nDo you want to proceed? [Not doing so will cancel this mod's install.]");
 
                                 if (!_fetchDepQuestion)
                                 {
@@ -871,7 +944,7 @@ public partial class MainViewModel : ViewModelBase
                     }
 
                     case 0x01:
-                        await DialogService.ShowMessage(_fetchTopLevel, "ERROR - Invalid Mod", "This is NOT a valid/compliant Mod Manager Mod. Please make sure it exists and it is valid.", MessageType.ERROR);
+                        await DialogService.ShowMessage(_fetchMainView, "ERROR - Invalid Mod", "This is NOT a valid/compliant Mod Manager Mod. Please make sure it exists and it is valid.", MessageType.ERROR);
                         return false;
 
                     case 0x02:
@@ -931,7 +1004,7 @@ public partial class MainViewModel : ViewModelBase
                                 if (_fetchMissingDeps.Count > 0)
                                 {
                                     var _fetchDepString = String.Join("\n- ", _fetchMissingDeps);
-                                    var _fetchDepQuestion = await DialogService.ShowQuestion(_fetchTopLevel, "Missing Dependencies", $"This Mod has some dependencies that are not installed.\nTo proceed, all the following dependencies must be installed:\n\n- {_fetchDepString}\n\nDo you want to proceed? [Not doing so will cancel this mod's install.]");
+                                    var _fetchDepQuestion = await DialogService.ShowQuestion(_fetchMainView, "Missing Dependencies", $"This Mod has some dependencies that are not installed.\nTo proceed, all the following dependencies must be installed:\n\n- {_fetchDepString}\n\nDo you want to proceed? [Not doing so will cancel this mod's install.]");
 
                                     if (!_fetchDepQuestion)
                                     {
@@ -1064,7 +1137,7 @@ public partial class MainViewModel : ViewModelBase
                         if (_fetchErroredList.Count > 0)
                         {
                             var _fetchError = String.Join('\n', _fetchErroredList);
-                            await DialogService.ShowMessage(_fetchTopLevel, "Some Mods were invalid!", $"The following mods were invalid and thus were not installed:\n {_fetchError}", MessageType.WARNING);
+                            await DialogService.ShowMessage(_fetchMainView, "Some Mods were invalid!", $"The following mods were invalid and thus were not installed:\n {_fetchError}", MessageType.WARNING);
                         }
 
                         return true;
@@ -1088,12 +1161,12 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentMod != null && InstalledMods != null)
         {
-            var _fetchTopLevel = FetchTopLevel() as Window;
+            var _fetchMainView = FetchMainWindow() as Window;
 
-            if (_fetchTopLevel == null)
+            if (_fetchMainView == null)
                 return false;
 
-            bool? _fetchResult = await DialogService.ShowQuestion(_fetchTopLevel, "Remove Mod?", "Are you sure you want to remove the selected mod?");
+            bool? _fetchResult = await DialogService.ShowQuestion(_fetchMainView, "Remove Mod?", "Are you sure you want to remove the selected mod?");
 
             // If they indeed do:
 
@@ -1177,7 +1250,6 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-
     [RelayCommand]
     private void MoveUtmost()
     {
@@ -1225,15 +1297,15 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentMod != null)
         {
-            var _fetchTopLevel = FetchTopLevel();
+            var _fetchMainView = FetchMainWindow();
 
-            if (_fetchTopLevel == null)
+            if (_fetchMainView == null)
                 return false;
 
             var _fetchDirectoryInfo = new DirectoryInfo(CurrentMod.ModPath);
 
-            if (_fetchTopLevel?.Launcher != null)
-                await _fetchTopLevel.Launcher.LaunchDirectoryInfoAsync(_fetchDirectoryInfo);
+            if (_fetchMainView?.Launcher != null)
+                await _fetchMainView.Launcher.LaunchDirectoryInfoAsync(_fetchDirectoryInfo);
 
             return true;
         }
@@ -1242,18 +1314,21 @@ public partial class MainViewModel : ViewModelBase
             return false;
     }
 
+    #endregion
+
+    #region BUILD COMMANDS
 
     [RelayCommand]
     private async Task<bool> Run()
     {
         if (CurrentConfig != null)
         {
-            var _fetchTopLevel = FetchTopLevel();
+            var _fetchMainView = FetchMainWindow();
 
-            if (_fetchTopLevel == null)
+            if (_fetchMainView == null)
                 return false;
 
-            return await ModService.Run(CurrentConfig, _fetchTopLevel);
+            return await ModService.Run(CurrentConfig, _fetchMainView);
         }
 
         else
@@ -1265,9 +1340,9 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentConfig != null && InstalledMods != null)
         {
-            var _fetchTopLevel = FetchTopLevel() as Window;
+            var _fetchMainView = FetchMainWindow() as Window;
 
-            if (_fetchTopLevel == null)
+            if (_fetchMainView == null)
                 return false;
 
             // Allocate all the pointers to use for the progress bars.
@@ -1283,7 +1358,7 @@ public partial class MainViewModel : ViewModelBase
 
             // Show the dialog.
 
-            var _multiProgress = DialogService.ShowProgress(_fetchTopLevel, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _firstCurrentPtr, _firstMaximumPtr, _firstTextPtr, _secondCurrentPtr, _secondMaximumPtr, _secondTextPtr);
+            var _multiProgress = DialogService.ShowProgress(_fetchMainView, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _firstCurrentPtr, _firstMaximumPtr, _firstTextPtr, _secondCurrentPtr, _secondMaximumPtr, _secondTextPtr);
 
             string _currentModName = "N/A";
 
@@ -1335,7 +1410,7 @@ public partial class MainViewModel : ViewModelBase
                 return true;
 
             else if (_buildResult == 0x01)
-                await DialogService.ShowMessage(_fetchTopLevel, "ERROR - Failed to build Mod", string.Format("Building failed on this Mod: {0}\nPlease re-install the Mod and try again!", _currentModName), MessageType.ERROR);
+                await DialogService.ShowMessage(_fetchMainView, "ERROR - Failed to build Mod", string.Format("Building failed on this Mod: {0}\nPlease re-install the Mod and try again!", _currentModName), MessageType.ERROR);
             return false;
         }
 
@@ -1348,15 +1423,15 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentConfig != null)
         {
-            var _fetchTopLevel = FetchTopLevel() as Window;
+            var _fetchMainView = FetchMainWindow() as Window;
 
-            if (_fetchTopLevel == null)
+            if (_fetchMainView == null)
                 return false;
 
             var _fetchBuildDir = PathService.ResolveBuild(CurrentConfig);
             Directory.Delete(_fetchBuildDir, true);
 
-            await DialogService.ShowMessage(_fetchTopLevel, "Restore Completed!", "Restoration complete! The game should run as if it isn't modded!", MessageType.INFO);
+            await DialogService.ShowMessage(_fetchMainView, "Restore Completed!", "Restoration complete! The game should run as if it isn't modded!", MessageType.INFO);
 
             return true;
         }
@@ -1387,21 +1462,24 @@ public partial class MainViewModel : ViewModelBase
             return false;
     }
 
+    #endregion
+
+    #region ASSEMBLY COMMANDS
 
     [RelayCommand]
     private async Task<bool> InstallPanacea()
     {
         if (CurrentConfig != null)
         {
-            var _fetchTopLevel = FetchTopLevel() as Window;
+            var _fetchMainView = FetchMainWindow() as Window;
 
-            if (_fetchTopLevel == null)
+            if (_fetchMainView == null)
                 return false;
 
             PackageService.InstallPanacea(CurrentConfig);
             ConfigurationValid = CurrentConfig.IsValid();
 
-            await DialogService.ShowMessage(_fetchTopLevel, "Panacea Installed!", "Panacea has been installed in accordance to current settings.", MessageType.INFO);
+            await DialogService.ShowMessage(_fetchMainView, "Panacea Installed!", "Panacea has been installed in accordance to current settings.", MessageType.INFO);
             return true;
         }
 
@@ -1414,15 +1492,15 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentConfig != null)
         {
-            var _fetchTopLevel = FetchTopLevel() as Window;
+            var _fetchMainView = FetchMainWindow() as Window;
 
-            if (_fetchTopLevel == null)
+            if (_fetchMainView == null)
                 return false;
 
             PackageService.InstallBackend(CurrentConfig);
             ConfigurationValid = CurrentConfig.IsValid();
 
-            await DialogService.ShowMessage(_fetchTopLevel, "LuaBackend Installed!", "LuaBackend has been installed in accordance to current settings.", MessageType.INFO);
+            await DialogService.ShowMessage(_fetchMainView, "LuaBackend Installed!", "LuaBackend has been installed in accordance to current settings.", MessageType.INFO);
             return true;
         }
 
@@ -1430,18 +1508,21 @@ public partial class MainViewModel : ViewModelBase
             return false;
     }
 
+    #endregion
+
+    #region POPUP COMMANDS
 
     [RelayCommand]
     private async Task<bool> LaunchSetup()
     {
         if (CurrentConfig != null && InstalledMods != null)
         {
-            var _fetchTopLevel = FetchTopLevel() as Window;
+            var _fetchMainView = FetchMainWindow() as Window;
 
-            if (_fetchTopLevel == null)
+            if (_fetchMainView == null)
                 return false;
 
-            await new SetupWizardView().ShowDialog(_fetchTopLevel);
+            await new SetupWizardView().ShowDialog(_fetchMainView);
             return true;
         }
 
@@ -1454,13 +1535,13 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentConfig != null && InstalledMods != null)
         {
-            var _fetchTopLevel = FetchTopLevel() as Window;
+            var _fetchMainView = FetchMainWindow() as Window;
 
-            if (_fetchTopLevel == null)
+            if (_fetchMainView == null)
                 return false;
 
             var _catalogWindow = new CatalogView();
-            var _fetchResult = await _catalogWindow.ShowDialog<string?>(_fetchTopLevel);
+            var _fetchResult = await _catalogWindow.ShowDialog<string?>(_fetchMainView);
 
             if (!String.IsNullOrEmpty(_fetchResult) && InstallCommand.CanExecute(_fetchResult))
             {
@@ -1481,12 +1562,12 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentConfig != null)
         {
-            var _fetchTopLevel = FetchTopLevel() as Window;
+            var _fetchMainView = FetchMainWindow() as Window;
 
-            if (_fetchTopLevel == null)
+            if (_fetchMainView == null)
                 return false;
 
-            var _fetchResult = await DialogService.ShowInput(_fetchTopLevel, "Declare Launch Aruguments", "Enter the launch arguments to use when launching on Steam.", "Done", "Ex. -fastboot -noaspect", CurrentConfig.Frontend.LaunchArguments);
+            var _fetchResult = await DialogService.ShowInput(_fetchMainView, "Declare Launch Aruguments", "Enter the launch arguments to use when launching on Steam.", "Done", "Ex. -fastboot -noaspect", CurrentConfig.Frontend.LaunchArguments);
 
             if (!String.IsNullOrEmpty(_fetchResult))
                 CurrentConfig.Frontend.LaunchArguments = _fetchResult;
@@ -1498,114 +1579,34 @@ public partial class MainViewModel : ViewModelBase
             return false;
     }
 
+    #endregion
+
+    #region PRESET COMMANDS
+
     [RelayCommand]
     private async Task<bool> CreatePreset()
     {
         if (CurrentConfig != null)
         {
-            var _fetchGame = (int)CurrentConfig.Frontend.TargetGame;
-            var _fetchPreset = CurrentConfig.Frontend.TargetPreset[_fetchGame];
+            var _fetchTargetGame = (int)CurrentConfig.Frontend.TargetGame;
 
-            var _fetchTopLevel = FetchTopLevel() as Window;
-
-            if (_fetchTopLevel == null)
-                return false;
-
-            var _fetchResult = await DialogService.ShowInput(_fetchTopLevel, "Create New Preset", "Please enter a name for the new preset.", "OK", "Ex. \"Some Very Cool Preset\"");
-
-            if (!String.IsNullOrEmpty(_fetchResult))
+            if (PresetMemory != null)
             {
-                var _isPresetPresent = PresetItems.OfType<MenuItem>().FirstOrDefault(x => x.Header as string == "Default") != null;
+                var _fetchMainView = FetchMainWindow() as Window;
 
-                if (!_isPresetPresent)
+                if (_fetchMainView == null)
+                    return false;
+
+                var _fetchResult = await DialogService.ShowInput(_fetchMainView, "Create New Preset", "Please enter a name for the new preset.", "OK", "Ex. \"Some Very Cool Preset\"");
+
+                if (_fetchResult != null)
                 {
-                    PresetItems.RemoveAt(0x02);
-
-                    PresetItems.Add(new MenuItem()
+                    PresetMemory.Add(new PresetModel
                     {
-                        Header = "Default",
-                        ToggleType = MenuItemToggleType.Radio,
-                        IsChecked = true,
-                        Command = SwitchPresetCommand,
-                        CommandParameter = "",
-                        InputGesture = new KeyGesture(Key.D, KeyModifiers.Alt)
-                    });
-
-                    PresetItems.Add(new MenuItem()
-                    {
-                        Header = _fetchResult,
-                        ToggleType = MenuItemToggleType.Radio,
-                        IsChecked = false,
-                        Command = SwitchPresetCommand,
-                        CommandParameter = _fetchResult,
-                        ContextMenu = new ContextMenu
-                        {
-                            ItemsSource = new[]
-                            {
-                                new MenuItem
-                                {
-                                    Header = "Rename Preset...",
-                                    Command = RenamePresetCommand,
-                                    CommandParameter = _fetchResult
-                                },
-
-                                new MenuItem
-                                {
-                                    Header = "Delete Preset...",
-                                    Command = DeletePresetCommand,
-                                    CommandParameter = _fetchResult
-                                }
-                            }
-                        },
-                        InputGesture = new KeyGesture(Key.D0, KeyModifiers.Alt)
+                        Name = _fetchResult,
+                        TargetGame = CurrentConfig.Frontend.TargetGame
                     });
                 }
-
-                else
-                {
-                    PresetItems.Add(new MenuItem()
-                    {
-                        Header = _fetchResult,
-                        ToggleType = MenuItemToggleType.Radio,
-                        IsChecked = false,
-                        Command = SwitchPresetCommand,
-                        CommandParameter = _fetchResult,
-                        ContextMenu = new ContextMenu
-                        {
-                            ItemsSource = new[]
-                            {
-                                new MenuItem
-                                {
-                                    Header = "Rename Preset...",
-                                    Command = RenamePresetCommand,
-                                    CommandParameter = _fetchResult
-                                },
-
-                                new MenuItem
-                                {
-                                    Header = "Delete Preset...",
-                                    Command = DeletePresetCommand,
-                                    CommandParameter = _fetchResult
-                                }
-                            }
-                        },
-                        InputGesture = new KeyGesture((Key)(34 + PresetItems.Count - 0x03), KeyModifiers.Alt)
-                    });
-                }
-
-                var _fetchPresetPath = Path.Combine(AppContext.BaseDirectory, "preset.yml");
-
-                var _fetchPresetRAW = File.ReadAllText(_fetchPresetPath);
-                var _fetchPresetList = YamlSerializer.Deserialize<List<PresetModel>>(_fetchPresetRAW);
-
-                _fetchPresetList.Add(new PresetModel
-                {
-                    PresetName = _fetchResult,
-                    PresetGame = CurrentConfig.Frontend.TargetGame
-                });
-
-                _fetchPresetRAW = YamlSerializer.Serialize(_fetchPresetList);
-                File.WriteAllText(_fetchPresetPath, _fetchPresetRAW);
             }
         }
 
@@ -1613,128 +1614,128 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task<bool> SwitchPreset(string input)
+    private async Task<bool> SwitchPreset(PresetModel input)
     {
         if (CurrentConfig != null)
         {
-            var _fetchGame = (int)CurrentConfig.Frontend.TargetGame;
-            var _fetchPreset = CurrentConfig.Frontend.TargetPreset[_fetchGame];
+            var _fetchTargetGame = CurrentConfig.Frontend.TargetGame;
+            var _fetchPresetList = CurrentConfig.Frontend.TargetPreset;
 
-            if (_fetchPreset == input)
-                return false;
+            if (_fetchPresetList != null)
+            {
+                var _fetchPreset = _fetchPresetList[(int)_fetchTargetGame];
+                var _fetchName = input == null ? "" : input.Name;
 
-            CurrentConfig.Frontend.TargetPreset[_fetchGame] = input;
-            InitializeMods();
-
-            return true;
+                if (_fetchPreset != _fetchName)
+                {
+                    _fetchPresetList[(int)_fetchTargetGame] = _fetchName;
+                    IterateModlist();
+                }
+            }
         }
 
         return false;
     }
 
     [RelayCommand]
-    private async Task<bool> DeletePreset(string input)
+    private async Task<bool> DeletePreset(PresetModel input)
     {
-        if (CurrentConfig != null)
+        if (CurrentConfig != null && PresetMemory != null)
         {
-            var _fetchGame = (int)CurrentConfig.Frontend.TargetGame;
-            var _fetchPreset = CurrentConfig.Frontend.TargetPreset[_fetchGame];
+            var _fetchTargetGame = CurrentConfig.Frontend.TargetGame;
+            var _fetchPresetList = CurrentConfig.Frontend.TargetPreset;
 
-            var _fetchTopLevel = FetchTopLevel() as Window;
-
-            if (_fetchTopLevel == null)
-                return false;
-
-            var _fetchResult = await DialogService.ShowQuestion(_fetchTopLevel, "Delete this Preset?", $"Are you sure you want to delete the preset \"{input}\"?\nIf it is currently active, the Default preset will be loaded.");
-
-            if (_fetchResult)
+            if (_fetchPresetList != null)
             {
-                if (_fetchPreset == input)
+                var _fetchPreset = _fetchPresetList[(int)_fetchTargetGame];
+                var _fetchName = input == null ? "" : input.Name;
+
+                var _fetchMainView = FetchMainWindow() as Window;
+
+                if (_fetchMainView == null)
+                    return false;
+
+                var _fetchResult = await DialogService.ShowQuestion(_fetchMainView, "Delete this Preset?", $"Are you sure you want to delete the preset \"{_fetchName}\"?\n" +
+                                                                                                           $"If it is currently active, the default preset will be loaded.");
+
+                if (_fetchResult)
                 {
-                    CurrentConfig.Frontend.TargetPreset[_fetchGame] = "";
-                    (PresetItems[0x02] as MenuItem).IsChecked = true;
-                }
-
-                var _fetchPresetPath = Path.Combine(AppContext.BaseDirectory, "preset.yml");
-
-                if (File.Exists(_fetchPresetPath))
-                {
-                    var _fetchPresetRAW = File.ReadAllText(_fetchPresetPath);
-                    var _fetchPresetList = YamlSerializer.Deserialize<List<PresetModel>>(_fetchPresetRAW);
-
-                    var _fetchPresetItem = _fetchPresetList.FirstOrDefault(x => x.PresetName == input);
-                    var _fetchPresetMenu = PresetItems.OfType<MenuItem>().FirstOrDefault(x => x.Header == input);
-
-                    _fetchPresetList.Remove(_fetchPresetItem);
-                    PresetItems.Remove(_fetchPresetMenu);
-
-                    if (PresetItems.Count > 3)
+                    if (_fetchPreset == _fetchName)
                     {
-                        var _fetchKeyIndex = 34;
-
-                        for (int i = 0x03; i < PresetItems.Count; i++)
-                            (PresetItems[i] as MenuItem).InputGesture = new KeyGesture((Key)(_fetchKeyIndex++), KeyModifiers.Alt);
+                        _fetchPresetList[(int)_fetchTargetGame] = "";
+                        IterateModlist();
                     }
 
-                    else
-                    {
-                        PresetItems[0x02] = new MenuItem()
-                        {
-                            Header = "No Presets Available.",
-                            IsEnabled = false
-                        };
-                    }
+                    PresetMemory.Remove(input);
 
                     Task.Run(() =>
                     {
-                        var _fetchNormalStr = input.ToLower().Replace(" ", "_");
+                        var _fetchPresetPath = PathService.ResolvePreset(CurrentConfig);
+                        var _fetchTargetFolder = Path.Combine(_fetchPresetPath, input.FolderName);
 
-                        foreach (var _fetchChar in Path.GetInvalidFileNameChars())
-                            _fetchNormalStr = _fetchNormalStr.Replace(_fetchChar, '-');
-
-                        var _fetchFinalPath = Path.Combine(PathService.ResolvePreset(CurrentConfig, false), _fetchNormalStr);
-
-                        if (Directory.Exists(_fetchFinalPath))
-                            Directory.Delete(_fetchFinalPath, true);
-
+                        if (Directory.Exists(_fetchTargetFolder))
+                            Directory.Delete(_fetchTargetFolder, true);
                     });
 
-                    var _fetchSerial = YamlSerializer.Serialize(_fetchPresetList);
-                    File.WriteAllText(_fetchPresetPath, _fetchSerial);
-
-                    InitializeMods();
+                    return true;
                 }
             }
-
-            return true;
         }
 
         return false;
     }
 
     [RelayCommand]
-    private async Task<bool> RenamePreset(string input)
+    private async Task<bool> RenamePreset(PresetModel input)
     {
-        if (CurrentConfig != null)
+        if (CurrentConfig != null && PresetMemory != null)
         {
-            var _fetchGame = (int)CurrentConfig.Frontend.TargetGame;
-            var _fetchPreset = CurrentConfig.Frontend.TargetPreset[_fetchGame];
+            var _fetchTargetGame = CurrentConfig.Frontend.TargetGame;
+            var _fetchPresetList = CurrentConfig.Frontend.TargetPreset;
 
-            var _fetchTopLevel = FetchTopLevel() as Window;
-
-            if (_fetchTopLevel == null)
-                return false;
-
-            var _fetchResult = await DialogService.ShowInput(_fetchTopLevel, "Rename Preset", "Please enter a new name for this preset.", "Rename", "", input);
-
-            if (_fetchResult != null)
+            if (_fetchPresetList != null)
             {
-                return true;
+                var _fetchPreset = _fetchPresetList[(int)_fetchTargetGame];
+
+                var _fetchName = input.Name;
+                var _fetchFolder = input.FolderName;
+
+                var _fetchMainView = FetchMainWindow() as Window;
+
+                if (_fetchMainView == null)
+                    return false;
+
+                var _fetchResult = await DialogService.ShowInput(_fetchMainView, "Rename Preset", "Please enter a new name for this preset.", "Rename", $"Current Name: \"{_fetchName}\"");
+
+                if (_fetchResult != null)
+                {
+                    var _fetchIndex = PresetMemory.IndexOf(input);
+                    PresetMemory.Remove(input);
+
+                    if (_fetchPreset == _fetchName)
+                        _fetchPresetList[(int)_fetchTargetGame] = _fetchResult;
+
+                    input.Name = _fetchResult;
+                    PresetMemory.Insert(_fetchIndex, input);
+
+                    Task.Run(() =>
+                    {
+                        var _fetchPresetPath = PathService.ResolvePreset(CurrentConfig);
+
+                        var _fetchFolderOLD = Path.Combine(_fetchPresetPath, _fetchFolder);
+                        var _fetchFolderNEW = Path.Combine(_fetchPresetPath, input.FolderName);
+
+                        if (Directory.Exists(_fetchFolderOLD))
+                            Directory.Move(_fetchFolderOLD, _fetchFolderNEW);
+                    });
+                }
             }
         }
 
         return false;
     }
+
+    #endregion
 }
 
 #pragma warning restore CS4014
