@@ -122,6 +122,204 @@ public partial class MainViewModel : ViewModelBase
 
     public MainViewModel() => InitializeView();
 
+    public void InitializeMods()
+    {
+        if (CurrentConfig != null)
+        {
+            InstalledMods = null;
+            HasModsInstalled = false;
+
+            // Construct the mod folder path for the specified game.
+
+            var _fetchMods = new ObservableCollection<ModModel>();
+            var _fetchModsPath = PathService.ResolveMod(CurrentConfig);
+
+            // For each directory that exists in the mod folder:
+
+            foreach (var _fetchDirectory in Directory.EnumerateDirectories(_fetchModsPath))
+            {
+                foreach (var _fetchChild in Directory.EnumerateDirectories(_fetchDirectory))
+                {
+                    // Construct the paths to YAML and PNG files.
+                    var _fetchPathYaml = Path.Combine(_fetchChild, "mod.yml");
+                    var _fetchPathIcon = Path.Combine(_fetchChild, "icon.png");
+
+                    var _fetchPathGit = Path.Combine(_fetchChild, ".git");
+
+                    // YAML don't do it? Don't do it!
+                    if (!File.Exists(_fetchPathYaml))
+                        continue;
+
+                    // Fetch and read the YAML to parse the metadata.
+                    var _metadata = Metadata.Read(_fetchPathYaml);
+
+                    // If the metadata is valid, parse the mod and push it to the ViewModel.
+
+                    if (_metadata.IsValid)
+                    {
+                        var _modModel = new ModModel
+                        {
+                            ModTitle = _metadata.Title,
+                            ModAuthor = _metadata.OriginalAuthor,
+                            ModDescription = _metadata.Description,
+                            ModPath = _fetchChild,
+                            ModFilesList = _metadata.Assets.Select(x => x.Name).ToArray(),
+                            ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
+                            ModActive = true,
+                            ModValid = true
+                        };
+
+                        if (_metadata.Preferences != null)
+                        {
+                            _modModel.ModPreferences = new List<PreferenceModel>();
+
+                            foreach (var _preference in _metadata.Preferences)
+                            {
+                                var _fetchPref = new PreferenceModel
+                                {
+                                    Title = _preference.Title,
+                                    Key = _preference.Key,
+                                    Description = _preference.Description,
+                                    Type = _preference.Type,
+                                    Options = _preference.Options,
+                                    Value = _preference.Value
+                                };
+
+                                _modModel.ModPreferences.Add(_fetchPref);
+                            }
+                        }
+
+                        // We have found a Git Repository, let's see what's up.
+
+                        Task.Run(() =>
+                        {
+                            if (Directory.Exists(_fetchPathGit))
+                            {
+                                if (Repository.IsValid(_fetchPathGit))
+                                {
+                                    var _fetchGit = new Repository(_fetchPathGit);
+
+                                    try
+                                    {
+                                        if (!_fetchGit.Info.IsHeadDetached)
+                                        {
+                                            var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+
+                                            _modModel.ModSource = new Uri(_fetchRemote.Url);
+                                            _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+
+                                            _modModel.ModPlatform = _modModel.ModSource.Host;
+
+                                            Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
+
+                                            var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
+                                            _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
+
+                                        }
+                                    }
+
+                                    catch (LibGit2SharpException) { }
+
+                                    _fetchGit.Dispose();
+                                    var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
+
+                                    foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
+                                    {
+                                        try
+                                        {
+                                            if (_fetchFile.Exists)
+                                                _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                                        }
+
+                                        catch (Exception) { }
+                                    }
+                                }
+                            }
+                        });
+
+                        _fetchMods.Add(_modModel);
+                    }
+
+                    // Otherwise, make it known that the mod sucks ASS and is no good for us, but still push it to the ViewModel so we know about it :D
+
+                    else
+                    {
+                        var uri = new Uri("avares://OpenKh.Tools.ModManager/Assets/invalid_mod.png");
+
+                        var _modModel = new ModModel
+                        {
+                            ModTitle = _metadata.Title,
+                            ModAuthor = "This mod is invalid!",
+                            ModDescription = "This mod contains errors within its YAML file. Please check the formatting!",
+                            ModIcon = new Bitmap(AssetLoader.Open(uri)),
+                            ModPath = _fetchChild,
+                            ModActive = false,
+                            ModValid = false
+                        };
+
+                        _fetchMods.Add(_modModel);
+                    }
+                }
+            }
+
+            // When all mods are loaded, start processing the "mod memory" for the targeted game.\
+            // If the mod memory does not exist, assume default order and mark all active.
+
+            var _fetchModMemoryPath = Path.Combine(_fetchModsPath, "mod_memory.yml");
+
+            if (File.Exists(_fetchModMemoryPath))
+            {
+                // Fetch the raw YAML data and deserialize it.
+                var _fetchRawYaml = File.ReadAllText(_fetchModMemoryPath);
+                var _fetchModMemory = YamlSerializer.Deserialize<ObservableCollection<MemoryModel>>(_fetchRawYaml);
+
+                // Make a temporary array for us to order the mods.
+                // And a temporary list for us to commit the mods.
+
+                var _tempModArray = new ModModel[_fetchMods.Count];
+                var _tempModList = new List<ModModel>();
+
+                foreach (var _fetchMemory in _fetchModMemory)
+                {
+                    var _fetchMod = _fetchMods.FirstOrDefault(x => ModService.ResolveMD5(x, CurrentConfig) == _fetchMemory.ModHash);
+
+                    if (_fetchMod == null || !_fetchMod.ModValid)
+                        continue;
+
+                    _fetchMod.ModActive = _fetchMemory.ModActive;
+                    _tempModArray[_fetchMemory.ModIndex] = _fetchMod;
+
+                    _fetchMods.Remove(_fetchMod);
+                }
+
+                // Add all the existing mods from the array.
+                _tempModList.AddRange(_tempModArray.Where(x => x != null));
+
+                // Add all the valid mods from the original list which didn't exist on the mod memory.
+                _tempModList.AddRange(_fetchMods.Where(x => x.ModValid));
+
+                // Add all the invalid mods from the original list which didn't exist on the mod memory.
+                _tempModList.AddRange(_fetchMods.Where(x => !x.ModValid));
+
+                // Sync to the actual installed mods collection.
+                InstalledMods = new ObservableCollection<ModModel>(_tempModList);
+            }
+
+            else
+                InstalledMods = _fetchMods;
+
+            // Register mod property event to handle mod memory.
+            InstalledMods.CollectionChanged += OnModPropertyChanged;
+
+            // If there is at least one mod, select the first mod and declare we have mods.
+            if (InstalledMods.Count > 0)
+            {
+                HasModsInstalled = true;
+                CurrentMod = InstalledMods.First();
+            }
+        }
+    }
+
     public void InitializeView()
     {
         Initialized = false;
@@ -278,196 +476,7 @@ public partial class MainViewModel : ViewModelBase
                 CurrentConfig.Frontend.TargetPreset[_fetchGame] = "";
         }
 
-        // === Mod Parsing and Verification === //
-
-        // Construct the mod folder path for the specified game.
-
-        var _fetchMods = new ObservableCollection<ModModel>();
-        var _fetchModsPath = PathService.ResolveMod(CurrentConfig);
-
-        // For each directory that exists in the mod folder:
-
-        foreach (var _fetchDirectory in Directory.EnumerateDirectories(_fetchModsPath))
-        {
-            foreach (var _fetchChild in Directory.EnumerateDirectories(_fetchDirectory))
-            {
-                // Construct the paths to YAML and PNG files.
-                var _fetchPathYaml = Path.Combine(_fetchChild, "mod.yml");
-                var _fetchPathIcon = Path.Combine(_fetchChild, "icon.png");
-
-                var _fetchPathGit = Path.Combine(_fetchChild, ".git");
-
-                // YAML don't do it? Don't do it!
-                if (!File.Exists(_fetchPathYaml))
-                    continue;
-
-                // Fetch and read the YAML to parse the metadata.
-                var _metadata = Metadata.Read(_fetchPathYaml);
-
-                // If the metadata is valid, parse the mod and push it to the ViewModel.
-
-                if (_metadata.IsValid)
-                {
-                    var _modModel = new ModModel
-                    {
-                        ModTitle = _metadata.Title,
-                        ModAuthor = _metadata.OriginalAuthor,
-                        ModDescription = _metadata.Description,
-                        ModPath = _fetchChild,
-                        ModFilesList = _metadata.Assets.Select(x => x.Name).ToArray(),
-                        ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
-                        ModActive = true,
-                        ModValid = true
-                    };
-
-                    if (_metadata.Preferences != null)
-                    {
-                        _modModel.ModPreferences = new List<PreferenceModel>();
-
-                        foreach (var _preference in _metadata.Preferences)
-                        {
-                            var _fetchPref = new PreferenceModel
-                            {
-                                Title = _preference.Title,
-                                Key = _preference.Key,
-                                Description = _preference.Description,
-                                Type = _preference.Type,
-                                Options = _preference.Options,
-                                Value = _preference.Value
-                            };
-
-                            _modModel.ModPreferences.Add(_fetchPref);
-                        }
-                    }
-
-                    // We have found a Git Repository, let's see what's up.
-
-                    Task.Run(() =>
-                    {
-                        if (Directory.Exists(_fetchPathGit))
-                        {
-                            if (Repository.IsValid(_fetchPathGit))
-                            {
-                                var _fetchGit = new Repository(_fetchPathGit);
-
-                                try
-                                {
-                                    if (!_fetchGit.Info.IsHeadDetached)
-                                    {
-                                        var _fetchRemote = _fetchGit.Network.Remotes["origin"];
-
-                                        _modModel.ModSource = new Uri(_fetchRemote.Url);
-                                        _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
-
-                                        _modModel.ModPlatform = _modModel.ModSource.Host;
-
-                                        Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
-
-                                        var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
-                                        _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
-
-                                    }
-                                }
-
-                                catch (LibGit2SharpException) { }
-
-                                _fetchGit.Dispose();
-                                var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
-
-                                foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                                {
-                                    try
-                                    {
-                                        if (_fetchFile.Exists)
-                                            _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
-                                    }
-
-                                    catch (Exception) { }
-                                }
-                            }
-                        }
-                    });
-
-                    _fetchMods.Add(_modModel);
-                }
-
-                // Otherwise, make it known that the mod sucks ASS and is no good for us, but still push it to the ViewModel so we know about it :D
-
-                else
-                {
-                    var uri = new Uri("avares://OpenKh.Tools.ModManager/Assets/invalid_mod.png");
-
-                    var _modModel = new ModModel
-                    {
-                        ModTitle = _metadata.Title,
-                        ModAuthor = "This mod is invalid!",
-                        ModDescription = "This mod contains errors within its YAML file. Please check the formatting!",
-                        ModIcon = new Bitmap(AssetLoader.Open(uri)),
-                        ModPath = _fetchChild,
-                        ModActive = false,
-                        ModValid = false
-                    };
-
-                    _fetchMods.Add(_modModel);
-                }
-            }
-        }
-
-        // When all mods are loaded, start processing the "mod memory" for the targeted game.\
-        // If the mod memory does not exist, assume default order and mark all active.
-
-        var _fetchModMemoryPath = Path.Combine(_fetchModsPath, "mod_memory.yml");
-
-        if (File.Exists(_fetchModMemoryPath))
-        {
-            // Fetch the raw YAML data and deserialize it.
-            var _fetchRawYaml = File.ReadAllText(_fetchModMemoryPath);
-            var _fetchModMemory = YamlSerializer.Deserialize<ObservableCollection<MemoryModel>>(_fetchRawYaml);
-
-            // Make a temporary array for us to order the mods.
-            // And a temporary list for us to commit the mods.
-
-            var _tempModArray = new ModModel[_fetchMods.Count];
-            var _tempModList = new List<ModModel>();
-
-            foreach (var _fetchMemory in _fetchModMemory)
-            {
-                var _fetchMod = _fetchMods.FirstOrDefault(x => ModService.ResolveMD5(x, CurrentConfig) == _fetchMemory.ModHash);
-
-                if (_fetchMod == null || !_fetchMod.ModValid)
-                    continue;
-
-                _fetchMod.ModActive = _fetchMemory.ModActive;
-                _tempModArray[_fetchMemory.ModIndex] = _fetchMod;
-
-                _fetchMods.Remove(_fetchMod);
-            }
-
-            // Add all the existing mods from the array.
-            _tempModList.AddRange(_tempModArray.Where(x => x != null));
-
-            // Add all the valid mods from the original list which didn't exist on the mod memory.
-            _tempModList.AddRange(_fetchMods.Where(x => x.ModValid));
-
-            // Add all the invalid mods from the original list which didn't exist on the mod memory.
-            _tempModList.AddRange(_fetchMods.Where(x => !x.ModValid));
-
-            // Sync to the actual installed mods collection.
-            InstalledMods = new ObservableCollection<ModModel>(_tempModList);
-        }
-
-        else
-            InstalledMods = _fetchMods;
-
-        // Register mod property event to handle mod memory.
-        InstalledMods.CollectionChanged += OnModPropertyChanged;
-
-        // If there is at least one mod, select the first mod and declare we have mods.
-        if (InstalledMods.Count > 0)
-        {
-            HasModsInstalled = true;
-            CurrentMod = InstalledMods.First();
-        }
+        InitializeMods();
 
         // Initialization is complete.
         Initialized = true;
@@ -1617,7 +1626,7 @@ public partial class MainViewModel : ViewModelBase
                 return false;
 
             CurrentConfig.Frontend.TargetPreset[_fetchGame] = input;
-            InitializeView();
+            InitializeMods();
 
             return true;
         }
