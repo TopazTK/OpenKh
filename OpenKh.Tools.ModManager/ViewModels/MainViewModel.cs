@@ -34,8 +34,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Xe.BinaryMapper;
-using static OpenKh.Kh2.Ard.AreaDataScript;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace OpenKh.Tools.ModManager.ViewModels;
 
@@ -1642,6 +1640,72 @@ public partial class MainViewModel : ViewModelBase
             var _fetchGame = (int)CurrentConfig.Frontend.TargetGame;
             var _fetchPreset = CurrentConfig.Frontend.TargetPreset[_fetchGame];
 
+            var _fetchTopLevel = FetchTopLevel() as Window;
+
+            if (_fetchTopLevel == null)
+                return false;
+
+            var _fetchResult = await DialogService.ShowQuestion(_fetchTopLevel, "Delete this Preset?", $"Are you sure you want to delete the preset \"{input}\"?\nIf it is currently active, the Default preset will be loaded.");
+
+            if (_fetchResult)
+            {
+                if (_fetchPreset == input)
+                {
+                    CurrentConfig.Frontend.TargetPreset[_fetchGame] = "";
+                    (PresetItems[0x02] as MenuItem).IsChecked = true;
+                }
+
+                var _fetchPresetPath = Path.Combine(AppContext.BaseDirectory, "preset.yml");
+
+                if (File.Exists(_fetchPresetPath))
+                {
+                    var _fetchPresetRAW = File.ReadAllText(_fetchPresetPath);
+                    var _fetchPresetList = YamlSerializer.Deserialize<List<PresetModel>>(_fetchPresetRAW);
+
+                    var _fetchPresetItem = _fetchPresetList.FirstOrDefault(x => x.PresetName == input);
+                    var _fetchPresetMenu = PresetItems.OfType<MenuItem>().FirstOrDefault(x => x.Header == input);
+
+                    _fetchPresetList.Remove(_fetchPresetItem);
+                    PresetItems.Remove(_fetchPresetMenu);
+
+                    if (PresetItems.Count > 3)
+                    {
+                        var _fetchKeyIndex = 34;
+
+                        for (int i = 0x03; i < PresetItems.Count; i++)
+                            (PresetItems[i] as MenuItem).InputGesture = new KeyGesture((Key)(_fetchKeyIndex++), KeyModifiers.Alt);
+                    }
+
+                    else
+                    {
+                        PresetItems[0x02] = new MenuItem()
+                        {
+                            Header = "No Presets Available.",
+                            IsEnabled = false
+                        };
+                    }
+
+                    Task.Run(() =>
+                    {
+                        var _fetchNormalStr = input.ToLower().Replace(" ", "_");
+
+                        foreach (var _fetchChar in Path.GetInvalidFileNameChars())
+                            _fetchNormalStr = _fetchNormalStr.Replace(_fetchChar, '-');
+
+                        var _fetchFinalPath = Path.Combine(PathService.ResolvePreset(CurrentConfig, false), _fetchNormalStr);
+
+                        if (Directory.Exists(_fetchFinalPath))
+                            Directory.Delete(_fetchFinalPath, true);
+
+                    });
+
+                    var _fetchSerial = YamlSerializer.Serialize(_fetchPresetList);
+                    File.WriteAllText(_fetchPresetPath, _fetchSerial);
+
+                    InitializeMods();
+                }
+            }
+
             return true;
         }
 
@@ -1656,7 +1720,17 @@ public partial class MainViewModel : ViewModelBase
             var _fetchGame = (int)CurrentConfig.Frontend.TargetGame;
             var _fetchPreset = CurrentConfig.Frontend.TargetPreset[_fetchGame];
 
-            return true;
+            var _fetchTopLevel = FetchTopLevel() as Window;
+
+            if (_fetchTopLevel == null)
+                return false;
+
+            var _fetchResult = await DialogService.ShowInput(_fetchTopLevel, "Rename Preset", "Please enter a new name for this preset.", "Rename", "", input);
+
+            if (_fetchResult != null)
+            {
+                return true;
+            }
         }
 
         return false;
