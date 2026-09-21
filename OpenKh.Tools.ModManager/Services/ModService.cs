@@ -54,10 +54,10 @@ namespace OpenKh.Tools.ModManager.Services
         /// <param name="currentMod">The mod to resolve the hash from.</param>
         /// <param name="currentConfig">The current active configuration.</param>
         /// <returns>The MD5 hash for the path of the mod as a hex string.</returns>
-        public static string ResolveMD5(ModModel currentMod, Config currentConfig)
+        public static string ResolveMD5(ModModel currentMod, Config? currentConfig)
         {
-            var _fetchRelativePath = Path.GetRelativePath(PathService.ResolveMod(currentConfig), currentMod.ModPath);
-            var _fetchBytes = Encoding.ASCII.GetBytes(_fetchRelativePath);
+            var _fetchRelativePath = currentConfig != null ? Path.GetRelativePath(PathService.ResolveMod(currentConfig), currentMod.ModPath) : currentMod.ModPath;
+            var _fetchBytes = Encoding.ASCII.GetBytes(_fetchRelativePath.Replace("\\", "/"));
             var _fetchHash = MD5.HashData(_fetchBytes);
 
             return Convert.ToHexString(_fetchHash);

@@ -369,18 +369,70 @@ public partial class MainViewModel : ViewModelBase
             {
                 foreach (var _fetchChild in Directory.EnumerateDirectories(_fetchDirectory))
                 {
-                    // Construct the paths to YAML and PNG files.
-                    var _fetchPathYaml = Path.Combine(_fetchChild, "mod.yml");
-                    var _fetchPathIcon = Path.Combine(_fetchChild, "icon.png");
+                    var _fetchPath = _fetchChild;
 
-                    var _fetchPathGit = Path.Combine(_fetchChild, ".git");
+                    // Construct the paths to YAML and PNG files.
+                    var _fetchPathYaml = Path.Combine(_fetchPath, "mod.yml");
+                    var _fetchPathIcon = Path.Combine(_fetchPath, "icon.png");
+
+                    var _fetchPathGit = Path.Combine(_fetchPath, ".git");
+
+                    PresetModel _fetchLinkPreset = null;
 
                     // YAML don't do it? Don't do it!
                     if (!File.Exists(_fetchPathYaml))
-                        continue;
+                    {
+                        if (PresetMemory != null)
+                        {
+                            var _fetchPathLink = Path.Combine(_fetchPath, "mod_link.yml");
 
-                    // Fetch and read the YAML to parse the metadata.
-                    var _metadata = Metadata.Read(_fetchPathYaml);
+                            if (!File.Exists(_fetchPathLink))
+                                continue;
+
+                            var _fetchLinkRAW = File.ReadAllText(_fetchPathLink);
+                            var _fetchLinkSerial = YamlSerializer.Deserialize<PresetModel>(_fetchLinkRAW);
+
+                            if (_fetchLinkSerial != null)
+                            {
+                                var _tryFetchPreset = PresetMemory.FirstOrDefault(x => x.Name == _fetchLinkSerial.Name);
+
+                                if (_tryFetchPreset != null || _fetchLinkSerial.Name == "Default")
+                                {
+                                    var _fetchPresetPath = PathService.ResolvePreset(CurrentConfig);
+                                    var _fetchBareModPath = PathService.ResolveMod(CurrentConfig, true);
+
+                                    var _fetchLinkedPathMain = _tryFetchPreset == null ? Path.Combine(_fetchBareModPath, Config.GameShorthand[CurrentConfig.Frontend.TargetGame], Path.GetFileName(_fetchDirectory), Path.GetFileName(_fetchChild))
+                                                                                       : Path.Combine(_fetchPresetPath, _tryFetchPreset.FolderName, Path.GetFileName(_fetchDirectory), Path.GetFileName(_fetchChild));
+
+                                    if (!Directory.Exists(_fetchLinkedPathMain))
+                                        continue;
+
+                                    else
+                                    {
+                                        _fetchPath = _fetchLinkedPathMain;
+
+                                        _fetchPathYaml = Path.Combine(_fetchPath, "mod.yml");
+                                        _fetchPathIcon = Path.Combine(_fetchPath, "icon.png");
+
+                                        _fetchPathGit = Path.Combine(_fetchPath, ".git");
+
+                                        _fetchLinkPreset = _tryFetchPreset ?? _fetchLinkSerial;
+                                    }
+                                }
+
+                                else
+                                    continue;
+                            }
+
+                            else
+                                continue;
+                        }
+
+                        else
+                            continue;
+                    }
+
+                     var _metadata = Metadata.Read(_fetchPathYaml);
 
                     // If the metadata is valid, parse the mod and push it to the ViewModel.
 
@@ -391,7 +443,8 @@ public partial class MainViewModel : ViewModelBase
                             ModTitle = _metadata.Title,
                             ModAuthor = _metadata.OriginalAuthor,
                             ModDescription = _metadata.Description,
-                            ModPath = _fetchChild,
+                            ModPath = _fetchPath,
+                            ModLinkPreset = _fetchLinkPreset,
                             ModFilesList = _metadata.Assets.Select(x => x.Name).ToArray(),
                             ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
                             ModActive = true,
@@ -438,6 +491,7 @@ public partial class MainViewModel : ViewModelBase
                                             _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
 
                                             _modModel.ModPlatform = _modModel.ModSource.Host;
+                                            _modModel.ModGitAddress = $"{Path.GetFileName(_fetchDirectory)}/{Path.GetFileName(_fetchChild)}@{_modModel.ModPlatform}";
 
                                             Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
 
@@ -558,6 +612,7 @@ public partial class MainViewModel : ViewModelBase
     {
         var _fetchErroredList = new List<string>();
         var _fetchSuccessList = new List<string>();
+        var _fetchLinkedList = new Dictionary<string, PresetModel>();
 
         if (CurrentConfig != null && InstalledMods != null)
         {
@@ -635,6 +690,211 @@ public partial class MainViewModel : ViewModelBase
 
                     if (_fetchMultiInstall == null)
                     {
+                        var _fetchModAuthor = _fetchResult.Split('/').First();
+                        var _fetchModName = _fetchResult.Split('/').Last();
+
+                        var _fetchModNormalized = _fetchResult.Split(':').First()
+                                                              .Split('@').First();
+
+                        var _fetchBytes = Encoding.ASCII.GetBytes(_fetchModNormalized);
+                        var _fetchModHash = MD5.HashData(_fetchBytes);
+
+                        var _fetchTargetGame = CurrentConfig.Frontend.TargetGame;
+                        var _fetchPresetArray = CurrentConfig.Frontend.TargetPreset;
+
+                        PresetModel _fetchPresetTarget = null;
+
+                        if (_fetchPresetArray != null && PresetMemory != null)
+                        {
+                            var _fetchExistsList = new List<PresetModel>();
+                            var _fetchPresetCurrent = _fetchPresetArray[(int)_fetchTargetGame];
+
+                            if (_fetchPresetCurrent != "")
+                            {
+                                var _fetchBareModPath = PathService.ResolveMod(CurrentConfig, true);
+                                var _fetchMemoryPath = Path.Combine(_fetchBareModPath, Config.GameShorthand[_fetchTargetGame], "mod_memory.yml");
+
+                                var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
+                                var _fetchMemorySerial = YamlSerializer.Deserialize<List<MemoryModel>>(_fetchMemoryRAW);
+
+                                var _fetchExists = _fetchMemorySerial.FirstOrDefault(x => x.ModHash == Convert.ToHexString(_fetchModHash));
+
+                                if (_fetchExists != null)
+                                    _fetchExistsList.Add(new PresetModel { Name = "Default", TargetGame = _fetchTargetGame });
+                            }
+
+                            foreach (var _fetchPreset in PresetMemory)
+                            {
+                                if (_fetchPreset.Name == _fetchPresetCurrent)
+                                    continue;
+
+                                var _fetchPresetPath = PathService.ResolvePreset(CurrentConfig);
+                                var _fetchMemoryPath = Path.Combine(_fetchPresetPath, _fetchPreset.FolderName, "mod_memory.yml");
+
+                                if (!File.Exists(_fetchMemoryPath))
+                                    continue;
+
+                                var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
+                                var _fetchMemorySerial = YamlSerializer.Deserialize<List<MemoryModel>>(_fetchMemoryRAW);
+
+                                var _fetchExists = _fetchMemorySerial.FirstOrDefault(x => x.ModHash == Convert.ToHexString(_fetchModHash));
+
+                                if (_fetchExists != null)
+                                    _fetchExistsList.Add(_fetchPreset);
+                            }
+
+                            if (_fetchExistsList.Count == 1)
+                            {
+                                var _fetchPreset = _fetchExistsList.First();
+                                var _fetchQuestion = await DialogService.ShowQuestion(_fetchMainView, "Mod Exists in Preset", $"The Mod you are trying to install currently exists in the Preset: \"{_fetchPreset.Name}\".\n" +
+                                                                                                                              $"Would you like to link this install to that Preset?\n" +
+                                                                                                                              $"Saying \"No\" will install a new instance of this Mod.");
+
+                                if (_fetchQuestion)
+                                    _fetchPresetTarget = _fetchPreset;
+                            }
+
+                            else if (_fetchExistsList.Count >= 2)
+                            {
+                                var _fetchDialog = await DialogService.ShowOptions(_fetchMainView, "Mod Exists in Multiple Presets", $"The Mod you are trying to install currently exists in multiple Presets.\n" +
+                                                                                                                                     $"If you would like to link this Mod to a Preset, please select a Preset from below and click \"Link\"\n" +
+                                                                                                                                     $"Otherwise, click \"Install\" to install a new instance of this Mod.", "Link", _fetchExistsList.Select(x => x.Name).ToArray(), "Install");
+
+                                if (_fetchDialog != null)
+                                    _fetchPresetTarget = _fetchExistsList.FirstOrDefault(x => x.Name == _fetchDialog);
+                            }
+
+                            if (_fetchPresetTarget != null)
+                            {
+                                var _fetchPresetPath = PathService.ResolvePreset(CurrentConfig);
+                                var _fetchBareModPath = PathService.ResolveMod(CurrentConfig, true);
+
+                                var _fetchModFolder = _fetchPresetTarget.Name == "Default" ? Path.Combine(_fetchBareModPath, Config.GameShorthand[_fetchTargetGame], _fetchModNormalized) : Path.Combine(_fetchPresetPath, _fetchPresetTarget.FolderName, _fetchModNormalized);
+
+                                var _fetchPathGit = Path.Combine(_fetchModFolder, ".git");
+                                var _fetchYamlName = Path.Combine(_fetchModFolder, "mod.yml");
+                                var _fetchPathIcon = Path.Combine(_fetchModFolder, "icon.png");
+
+                                var _fetchMetadata = Metadata.Read(_fetchYamlName);
+
+                                if (_fetchMetadata.Dependencies != null)
+                                {
+                                    var _fetchDependencies = _fetchMetadata.Dependencies;
+                                    var _fetchMissingDeps = new List<string>();
+
+                                    foreach (var _fetchDependency in _fetchDependencies)
+                                    {
+                                        var _doesHaveDependency = InstalledMods.FirstOrDefault(x => x.ModGitAddress != null && x.ModGitAddress.ToLower() == _fetchDependency.ToLower());
+
+                                        if (_doesHaveDependency == null)
+                                            _fetchMissingDeps.Add(_fetchDependency);
+                                    }
+
+                                    if (_fetchMissingDeps.Count > 0)
+                                    {
+                                        var _fetchDepString = String.Join("\n- ", _fetchMissingDeps);
+                                        var _fetchDepQuestion = await DialogService.ShowQuestion(_fetchMainView, "Missing Dependencies", $"This Mod has some dependencies that are not installed.\nTo proceed, all the following dependencies must be installed:\n\n- {_fetchDepString}\n\nDo you want to proceed? [Not doing so will cancel this mod's install.]");
+
+                                        if (!_fetchDepQuestion)
+                                            return false;
+
+                                        else
+                                        {
+                                            var _fetchInstallStr = String.Join(";", _fetchMissingDeps);
+
+                                            var _fetchInstall = await Install(_fetchInstallStr);
+
+                                            if (!_fetchInstall)
+                                                return false;
+                                        }
+                                    }
+                                }
+
+                                var _modModel = new ModModel
+                                {
+                                    ModTitle = !String.IsNullOrEmpty(_fetchMetadata.Title) ? _fetchMetadata.Title : _fetchModName,
+                                    ModAuthor = !String.IsNullOrEmpty(_fetchMetadata.OriginalAuthor) ? _fetchMetadata.OriginalAuthor : _fetchModAuthor,
+                                    ModGitAddress = _fetchResult,
+                                    ModDescription = !String.IsNullOrEmpty(_fetchMetadata.Description) ? _fetchMetadata.Description : "This mod does not have a description, but we believe it's pretty cool.",
+                                    ModPath = _fetchModFolder,
+                                    ModLinkPreset = _fetchPresetTarget,
+                                    ModFilesList = _fetchMetadata.Assets.Select(x => x.Name).ToArray(),
+                                    ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
+                                    ModActive = true,
+                                    ModValid = true
+                                };
+
+                                if (_fetchMetadata.Preferences != null)
+                                {
+                                    _modModel.ModPreferences = new List<PreferenceModel>();
+
+                                    foreach (var _preference in _fetchMetadata.Preferences)
+                                    {
+                                        var _fetchPref = new PreferenceModel
+                                        {
+                                            Title = _preference.Title,
+                                            Key = _preference.Key,
+                                            Description = _preference.Description,
+                                            Type = _preference.Type,
+                                            Options = _preference.Options,
+                                            Value = _preference.Value
+                                        };
+
+                                        _modModel.ModPreferences.Add(_fetchPref);
+                                    }
+                                }
+
+                                if (Directory.Exists(_fetchPathGit))
+                                {
+                                    if (Repository.IsValid(_fetchPathGit))
+                                    {
+                                        var _fetchGit = new Repository(_fetchPathGit);
+
+                                        if (!_fetchGit.Info.IsHeadDetached)
+                                        {
+                                            var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+
+                                            _modModel.ModSource = new Uri(_fetchRemote.Url);
+                                            _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+
+                                            _modModel.ModPlatform = _modModel.ModSource.Host;
+
+                                            Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
+
+                                            var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
+                                            _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
+                                        }
+
+                                        _fetchGit.Dispose();
+
+                                        var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
+
+                                        foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
+                                            if (_fetchFile.Exists)
+                                                _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                                    }
+                                }
+
+                                var _fetchFirstInvalid = InstalledMods.FirstOrDefault(x => !x.ModValid);
+                                var _fetchModIndex = _fetchFirstInvalid != null ? InstalledMods.IndexOf(_fetchFirstInvalid) : 0x00;
+
+                                InstalledMods.Insert(_fetchModIndex, _modModel);
+                                HasModsInstalled = true;
+
+                                var _fetchTargetFolder = Path.Combine(_fetchModPath, _fetchModAuthor, _fetchModName);
+
+                                if (!Directory.Exists(_fetchTargetFolder))
+                                    Directory.CreateDirectory(_fetchTargetFolder);
+
+                                var _fetchLinkPath = Path.Combine(_fetchTargetFolder, "mod_link.yml");
+                                var _fetchLinkSerial = YamlSerializer.Serialize(_fetchPresetTarget);
+
+                                File.WriteAllText(_fetchLinkPath, _fetchLinkSerial);
+
+                                return true;
+                            }
+                        }
+
                         // Allocate the pointers necessary.
 
                         SafePtr _progressCurrentPtr = 0x00;
@@ -689,6 +949,82 @@ public partial class MainViewModel : ViewModelBase
                         for (int i = 0; i < _fetchMultiInstall.Length; i++)
                         {
                             var _fetchMod = _fetchMultiInstall[i];
+
+                            var _fetchModAuthor = _fetchMod.Split('/').First();
+                            var _fetchModName = _fetchMod.Split('/').Last();
+
+                            var _fetchModNormalized = _fetchMod.Split(':').First()
+                                                               .Split('@').First();
+
+                            var _fetchBytes = Encoding.ASCII.GetBytes(_fetchModNormalized);
+                            var _fetchModHash = MD5.HashData(_fetchBytes);
+
+                            var _fetchTargetGame = CurrentConfig.Frontend.TargetGame;
+                            var _fetchPresetArray = CurrentConfig.Frontend.TargetPreset;
+
+                            if (_fetchPresetArray != null && PresetMemory != null)
+                            {
+                                var _fetchExistsList = new List<PresetModel>();
+                                var _fetchPresetCurrent = _fetchPresetArray[(int)_fetchTargetGame];
+
+                                if (_fetchPresetCurrent != "")
+                                {
+                                    var _fetchBareModPath = PathService.ResolveMod(CurrentConfig, true);
+                                    var _fetchMemoryPath = Path.Combine(_fetchBareModPath, Config.GameShorthand[_fetchTargetGame], "mod_memory.yml");
+
+                                    var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
+                                    var _fetchMemorySerial = YamlSerializer.Deserialize<List<MemoryModel>>(_fetchMemoryRAW);
+
+                                    var _fetchExists = _fetchMemorySerial.FirstOrDefault(x => x.ModHash == Convert.ToHexString(_fetchModHash));
+
+                                    if (_fetchExists != null)
+                                        _fetchExistsList.Add(new PresetModel { Name = "Default", TargetGame = _fetchTargetGame });
+                                }
+
+                                foreach (var _fetchPreset in PresetMemory)
+                                {
+                                    if (_fetchPreset.Name == _fetchPresetCurrent)
+                                        continue;
+
+                                    var _fetchPresetPath = PathService.ResolvePreset(CurrentConfig);
+                                    var _fetchMemoryPath = Path.Combine(_fetchPresetPath, _fetchPreset.FolderName, "mod_memory.yml");
+
+                                    var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
+                                    var _fetchMemorySerial = YamlSerializer.Deserialize<List<MemoryModel>>(_fetchMemoryRAW);
+
+                                    var _fetchExists = _fetchMemorySerial.FirstOrDefault(x => x.ModHash == Convert.ToHexString(_fetchModHash));
+
+                                    if (_fetchExists != null)
+                                        _fetchExistsList.Add(_fetchPreset);
+                                }
+
+                                if (_fetchExistsList.Count == 1)
+                                {
+                                    var _fetchPreset = _fetchExistsList.First();
+                                    var _fetchQuestion = await DialogService.ShowQuestion(_fetchMainView, "Mod Exists in Preset", $"The Mod named \"{_fetchModNormalized}\" currently exists in the Preset: \"{_fetchPreset.Name}\".\n" +
+                                                                                                                                  $"Would you like to link this install to that Preset?\n" +
+                                                                                                                                  $"Saying \"No\" will install a new instance of this Mod.");
+
+                                    if (_fetchQuestion)
+                                    {
+                                        _fetchLinkedList.Add(_fetchModNormalized, _fetchPreset);
+                                        continue;
+                                    }
+                                }
+
+                                else if (_fetchExistsList.Count >= 2)
+                                {
+                                    var _fetchDialog = await DialogService.ShowOptions(_fetchMainView, "Mod Exists in Multiple Presets", $"The Mod named \"{_fetchModNormalized}\" currently exists in multiple Presets.\n" +
+                                                                                                                                         $"If you would like to link this Mod to a Preset, please select a Preset from below and click \"Link\"\n" +
+                                                                                                                                         $"Otherwise, click \"Install\" to install a new instance of this Mod.", "Link", _fetchExistsList.Select(x => x.Name).ToArray(), "Install");
+
+                                    if (_fetchDialog != null)
+                                    {
+                                        _fetchLinkedList.Add(_fetchModNormalized, _fetchExistsList.FirstOrDefault(x => x.Name == _fetchDialog));
+                                        continue;
+                                    }
+                                }
+                            }
 
                             var _fetchInstallStatus =
                             await ModService.InstallGit
@@ -952,6 +1288,147 @@ public partial class MainViewModel : ViewModelBase
                         var _fetchIncompatibleList = new List<Tuple<string, string>>();
                         var _fetchNoDependencyList = new List<string>();
 
+                        foreach (var _fetchLinked in _fetchLinkedList)
+                        {
+                            var _fetchMod = _fetchLinked.Key;
+                            var _fetchPreset = _fetchLinked.Value;
+
+                            var _fetchModAuthor = _fetchMod.Split('/').First();
+                            var _fetchModName = _fetchMod.Split('/').Last();
+
+                            var _fetchPresetPath = PathService.ResolvePreset(CurrentConfig);
+                            var _fetchBareModPath = PathService.ResolveMod(CurrentConfig, true);
+
+                            var _fetchTargetGame = CurrentConfig.Frontend.TargetGame;
+
+                            var _fetchModFolder = _fetchPreset.Name == "Default" ? Path.Combine(_fetchBareModPath, Config.GameShorthand[_fetchTargetGame], _fetchMod) : Path.Combine(_fetchPresetPath, _fetchPreset.FolderName, _fetchMod);
+
+                            var _fetchPathGit = Path.Combine(_fetchModFolder, ".git");
+                            var _fetchYamlName = Path.Combine(_fetchModFolder, "mod.yml");
+                            var _fetchPathIcon = Path.Combine(_fetchModFolder, "icon.png");
+
+                            var _fetchMetadata = Metadata.Read(_fetchYamlName);
+
+                            if (_fetchMetadata.Dependencies != null)
+                            {
+                                var _fetchDependencies = _fetchMetadata.Dependencies;
+                                var _fetchMissingDeps = new List<string>();
+
+                                foreach (var _fetchDependency in _fetchDependencies)
+                                {
+                                    var _doesHaveDependency = InstalledMods.FirstOrDefault(x => x.ModGitAddress != null && x.ModGitAddress.ToLower() == _fetchDependency.ToLower());
+
+                                    if (_doesHaveDependency == null)
+                                        _fetchMissingDeps.Add(_fetchDependency);
+                                }
+
+                                if (_fetchMissingDeps.Count > 0)
+                                {
+                                    var _fetchDepString = String.Join("\n- ", _fetchMissingDeps);
+                                    var _fetchDepQuestion = await DialogService.ShowQuestion(_fetchMainView, "Missing Dependencies", $"This Mod has some dependencies that are not installed.\nTo proceed, all the following dependencies must be installed:\n\n- {_fetchDepString}\n\nDo you want to proceed? [Not doing so will cancel this mod's install.]");
+
+                                    if (!_fetchDepQuestion)
+                                    {
+                                        _fetchNoDependencyList.Add(_fetchMod);
+                                        continue;
+                                    }
+
+                                    else
+                                    {
+                                        var _fetchInstallStr = String.Join(";", _fetchMissingDeps);
+                                        var _fetchInstall = await Install(_fetchInstallStr);
+
+                                        if (!_fetchInstall)
+                                        {
+                                            _fetchNoDependencyList.Add(_fetchMod);
+                                            continue;
+                                        }
+                                    }
+                                }
+                            }
+
+                            var _modModel = new ModModel
+                            {
+                                ModTitle = !String.IsNullOrEmpty(_fetchMetadata.Title) ? _fetchMetadata.Title : _fetchModName,
+                                ModAuthor = !String.IsNullOrEmpty(_fetchMetadata.OriginalAuthor) ? _fetchMetadata.OriginalAuthor : _fetchModAuthor,
+                                ModGitAddress = _fetchResult,
+                                ModDescription = !String.IsNullOrEmpty(_fetchMetadata.Description) ? _fetchMetadata.Description : "This mod does not have a description, but we believe it's pretty cool.",
+                                ModPath = _fetchModFolder,
+                                ModLinkPreset = _fetchPreset,
+                                ModFilesList = _fetchMetadata.Assets.Select(x => x.Name).ToArray(),
+                                ModIcon = File.Exists(_fetchPathIcon) ? new Bitmap(_fetchPathIcon) : null,
+                                ModActive = true,
+                                ModValid = true
+                            };
+
+                            if (_fetchMetadata.Preferences != null)
+                            {
+                                _modModel.ModPreferences = new List<PreferenceModel>();
+
+                                foreach (var _preference in _fetchMetadata.Preferences)
+                                {
+                                    var _fetchPref = new PreferenceModel
+                                    {
+                                        Title = _preference.Title,
+                                        Key = _preference.Key,
+                                        Description = _preference.Description,
+                                        Type = _preference.Type,
+                                        Options = _preference.Options,
+                                        Value = _preference.Value
+                                    };
+
+                                    _modModel.ModPreferences.Add(_fetchPref);
+                                }
+                            }
+
+                            if (Directory.Exists(_fetchPathGit))
+                            {
+                                if (Repository.IsValid(_fetchPathGit))
+                                {
+                                    var _fetchGit = new Repository(_fetchPathGit);
+
+                                    if (!_fetchGit.Info.IsHeadDetached)
+                                    {
+                                        var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+
+                                        _modModel.ModSource = new Uri(_fetchRemote.Url);
+                                        _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+
+                                        _modModel.ModPlatform = _modModel.ModSource.Host;
+
+                                        Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
+
+                                        var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
+                                        _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
+                                    }
+
+                                    _fetchGit.Dispose();
+
+                                    var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
+
+                                    foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
+                                        if (_fetchFile.Exists)
+                                            _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                                }
+                            }
+
+                            var _fetchFirstInvalid = InstalledMods.FirstOrDefault(x => !x.ModValid);
+                            var _fetchModIndex = _fetchFirstInvalid != null ? InstalledMods.IndexOf(_fetchFirstInvalid) : 0x00;
+
+                            InstalledMods.Insert(_fetchModIndex, _modModel);
+                            HasModsInstalled = true;
+
+                            var _fetchTargetFolder = Path.Combine(_fetchModPath, _fetchModAuthor, _fetchModName);
+
+                            if (!Directory.Exists(_fetchTargetFolder))
+                                Directory.CreateDirectory(_fetchTargetFolder);
+
+                            var _fetchLinkPath = Path.Combine(_fetchTargetFolder, "mod_link.yml");
+                            var _fetchLinkSerial = YamlSerializer.Serialize(_fetchPreset);
+
+                            File.WriteAllText(_fetchLinkPath, _fetchLinkSerial);
+                        }
+
                         foreach (var _fetchSuccess in _fetchSuccessList)
                         {
                             var _fetchModAuthor = _fetchSuccess.Split('/').First();
@@ -1166,14 +1643,17 @@ public partial class MainViewModel : ViewModelBase
             if (_fetchMainView == null)
                 return false;
 
-            bool? _fetchResult = await DialogService.ShowQuestion(_fetchMainView, "Remove Mod?", "Are you sure you want to remove the selected mod?");
+            bool? _fetchResult = await DialogService.ShowQuestion(_fetchMainView, "Remove Mod?", "Are you sure you want to remove the selected mod?\n" +
+                                                                                                 "Please do note that doing so will also remove it from all presets the mod is linked to.");
 
             // If they indeed do:
 
             if (_fetchResult == true)
             {
-                // Fetch the path too we kinda need it.
                 var _fetchModPath = CurrentMod.ModPath;
+                var _fetchGitAddress = CurrentMod.ModGitAddress;
+
+                var _isModLinked = CurrentMod.ModLinkPreset != null;
 
                 // Remove the mod from the list.
                 InstalledMods.Remove(CurrentMod);
@@ -1193,8 +1673,61 @@ public partial class MainViewModel : ViewModelBase
                 // This is a task for a reason. This isn't being awaited for a reason. Do not listen to IntelliSense on this one.
                 Task.Run(() =>
                 {
-                    if (Directory.Exists(_fetchModPath))
-                        Directory.Delete(_fetchModPath, true);
+                    var _fetchTargetGame = CurrentConfig.Frontend.TargetGame;
+                    var _fetchPresetArray = CurrentConfig.Frontend.TargetPreset;
+
+                    if (!_isModLinked)
+                    {
+                        if (Directory.Exists(_fetchModPath))
+                            Directory.Delete(_fetchModPath, true);
+                    }
+
+                    else
+                    {
+                        // Only Git mods can be linked.
+                        var _fetchNormalized = _fetchGitAddress.Split(':').First()
+                                                               .Split('@').First();
+
+                        var _fetchCurrentPath = PathService.ResolveMod(CurrentConfig);
+                        var _fetchActualPath = Path.Combine(_fetchCurrentPath, _fetchNormalized);
+
+                        if (Directory.Exists(_fetchActualPath))
+                            Directory.Delete(_fetchActualPath, true);
+                    }
+
+                    if (_fetchGitAddress != null && _fetchPresetArray != null && PresetMemory != null)
+                    {
+                        var _fetchNormalized = _fetchGitAddress.Split(':').First()
+                                                               .Split('@').First();
+
+                        var _fetchPresetName = _fetchPresetArray[(int)_fetchTargetGame];
+                        var _fetchTargetName = String.IsNullOrEmpty(_fetchPresetName) ? "Default" : _fetchPresetName;
+
+                        foreach (var _fetchPreset in PresetMemory)
+                        {
+                            if (_fetchPreset.Name == _fetchTargetName)
+                                continue;
+
+                            var _fetchPresetPath = PathService.ResolvePreset(CurrentConfig, true);
+                            var _fetchModBarePath = PathService.ResolveMod(CurrentConfig, true);
+
+                            var _fetchTargetPath = Path.Combine(_fetchPresetPath, Config.GameShorthand[_fetchTargetGame], _fetchPreset.FolderName, _fetchNormalized);
+                            
+                            if (Directory.Exists(_fetchTargetPath))
+                            {
+                                var _fetchFilePath = Path.Combine(_fetchTargetPath, "mod_link.yml");
+
+                                if (File.Exists(_fetchFilePath))
+                                {
+                                    var _fetchLinkRAW = File.ReadAllText(_fetchFilePath);
+                                    var _fetchLinkSerial = YamlSerializer.Deserialize<PresetModel>(_fetchLinkRAW);
+
+                                    if (_fetchLinkSerial != null && _fetchLinkSerial.Name == _fetchTargetName)
+                                        Directory.Delete(_fetchTargetPath, true);
+                                }
+                            }
+                        }
+                    }
                 });
 
                 return true;

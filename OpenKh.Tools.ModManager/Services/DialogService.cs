@@ -135,11 +135,35 @@ namespace OpenKh.Tools.ModManager.Services
 
         public static async Task<string> ShowInput(Window? owner, string title, string message, string mainButtonText, string placeholderText, string? currentText = null, string? miscButtonMessage = null, Func<Window?, Task<string?>>? miscButtonCallback = null)
         {
-            var _fetchDialog = new InputDialog { Title = title, MiscButtonCallback = miscButtonCallback, CurrentText = currentText };
+            var _fetchDialog = new InputDialog { Title = title, MiscButtonCallback = miscButtonCallback, CurrentText = currentText, MiscButtonText = miscButtonMessage };
 
             _fetchDialog.MainText.Text = message;
             _fetchDialog.AcceptButton.Content = mainButtonText;
             _fetchDialog.InputText.PlaceholderText = placeholderText;
+
+            if (owner != null)
+                return await _fetchDialog.ShowDialog<string>(owner);
+
+            else
+            {
+                _fetchDialog.Show();
+
+                await Task.Run(() =>
+                {
+                    while (_fetchDialog.Result == null)
+                    { }
+                }, CancellationToken.None);
+
+                return _fetchDialog.Result;
+            }
+        }
+
+        public static async Task<string> ShowOptions(Window? owner, string title, string message, string mainButtonText, string[] options, string? miscButtonMessage = null, Func<Window?, Task<string?>>? miscButtonCallback = null)
+        {
+            var _fetchDialog = new OptionsDialog { Title = title, MiscButtonCallback = miscButtonCallback, Options = options, MiscButtonText = miscButtonMessage };
+
+            _fetchDialog.MainText.Text = message;
+            _fetchDialog.AcceptButton.Content = mainButtonText;
 
             if (miscButtonMessage != null)
                 _fetchDialog.MiscButton.Content = miscButtonMessage;

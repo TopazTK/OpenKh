@@ -26,6 +26,7 @@ namespace OpenKh.Tools.ModManager.Models
         public bool ModValid { get; set; }
         public Uri? ModSource { get; set; }
         public Uri? ModIssues { get; set; }
+        public PresetModel? ModLinkPreset { get; set; }
         public int ModBehindBy { get; set; }
     }
 }

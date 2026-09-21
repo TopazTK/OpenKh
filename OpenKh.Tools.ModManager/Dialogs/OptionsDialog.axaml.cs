@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace OpenKh.Tools.ModManager.Dialogs
 {
-    public partial class InputDialog : Window
+    public partial class OptionsDialog : Window
     {
         public Func<Window?, Task<string?>>? MiscButtonCallback { get; set; }
 
@@ -16,7 +16,9 @@ namespace OpenKh.Tools.ModManager.Dialogs
         public string? CurrentText { get; set; }
         public string? MiscButtonText { get; set; }
 
-        public InputDialog()
+        public string[]? Options { get; set; }
+
+        public OptionsDialog()
         {
             InitializeComponent();
             Loaded += OnViewLoaded;
@@ -24,16 +26,14 @@ namespace OpenKh.Tools.ModManager.Dialogs
 
         private void OnViewLoaded(object? sender, RoutedEventArgs e)
         {
-            InputText.Focus();
-
-            InputText.MaxWidth = Bounds.Width;
-            InputText.Text = CurrentText;
+            MainOption.ItemsSource = Options;
+            MainOption.SelectedIndex = 0;
 
             MiscButton.Content = MiscButtonText;
             MiscButton.IsVisible = MiscButtonText == null ? false : true;
         }
 
-        private void OnAcceptClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Close(Result = InputText.Text);
+        private void OnAcceptClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Close(Result = MainOption.SelectedItem as string);
 
         private async void OnMiscClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
