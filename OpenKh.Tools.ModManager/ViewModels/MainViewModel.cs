@@ -559,7 +559,7 @@ public partial class MainViewModel : ViewModelBase
                 // Make a temporary array for us to order the mods.
                 // And a temporary list for us to commit the mods.
 
-                var _tempModArray = new ModModel[_fetchMods.Count];
+                var _tempModArray = new ModModel[_fetchModMemory.Count];
                 var _tempModList = new List<ModModel>();
 
                 foreach (var _fetchMemory in _fetchModMemory)
@@ -714,13 +714,16 @@ public partial class MainViewModel : ViewModelBase
                                 var _fetchBareModPath = PathService.ResolveMod(CurrentConfig, true);
                                 var _fetchMemoryPath = Path.Combine(_fetchBareModPath, Config.GameShorthand[_fetchTargetGame], "mod_memory.yml");
 
-                                var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
-                                var _fetchMemorySerial = YamlSerializer.Deserialize<List<MemoryModel>>(_fetchMemoryRAW);
+                                if (File.Exists(_fetchMemoryPath))
+                                {
+                                    var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
+                                    var _fetchMemorySerial = YamlSerializer.Deserialize<List<MemoryModel>>(_fetchMemoryRAW);
 
-                                var _fetchExists = _fetchMemorySerial.FirstOrDefault(x => x.ModHash == Convert.ToHexString(_fetchModHash));
+                                    var _fetchExists = _fetchMemorySerial.FirstOrDefault(x => x.ModHash == Convert.ToHexString(_fetchModHash));
 
-                                if (_fetchExists != null)
-                                    _fetchExistsList.Add(new PresetModel { Name = "Default", TargetGame = _fetchTargetGame });
+                                    if (_fetchExists != null)
+                                        _fetchExistsList.Add(new PresetModel { Name = "Default", TargetGame = _fetchTargetGame });
+                                }
                             }
 
                             foreach (var _fetchPreset in PresetMemory)
@@ -972,13 +975,16 @@ public partial class MainViewModel : ViewModelBase
                                     var _fetchBareModPath = PathService.ResolveMod(CurrentConfig, true);
                                     var _fetchMemoryPath = Path.Combine(_fetchBareModPath, Config.GameShorthand[_fetchTargetGame], "mod_memory.yml");
 
-                                    var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
-                                    var _fetchMemorySerial = YamlSerializer.Deserialize<List<MemoryModel>>(_fetchMemoryRAW);
+                                    if (File.Exists(_fetchMemoryPath))
+                                    {
+                                        var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
+                                        var _fetchMemorySerial = YamlSerializer.Deserialize<List<MemoryModel>>(_fetchMemoryRAW);
 
-                                    var _fetchExists = _fetchMemorySerial.FirstOrDefault(x => x.ModHash == Convert.ToHexString(_fetchModHash));
+                                        var _fetchExists = _fetchMemorySerial.FirstOrDefault(x => x.ModHash == Convert.ToHexString(_fetchModHash));
 
-                                    if (_fetchExists != null)
-                                        _fetchExistsList.Add(new PresetModel { Name = "Default", TargetGame = _fetchTargetGame });
+                                        if (_fetchExists != null)
+                                            _fetchExistsList.Add(new PresetModel { Name = "Default", TargetGame = _fetchTargetGame });
+                                    }
                                 }
 
                                 foreach (var _fetchPreset in PresetMemory)
@@ -988,6 +994,9 @@ public partial class MainViewModel : ViewModelBase
 
                                     var _fetchPresetPath = PathService.ResolvePreset(CurrentConfig);
                                     var _fetchMemoryPath = Path.Combine(_fetchPresetPath, _fetchPreset.FolderName, "mod_memory.yml");
+
+                                    if (!File.Exists(_fetchMemoryPath))
+                                        continue;
 
                                     var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
                                     var _fetchMemorySerial = YamlSerializer.Deserialize<List<MemoryModel>>(_fetchMemoryRAW);
