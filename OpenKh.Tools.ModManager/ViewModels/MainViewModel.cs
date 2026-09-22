@@ -1,3 +1,4 @@
+#pragma warning disable S4790
 #pragma warning disable CS4014
 
 using Avalonia;
@@ -2056,3 +2057,4 @@ public partial class MainViewModel : ViewModelBase
 }
 
 #pragma warning restore CS4014
+#pragma warning restore S4790

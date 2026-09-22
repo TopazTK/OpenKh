@@ -678,11 +678,12 @@ namespace OpenKh.Tools.ModManager.Services
                         return 0x03;
                     }
 
-                    var _fetchMetadata = new Metadata();
-
-                    _fetchMetadata.Title = Path.GetFileNameWithoutExtension(fileName) + $" ({_fetchExtension.ToUpper()})";
-                    _fetchMetadata.Description = $"This Metadata has been automatically generated for this {_fetchExtension.ToUpper()} Modification.";
-                    _fetchMetadata.Assets = new List<AssetFile>();
+                    var _fetchMetadata = new Metadata
+                    {
+                        Title = Path.GetFileNameWithoutExtension(fileName) + $" ({_fetchExtension.ToUpper()})",
+                        Description = $"This Metadata has been automatically generated for this {_fetchExtension.ToUpper()} Modification.",
+                        Assets = new List<AssetFile>()
+                    };
 
                     await Task.Run(() =>
                     {
