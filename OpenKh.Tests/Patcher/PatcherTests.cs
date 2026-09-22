@@ -4307,7 +4307,7 @@ namespace OpenKh.Tests.Patcher
         }
 
         [Fact]
-        public void Kh1ArdResourceReplaceOutOfRangeThrowsTest()
+        public async void Kh1ArdResourceReplaceOutOfRangeThrowsTest()
         {
             var patcher = new PatcherProcessor();
             var patch = Kh1ArdPatch(("9", "nope.mdls"));
@@ -4315,12 +4315,12 @@ namespace OpenKh.Tests.Patcher
             CreateFile(AssetsInputDir, "tw01.ard").Using(x => x.Write(CreateArd(
                 "a.mdls", "a.mset", "b.moa", "b.moa.mset")));
 
-            Assert.Throws<PatcherException>(() =>
-                patcher.Patch(AssetsInputDir, ModOutputDir, patch, ModInputDir, Tests: true));
+            await Assert.ThrowsAsync<PatcherException>(() =>
+                    patcher.Patch(AssetsInputDir, ModOutputDir, patch, ModInputDir, Tests: true));
         }
 
         [Fact]
-        public void Kh1ArdResourceReplaceEmptyNameThrowsTest()
+        public async void Kh1ArdResourceReplaceEmptyNameThrowsTest()
         {
             var patcher = new PatcherProcessor();
             var patch = Kh1ArdPatch(("0", ""));
@@ -4328,12 +4328,12 @@ namespace OpenKh.Tests.Patcher
             CreateFile(AssetsInputDir, "tw01.ard").Using(x => x.Write(CreateArd(
                 "a.mdls", "a.mset", "b.moa", "b.moa.mset")));
 
-            Assert.Throws<PatcherException>(() =>
-                patcher.Patch(AssetsInputDir, ModOutputDir, patch, ModInputDir, Tests: true));
+            await Assert.ThrowsAsync<PatcherException>(() =>
+                    patcher.Patch(AssetsInputDir, ModOutputDir, patch, ModInputDir, Tests: true));
         }
 
         [Fact]
-        public void Kh1ArdResourceReplaceNameTooLongThrowsTest()
+        public async void Kh1ArdResourceReplaceNameTooLongThrowsTest()
         {
             var patcher = new PatcherProcessor();
             var patch = Kh1ArdPatch(("0", new string('x', OpenKh.Kh1.Ard.MaxNameLength + 1)));
@@ -4341,8 +4341,8 @@ namespace OpenKh.Tests.Patcher
             CreateFile(AssetsInputDir, "tw01.ard").Using(x => x.Write(CreateArd(
                 "a.mdls", "a.mset", "b.moa", "b.moa.mset")));
 
-            Assert.Throws<PatcherException>(() =>
-                patcher.Patch(AssetsInputDir, ModOutputDir, patch, ModInputDir, Tests: true));
+            await Assert.ThrowsAsync<PatcherException>(() =>
+                    patcher.Patch(AssetsInputDir, ModOutputDir, patch, ModInputDir, Tests: true));
         }
 
         private const int ArdHeaderSize = 4 + (32 + 1) * 4;

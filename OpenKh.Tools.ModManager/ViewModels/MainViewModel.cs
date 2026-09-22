@@ -1,40 +1,37 @@
 #pragma warning disable S4790
 #pragma warning disable CS4014
 
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
-using Avalonia.Interactivity;
-using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Controls;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
-using Avalonia.Threading;
-using CommunityToolkit.Mvvm.ComponentModel;
+using Avalonia.Controls.ApplicationLifetimes;
+
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+
 using LibGit2Sharp;
 using LibGit2Sharp.Handlers;
-using OpenKh.Bbs.SystemData;
+
 using OpenKh.Patcher;
 using OpenKh.Tools.ModManager.Classes;
 using OpenKh.Tools.ModManager.Dialogs;
 using OpenKh.Tools.ModManager.Models;
 using OpenKh.Tools.ModManager.Services;
 using OpenKh.Tools.ModManager.Views;
+
 using SharpYaml;
+
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Xe.BinaryMapper;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 
 namespace OpenKh.Tools.ModManager.ViewModels;
 
@@ -390,7 +387,7 @@ public partial class MainViewModel : ViewModelBase
                             if (!File.Exists(_fetchPathLink))
                                 continue;
 
-                            var _fetchLinkRAW = File.ReadAllText(_fetchPathLink);
+                            var _fetchLinkRAW = await File.ReadAllTextAsync(_fetchPathLink);
                             var _fetchLinkSerial = YamlSerializer.Deserialize<PresetModel>(_fetchLinkRAW);
 
                             if (_fetchLinkSerial != null)
@@ -554,7 +551,7 @@ public partial class MainViewModel : ViewModelBase
             if (File.Exists(_fetchModMemoryPath))
             {
                 // Fetch the raw YAML data and deserialize it.
-                var _fetchRawYaml = File.ReadAllText(_fetchModMemoryPath);
+                var _fetchRawYaml = await File.ReadAllTextAsync(_fetchModMemoryPath);
                 var _fetchModMemory = YamlSerializer.Deserialize<ObservableCollection<MemoryModel>>(_fetchRawYaml);
 
                 // Make a temporary array for us to order the mods.
@@ -717,7 +714,7 @@ public partial class MainViewModel : ViewModelBase
 
                                 if (File.Exists(_fetchMemoryPath))
                                 {
-                                    var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
+                                    var _fetchMemoryRAW = await File.ReadAllTextAsync(_fetchMemoryPath);
                                     var _fetchMemorySerial = YamlSerializer.Deserialize<List<MemoryModel>>(_fetchMemoryRAW);
 
                                     var _fetchExists = _fetchMemorySerial.FirstOrDefault(x => x.ModHash == Convert.ToHexString(_fetchModHash));
@@ -738,7 +735,7 @@ public partial class MainViewModel : ViewModelBase
                                 if (!File.Exists(_fetchMemoryPath))
                                     continue;
 
-                                var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
+                                var _fetchMemoryRAW = await File.ReadAllTextAsync(_fetchMemoryPath);
                                 var _fetchMemorySerial = YamlSerializer.Deserialize<List<MemoryModel>>(_fetchMemoryRAW);
 
                                 var _fetchExists = _fetchMemorySerial.FirstOrDefault(x => x.ModHash == Convert.ToHexString(_fetchModHash));
@@ -848,7 +845,7 @@ public partial class MainViewModel : ViewModelBase
 
                                     if (File.Exists(_fetchMemoryPath))
                                     {
-                                        var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
+                                        var _fetchMemoryRAW = await File.ReadAllTextAsync(_fetchMemoryPath);
                                         var _fetchMemorySerial = YamlSerializer.Deserialize<List<MemoryModel>>(_fetchMemoryRAW);
 
                                         var _fetchExists = _fetchMemorySerial.FirstOrDefault(x => x.ModHash == Convert.ToHexString(_fetchModHash));
@@ -869,7 +866,7 @@ public partial class MainViewModel : ViewModelBase
                                     if (!File.Exists(_fetchMemoryPath))
                                         continue;
 
-                                    var _fetchMemoryRAW = File.ReadAllText(_fetchMemoryPath);
+                                    var _fetchMemoryRAW = await File.ReadAllTextAsync(_fetchMemoryPath);
                                     var _fetchMemorySerial = YamlSerializer.Deserialize<List<MemoryModel>>(_fetchMemoryRAW);
 
                                     var _fetchExists = _fetchMemorySerial.FirstOrDefault(x => x.ModHash == Convert.ToHexString(_fetchModHash));
