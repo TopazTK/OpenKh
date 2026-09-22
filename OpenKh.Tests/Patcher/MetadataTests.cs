@@ -16,7 +16,7 @@ namespace OpenKh.Tests.Patcher
             Assert.Equal(1, metadata.Specifications);
 
             Assert.Single(metadata.Dependencies);
-            Assert.Equal("openkh/is-awesome", metadata.Dependencies[0].Name);
+            Assert.Equal("openkh/is-awesome", metadata.Dependencies[0]);
 
             Assert.NotNull(metadata.Assets);
             Assert.Single(metadata.Assets);
