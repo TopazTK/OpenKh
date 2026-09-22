@@ -530,6 +530,9 @@ namespace OpenKh.Tools.ModManager.Services
                             if (_fetchEntry.FullName.EndsWith('/'))
                                 continue;
 
+                            if (_fetchEntry.FullName.Contains("../"))
+                                continue;
+
                             // Construct the target paths for the file and the directory.
                             var _fetchFileTarget = Path.Combine(_fetchCurrentModDir, _fetchEntry.FullName);
                             var _fetchDirectory = Path.Combine(_fetchCurrentModDir, Path.GetDirectoryName(_fetchEntry.FullName));
@@ -644,6 +647,9 @@ namespace OpenKh.Tools.ModManager.Services
                             var _fetchEntry = _fetchArchive.Entries[i];
 
                             if (_fetchEntry.FullName.EndsWith('/'))
+                                continue;
+
+                            if (_fetchEntry.FullName.Contains("../"))
                                 continue;
 
                             var _pathSplit = _fetchEntry.FullName.Split(_fetchEntry.FullName.IndexOf('/') > -1 ? "/" : "\\");
