@@ -93,7 +93,7 @@
                         </MenuItem.IsEnabled>
                     </MenuItem>
                 </MenuItem>
-                <MenuItem Header="Presets" ItemsSource="{Binding PresetMenu}">
+                <MenuItem Header="Profiles" ItemsSource="{Binding PresetMenu}">
                 </MenuItem>
                 <MenuItem Header="Info"/>
             </Menu>

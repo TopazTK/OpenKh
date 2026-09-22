@@ -88,7 +88,7 @@ public partial class MainViewModel : ViewModelBase
             {
                 var _fetchCurrent = _fetchPresetConfig[(int)_fetchTargetGame];
 
-                var _fetchPresetPath = Path.Combine(AppContext.BaseDirectory, "preset.yml");
+                var _fetchPresetPath = Path.Combine(AppContext.BaseDirectory, "profile.yml");
 
                 var _fetchPresetList = sender as ObservableCollection<PresetModel>;
                 var _fetchGameList = _fetchPresetList.Where(x => x.TargetGame == CurrentConfig.Frontend.TargetGame);
@@ -99,7 +99,7 @@ public partial class MainViewModel : ViewModelBase
                 {
                     new MenuItem()
                     {
-                        Header = "Create New Preset...",
+                        Header = "Create New Profile...",
                         Command = CreatePresetCommand,
                         InputGesture = new KeyGesture(Key.N, KeyModifiers.Alt)
                     },
@@ -108,7 +108,7 @@ public partial class MainViewModel : ViewModelBase
 
                     new MenuItem()
                     {
-                        Header = "No Presets Available",
+                        Header = "No Profiles Available",
                         IsEnabled = false
                     },
                 };
@@ -152,14 +152,14 @@ public partial class MainViewModel : ViewModelBase
                                 {
                                 new MenuItem
                                 {
-                                    Header = "Rename Preset...",
+                                    Header = "Rename Profile...",
                                     Command = RenamePresetCommand,
                                     CommandParameter = _fetchPreset
                                 },
 
                                 new MenuItem
                                 {
-                                    Header = "Delete Preset...",
+                                    Header = "Delete Profile...",
                                     Command = DeletePresetCommand,
                                     CommandParameter = _fetchPreset
                                 }
@@ -173,7 +173,7 @@ public partial class MainViewModel : ViewModelBase
                 {
                     PresetMenu[0x02] = new MenuItem
                     {
-                        Header = "No Presets Available",
+                        Header = "No Profiles Available",
                         IsEnabled = false
                     };
                 }
@@ -306,7 +306,7 @@ public partial class MainViewModel : ViewModelBase
             var _fetchTargetGame = CurrentConfig.Frontend.TargetGame;
             var _fetchTargetPreset = _fetchPresetConfig[(int)_fetchTargetGame];
 
-            var _fetchPresetPath = Path.Combine(AppContext.BaseDirectory, "preset.yml");
+            var _fetchPresetPath = Path.Combine(AppContext.BaseDirectory, "profile.yml");
 
             if (File.Exists(_fetchPresetPath))
             {
@@ -1912,7 +1912,7 @@ public partial class MainViewModel : ViewModelBase
                 if (_fetchMainView == null)
                     return false;
 
-                var _fetchResult = await DialogService.ShowInput(_fetchMainView, "Create New Preset", "Please enter a name for the new preset.", "OK", "Ex. \"Some Very Cool Preset\"");
+                var _fetchResult = await DialogService.ShowInput(_fetchMainView, "Create New Profile...", "Please enter a name for the new Profile.", "OK", "Ex. \"Some Very Cool Profile\"");
 
                 if (_fetchResult != null)
                 {
@@ -1970,8 +1970,8 @@ public partial class MainViewModel : ViewModelBase
                 if (_fetchMainView == null)
                     return false;
 
-                var _fetchResult = await DialogService.ShowQuestion(_fetchMainView, "Delete this Preset?", $"Are you sure you want to delete the preset \"{_fetchName}\"?\n" +
-                                                                                                           $"If it is currently active, the default preset will be loaded.");
+                var _fetchResult = await DialogService.ShowQuestion(_fetchMainView, "Delete this Profile?", $"Are you sure you want to delete the Profile \"{_fetchName}\"?\n" +
+                                                                                                           $"If it is currently active, the default Profile will be loaded.");
 
                 if (_fetchResult)
                 {
@@ -2020,7 +2020,7 @@ public partial class MainViewModel : ViewModelBase
                 if (_fetchMainView == null)
                     return false;
 
-                var _fetchResult = await DialogService.ShowInput(_fetchMainView, "Rename Preset", "Please enter a new name for this preset.", "Rename", $"Current Name: \"{_fetchName}\"");
+                var _fetchResult = await DialogService.ShowInput(_fetchMainView, "Rename Profile", "Please enter a new name for this Profile.", "Rename", $"Current Name: \"{_fetchName}\"");
 
                 if (_fetchResult != null)
                 {
