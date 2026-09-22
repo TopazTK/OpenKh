@@ -525,12 +525,13 @@ namespace OpenKh.Tools.ModManager.Services
                         {
                             // Fetch the current entry.
                             var _fetchEntry = _fetchArchive.Entries[i];
+                            var _normalizePath = _fetchEntry.FullName.Replace("\\", "/");
 
                             // If the entry is a directory (yes, really): Move on to the next one.
-                            if (_fetchEntry.FullName.EndsWith('/'))
+                            if (_normalizePath.EndsWith('/'))
                                 continue;
 
-                            if (_fetchEntry.FullName.Contains("../"))
+                            if (_normalizePath.Contains("../") || _normalizePath.Contains("/.."))
                                 continue;
 
                             // Construct the target paths for the file and the directory.
@@ -645,12 +646,15 @@ namespace OpenKh.Tools.ModManager.Services
                         for (int i = 0; i < _fetchArchive.Entries.Count; i++)
                         {
                             var _fetchEntry = _fetchArchive.Entries[i];
+                            var _normalizePath = _fetchEntry.FullName.Replace("\\", "/");
 
-                            if (_fetchEntry.FullName.EndsWith('/'))
+                            // If the entry is a directory (yes, really): Move on to the next one.
+                            if (_normalizePath.EndsWith('/'))
                                 continue;
 
-                            if (_fetchEntry.FullName.Contains("../"))
+                            if (_normalizePath.Contains("../") || _normalizePath.Contains("/.."))
                                 continue;
+
 
                             var _pathSplit = _fetchEntry.FullName.Split(_fetchEntry.FullName.IndexOf('/') > -1 ? "/" : "\\");
                             var _pathPackage = _pathSplit[0];
