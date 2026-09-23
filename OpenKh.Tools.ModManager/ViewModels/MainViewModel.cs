@@ -373,7 +373,7 @@ public partial class MainViewModel : ViewModelBase
                     var _fetchPathYaml = Path.Combine(_fetchPath, "mod.yml");
                     var _fetchPathIcon = Path.Combine(_fetchPath, "icon.png");
 
-                    var _fetchPathGit = Path.Combine(_fetchPath, ".git");
+                    var _fetchPathGit = Path.Combine(_fetchPath, "git_info.yml");
 
                     PresetModel _fetchLinkPreset = null;
 
@@ -471,55 +471,44 @@ public partial class MainViewModel : ViewModelBase
 
                         // We have found a Git Repository, let's see what's up.
 
-                        if (Directory.Exists(_fetchPathGit))
+                        if (File.Exists(_fetchPathGit))
                         {
-                            if (Repository.IsValid(_fetchPathGit))
+                            var _fetchGitRAW = await File.ReadAllTextAsync(_fetchPathGit);
+                            var _fetchSerial = YamlSerializer.Deserialize<GitModel>(_fetchGitRAW);
+
+                            if (_fetchSerial != null)
                             {
-                                var _fetchGit = new Repository(_fetchPathGit);
+                                _modModel.ModTitle = String.IsNullOrEmpty(_modModel.ModTitle) ? _fetchSerial.Repository : _modModel.ModTitle;
+                                _modModel.ModAuthor = String.IsNullOrEmpty(_modModel.ModAuthor) ? _fetchSerial.Author : _modModel.ModAuthor;
 
-                                try
-                                {
-                                    if (!_fetchGit.Info.IsHeadDetached)
-                                    {
-                                        var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+                                _modModel.ModSource = new Uri($"https://{_fetchSerial.Platform}/{_fetchSerial.Author}/{_fetchSerial.Repository}");
+                                _modModel.ModIssues = new Uri($"https://{_fetchSerial.Platform}/{_fetchSerial.Author}/{_fetchSerial.Repository}/issues");
 
-                                        _modModel.ModSource = new Uri(_fetchRemote.Url);
-                                        _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+                                _modModel.ModPlatform = _fetchSerial.Platform;
+                                _modModel.ModGitAddress = $"{Path.GetFileName(_fetchDirectory)}/{Path.GetFileName(_fetchChild)}@{_fetchSerial.Platform}";
 
-                                        _modModel.ModPlatform = _modModel.ModSource.Host;
-                                        _modModel.ModGitAddress = $"{Path.GetFileName(_fetchDirectory)}/{Path.GetFileName(_fetchChild)}@{_modModel.ModPlatform}";
-
-                                        Task.Run(() =>
-                                        {
-                                            var _fetchTempGit = new Repository(_fetchPathGit);
-
-                                            Commands.Fetch(_fetchTempGit, _fetchTempGit.Network.Remotes["origin"].Name, Array.Empty<string>(), null, null);
-
-                                            var _fetchBehind = _fetchTempGit.Head.TrackingDetails.BehindBy;
-                                            _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
-                                        });
-                                    }
-                                }
-
-                                catch (LibGit2SharpException) { }
-
-                                _fetchGit.Dispose();
-                                var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
-
-                                foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                                {
-                                    try
-                                    {
-                                        if (_fetchFile.Exists)
-                                            _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
-                                    }
-
-                                    catch (Exception) { }
-                                }
+                                _modModel.ModLatestCommit = _fetchSerial.LatestCommit ?? new DateTime();
                             }
                         }
 
                         _fetchMods.Add(_modModel);
+
+                        Task.Run(async () =>
+                        {
+                            var _fetchModIndex = _fetchMods.IndexOf(_modModel);
+
+                            var _fetchGitRAW = await File.ReadAllTextAsync(_fetchPathGit);
+                            var _fetchSerial = YamlSerializer.Deserialize<GitModel>(_fetchGitRAW);
+
+                            if (_fetchSerial != null)
+                            {
+                                var _fetchLatest = await GitService.FetchLatestCommit(_fetchSerial.Platform, _fetchSerial.Author, _fetchSerial.Repository, _fetchSerial.Branch);
+                                var _fetchCompare = DateTime.Compare(_modModel.ModLatestCommit, _fetchLatest ?? _modModel.ModLatestCommit);
+
+                                if (_fetchCompare > 0x00)
+                                    _fetchMods[_fetchModIndex].ModUpdate = true;
+                            }
+                        });
                     }
 
                     // Otherwise, make it known that the mod sucks ASS and is no good for us, but still push it to the ViewModel so we know about it :D
@@ -1016,7 +1005,7 @@ public partial class MainViewModel : ViewModelBase
                         if (_fetchPresetTarget != null)
                             _fetchModFolder = _fetchPresetTarget.Name == "Default" ? Path.Combine(_fetchBareModPath, Config.GameShorthand[_fetchTargetGame], _fetchModAuthor, _fetchModName) : Path.Combine(_fetchPresetPath, _fetchPresetTarget.FolderName, _fetchModAuthor, _fetchModName);
 
-                        var _fetchPathGit = Path.Combine(_fetchModFolder, ".git");
+                        var _fetchPathGit = Path.Combine(_fetchModFolder, "git_info.yml");
                         var _fetchYamlName = Path.Combine(_fetchModFolder, "mod.yml");
                         var _fetchPathIcon = Path.Combine(_fetchModFolder, "icon.png");
 
@@ -1119,34 +1108,21 @@ public partial class MainViewModel : ViewModelBase
                                 }
                             }
 
-                            if (Directory.Exists(_fetchPathGit))
+                            if (File.Exists(_fetchPathGit))
                             {
-                                if (Repository.IsValid(_fetchPathGit))
+                                var _fetchGitRAW = File.ReadAllText(_fetchPathGit);
+                                var _fetchSerial = YamlSerializer.Deserialize<GitModel>(_fetchGitRAW);
+
+                                if (_fetchSerial != null)
                                 {
-                                    var _fetchGit = new Repository(_fetchPathGit);
+                                    _modModel.ModTitle = String.IsNullOrEmpty(_modModel.ModTitle) ? _fetchSerial.Repository : _modModel.ModTitle;
+                                    _modModel.ModAuthor = String.IsNullOrEmpty(_modModel.ModAuthor) ? _fetchSerial.Author : _modModel.ModAuthor;
 
-                                    if (!_fetchGit.Info.IsHeadDetached)
-                                    {
-                                        var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+                                    _modModel.ModSource = new Uri($"https://{_fetchSerial.Platform}/{_fetchSerial.Author}/{_fetchSerial.Repository}");
+                                    _modModel.ModIssues = new Uri($"https://{_fetchSerial.Platform}/{_fetchSerial.Author}/{_fetchSerial.Repository}/issues");
 
-                                        _modModel.ModSource = new Uri(_fetchRemote.Url);
-                                        _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
-
-                                        _modModel.ModPlatform = _modModel.ModSource.Host;
-
-                                        Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
-
-                                        var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
-                                        _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
-                                    }
-
-                                    _fetchGit.Dispose();
-
-                                    var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
-
-                                    foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                                        if (_fetchFile.Exists)
-                                            _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                                    _modModel.ModPlatform = _fetchSerial.Platform;
+                                    _modModel.ModLatestCommit = _fetchSerial.LatestCommit ?? new DateTime();
                                 }
                             }
 
@@ -1229,7 +1205,7 @@ public partial class MainViewModel : ViewModelBase
                             if (_tryFetchPreset != null)
                                 _fetchCurrentPath = _tryFetchPreset.Name == "Default" ? Path.Combine(_fetchBareModPath, Config.GameShorthand[_fetchTargetGame], _fetchSuccess) : Path.Combine(_fetchPresetPath, _tryFetchPreset.FolderName, _fetchSuccess);
 
-                            var _fetchPathGit = Path.Combine(_fetchCurrentPath, ".git");
+                            var _fetchPathGit = Path.Combine(_fetchCurrentPath, "git_info.yml");
                             var _fetchYamlName = Path.Combine(_fetchCurrentPath, "mod.yml");
                             var _fetchPathIcon = Path.Combine(_fetchCurrentPath, "icon.png");
 
@@ -1334,34 +1310,21 @@ public partial class MainViewModel : ViewModelBase
                                     }
                                 }
 
-                                if (Directory.Exists(_fetchPathGit))
+                                if (File.Exists(_fetchPathGit))
                                 {
-                                    if (Repository.IsValid(_fetchPathGit))
+                                    var _fetchGitRAW = File.ReadAllText(_fetchPathGit);
+                                    var _fetchSerial = YamlSerializer.Deserialize<GitModel>(_fetchGitRAW);
+
+                                    if (_fetchSerial != null)
                                     {
-                                        var _fetchGit = new Repository(_fetchPathGit);
+                                        _modModel.ModTitle = String.IsNullOrEmpty(_modModel.ModTitle) ? _fetchSerial.Repository : _modModel.ModTitle;
+                                        _modModel.ModAuthor = String.IsNullOrEmpty(_modModel.ModAuthor) ? _fetchSerial.Author : _modModel.ModAuthor;
 
-                                        if (!_fetchGit.Info.IsHeadDetached)
-                                        {
-                                            var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+                                        _modModel.ModSource = new Uri($"https://{_fetchSerial.Platform}/{_fetchSerial.Author}/{_fetchSerial.Repository}");
+                                        _modModel.ModIssues = new Uri($"https://{_fetchSerial.Platform}/{_fetchSerial.Author}/{_fetchSerial.Repository}/issues");
 
-                                            _modModel.ModSource = new Uri(_fetchRemote.Url);
-                                            _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
-
-                                            _modModel.ModPlatform = _modModel.ModSource.Host;
-
-                                            Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
-
-                                            var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
-                                            _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
-                                        }
-
-                                        _fetchGit.Dispose();
-
-                                        var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
-
-                                        foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                                            if (_fetchFile.Exists)
-                                                _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                                        _modModel.ModPlatform = _fetchSerial.Platform;
+                                        _modModel.ModLatestCommit = _fetchSerial.LatestCommit ?? new DateTime();
                                     }
                                 }
 

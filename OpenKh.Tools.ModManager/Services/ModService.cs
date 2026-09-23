@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Collections.Concurrent;
+using SharpYaml;
 
 namespace OpenKh.Tools.ModManager.Services
 {
@@ -426,6 +427,22 @@ namespace OpenKh.Tools.ModManager.Services
                 Directory.Delete(_fetchCurrentModDir, true);
                 return 0x03;
             }
+
+            // If not, we need to submit the Git information.
+
+            var _fetchGitInfo = new GitModel
+            {
+                Author = _fetchAuthor,
+                Repository = _fetchName,
+                Platform = _fetchPlatform ?? "github.com",
+                Branch = _fetchBranch,
+                LatestCommit = await GitService.FetchLatestCommit(_fetchPlatform == null ? "github.com" : _fetchPlatform.ToLower(), _fetchAuthor, _fetchName)
+            };
+
+            var _fetchGitInfoPath = Path.Combine(_fetchCurrentModDir, "git_info.yml");
+            var _fetchSerial = YamlSerializer.Serialize(_fetchGitInfo);
+
+            File.WriteAllText(_fetchGitInfoPath, _fetchSerial);
 
             return 0x00;
         }

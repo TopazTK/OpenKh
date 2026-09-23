@@ -52,7 +52,7 @@ namespace OpenKh.Tools.ModManager.Services
             }
         }
 
-        public static async Task<DateTime?> FetchLatestCommit(string host, string author, string repository, string filePath, string? branch = "main")
+        public static async Task<DateTime?> FetchLatestCommit(string host, string author, string repository, string? branch = "main")
         {
             try
             {
