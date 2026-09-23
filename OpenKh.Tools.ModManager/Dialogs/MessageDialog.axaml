@@ -13,7 +13,7 @@
 
     <StackPanel Margin="15" Spacing="10">
         <StackPanel Orientation="Horizontal" Spacing="5">
-            <PathIcon  Name="MainIcon" Data="{StaticResource icon_type_info}"/>
+            <PathIcon  Name="MainIcon" Data="{StaticResource icon_type_info}" VerticalAlignment="Top"/>
             <TextBlock Name="MainText" TextWrapping="Wrap" VerticalAlignment="Center" Text="Ayy man this shit be spewin' sum' BULLSHIT!"/>
         </StackPanel>
         <Button Name="AcceptButton" HorizontalAlignment="Right" HorizontalContentAlignment="Center" Content="OK" Click="OnAcceptClicked" Width="50" HotKey="Enter"/>

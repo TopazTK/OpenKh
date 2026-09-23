@@ -11,7 +11,7 @@
 
     <StackPanel Margin="15" Spacing="10">
         <StackPanel Orientation="Horizontal" Spacing="5">
-            <PathIcon  Name="MainIcon" Data="{StaticResource icon_type_question}"/>
+            <PathIcon  Name="MainIcon" Data="{StaticResource icon_type_question}" VerticalAlignment="Top"/>
             <TextBlock Name="MainText" TextWrapping="Wrap" VerticalAlignment="Center" Text="Some question goes here, am I right?"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">

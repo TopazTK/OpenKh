@@ -471,52 +471,53 @@ public partial class MainViewModel : ViewModelBase
 
                         // We have found a Git Repository, let's see what's up.
 
-                        Task.Run(() =>
+                        if (Directory.Exists(_fetchPathGit))
                         {
-                            if (Directory.Exists(_fetchPathGit))
+                            if (Repository.IsValid(_fetchPathGit))
                             {
-                                if (Repository.IsValid(_fetchPathGit))
+                                var _fetchGit = new Repository(_fetchPathGit);
+
+                                try
                                 {
-                                    var _fetchGit = new Repository(_fetchPathGit);
-
-                                    try
+                                    if (!_fetchGit.Info.IsHeadDetached)
                                     {
-                                        if (!_fetchGit.Info.IsHeadDetached)
+                                        var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+
+                                        _modModel.ModSource = new Uri(_fetchRemote.Url);
+                                        _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+
+                                        _modModel.ModPlatform = _modModel.ModSource.Host;
+                                        _modModel.ModGitAddress = $"{Path.GetFileName(_fetchDirectory)}/{Path.GetFileName(_fetchChild)}@{_modModel.ModPlatform}";
+
+                                        Task.Run(() =>
                                         {
-                                            var _fetchRemote = _fetchGit.Network.Remotes["origin"];
+                                            var _fetchTempGit = new Repository(_fetchPathGit);
 
-                                            _modModel.ModSource = new Uri(_fetchRemote.Url);
-                                            _modModel.ModIssues = new Uri(_fetchRemote.Url + "/issues");
+                                            Commands.Fetch(_fetchTempGit, _fetchTempGit.Network.Remotes["origin"].Name, Array.Empty<string>(), null, null);
 
-                                            _modModel.ModPlatform = _modModel.ModSource.Host;
-                                            _modModel.ModGitAddress = $"{Path.GetFileName(_fetchDirectory)}/{Path.GetFileName(_fetchChild)}@{_modModel.ModPlatform}";
-
-                                            Commands.Fetch(_fetchGit, _fetchRemote.Name, Array.Empty<string>(), null, null);
-
-                                            var _fetchBehind = _fetchGit.Head.TrackingDetails.BehindBy;
+                                            var _fetchBehind = _fetchTempGit.Head.TrackingDetails.BehindBy;
                                             _modModel.ModBehindBy = _fetchBehind != null ? _fetchBehind.Value : 0;
-
-                                        }
-                                    }
-
-                                    catch (LibGit2SharpException) { }
-
-                                    _fetchGit.Dispose();
-                                    var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
-
-                                    foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                                    {
-                                        try
-                                        {
-                                            if (_fetchFile.Exists)
-                                                _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
-                                        }
-
-                                        catch (Exception) { }
+                                        });
                                     }
                                 }
+
+                                catch (LibGit2SharpException) { }
+
+                                _fetchGit.Dispose();
+                                var _fetchGitDir = new DirectoryInfo(_fetchPathGit);
+
+                                foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
+                                {
+                                    try
+                                    {
+                                        if (_fetchFile.Exists)
+                                            _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+                                    }
+
+                                    catch (Exception) { }
+                                }
                             }
-                        });
+                        }
 
                         _fetchMods.Add(_modModel);
                     }
@@ -771,10 +772,10 @@ public partial class MainViewModel : ViewModelBase
 
                         // Allocate the pointers necessary.
 
-                        SafePtr _progressCurrentPtr = 0x00;
-                        SafePtr _progressMaximumPtr = 0x00;
+                        SafePtr _progressCurrentPtr = 0.00;
+                        SafePtr _progressMaximumPtr = -1.00;
 
-                        SafePtr _progressTextPtr = "Receiving Git Objects: {0} / {3}";
+                        SafePtr _progressTextPtr = "Sending REST Request... Please wait...";
 
                         var _singleProgress = DialogService.ShowProgress(_fetchMainView, "Installing Mod...", "Installing declared Mod... Please be patient...", ModService.CancelTokenSource, _progressCurrentPtr, _progressMaximumPtr, _progressTextPtr);
 
@@ -783,17 +784,36 @@ public partial class MainViewModel : ViewModelBase
                         (
                             _fetchResult,
                             CurrentConfig,
-                            new TransferProgressHandler((progress) =>
+                            (progress, totalLength, isLocal) =>
                             {
-                                _progressCurrentPtr /= progress.ReceivedObjects;
-                                _progressMaximumPtr /= progress.TotalObjects;
+                                if (!isLocal)
+                                {
+                                    var _isGibibyte = totalLength > 1073741824;
+                                    var _isMebibyte = totalLength > 1048576;
+
+                                    _progressTextPtr /= "Downloading Zipball: {0:0.00} / {3:0.00} " + (_isGibibyte ? "GiB" : (_isMebibyte ? "MiB" : "KiB"));
+
+                                    var _fetchCurrByte = (double)progress / Math.Pow(1024, Convert.ToInt32(_isMebibyte) + Convert.ToInt32(_isGibibyte) + 1);
+                                    var _fetchTotalByte = (double)totalLength / Math.Pow(1024, Convert.ToInt32(_isMebibyte) + Convert.ToInt32(_isGibibyte) + 1);
+
+                                    _progressCurrentPtr /= _fetchCurrByte;
+                                    _progressMaximumPtr /= _fetchTotalByte;
+                                }
+
+                                else
+                                {
+                                    _progressTextPtr /= "Extracting Zipball: {0} / {3}";
+
+                                    _progressCurrentPtr /= Convert.ToDouble(progress);
+                                    _progressMaximumPtr /= Convert.ToDouble(totalLength);
+                                }
 
                                 if (ModService.CancelToken.IsCancellationRequested)
                                     return false;
 
                                 return true;
                             }
-                        ));
+                        );
 
                         // Free all the pointers allocated.
 
@@ -810,8 +830,8 @@ public partial class MainViewModel : ViewModelBase
                         SafePtr _firstCurrentPtr = 0x00;
                         SafePtr _firstMaximumPtr = 0x00;
 
-                        SafePtr _secondCurrentPtr = 0x00;
-                        SafePtr _secondMaximumPtr = 0x00;
+                        SafePtr _secondCurrentPtr = 0.00;
+                        SafePtr _secondMaximumPtr = 0.00;
 
                         SafePtr _firstTextPtr = $"Processing Mod: N/A";
                         SafePtr _secondTextPtr = "Receiving Git Objects: {0} / {3}";
@@ -910,22 +930,23 @@ public partial class MainViewModel : ViewModelBase
                             (
                                 _fetchMod,
                                 CurrentConfig,
-                                new TransferProgressHandler((progress) =>
+                                (progress, totalLength, isLocal) =>
                                 {
-                                    _firstTextPtr /= $"Processing Mod: {_fetchMod}";
+                                    var _fetchCurrMebibyte = (double)progress / Math.Pow(1024, 2);
+                                    var _fetchTotalMebibyte = (double)totalLength / Math.Pow(1024, 2);
 
                                     _firstCurrentPtr /= i + 0x01;
                                     _firstMaximumPtr /= _fetchMultiInstall.Length;
 
-                                    _secondCurrentPtr /= progress.ReceivedObjects;
-                                    _secondMaximumPtr /= progress.TotalObjects;
+                                    _secondCurrentPtr /= _fetchCurrMebibyte;
+                                    _secondMaximumPtr /= _fetchTotalMebibyte;
 
                                     if (ModService.CancelToken.IsCancellationRequested)
                                         return false;
 
                                     return true;
                                 }
-                            ));
+                            );
 
                             if (_fetchInstallStatus == 0x01)
                                 _fetchErroredList.Add(_fetchMod);

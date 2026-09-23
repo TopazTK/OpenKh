@@ -30,8 +30,8 @@ namespace OpenKh.Tools.ModManager.Services
             {
                 while (true)
                 {
-                    int? _fetchFirstCurrent = firstProgCurr;
-                    int? _fetchFirstMaximum = firstProgMax;
+                    double? _fetchFirstCurrent = firstProgCurr;
+                    double? _fetchFirstMaximum = firstProgMax;
 
                     if (_fetchFirstCurrent == null || _fetchFirstMaximum == null)
                     {
@@ -43,19 +43,23 @@ namespace OpenKh.Tools.ModManager.Services
                         break;
                     }
 
-                    int? _fetchSecondCurrent = secondProgCurr != null ? secondProgCurr : null;
-                    int? _fetchSecondMaximum = secondProgMax != null ? secondProgMax : null;
+                    double? _fetchSecondCurrent = secondProgCurr != null ? secondProgCurr : null;
+                    double? _fetchSecondMaximum = secondProgMax != null ? secondProgMax : null;
 
                     string? _fetchFirstString = firstProgText != null ? firstProgText : null;
                     string? _fetchSecondString = secondProgText != null ? secondProgText : null;
 
                     Dispatcher.UIThread.Post(() =>
                     {
+                        _fetchDialog.MainProgress.IsIndeterminate = _fetchFirstMaximum.Value <= -1;
+
                         _fetchDialog.MainProgress.Maximum = _fetchFirstMaximum.Value;
                         _fetchDialog.MainProgress.Value = _fetchFirstCurrent.Value;
 
                         _fetchDialog.MainProgress.ShowProgressText = _fetchFirstString != null;
                         _fetchDialog.MainProgress.ProgressTextFormat = _fetchFirstString ?? "";
+
+                        _fetchDialog.MiscProgress.IsIndeterminate = _fetchSecondMaximum != null ? _fetchSecondMaximum.Value <= -1 : false;
 
                         _fetchDialog.MiscProgress.Maximum = _fetchSecondMaximum ?? 0;
                         _fetchDialog.MiscProgress.Value = _fetchSecondCurrent ?? 0;

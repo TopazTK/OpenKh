@@ -30,6 +30,9 @@ namespace OpenKh.Tools.ModManager.Classes
             else if (value is long)
                 Marshal.WriteInt64(_internalPtr, (long)value);
 
+            else if (value is double)
+                Marshal.WriteInt64(_internalPtr, BitConverter.DoubleToInt64Bits((double)value));
+
             else if (value is string)
             {
                 var _fetchString = (value as string) + "\x00";
@@ -46,11 +49,13 @@ namespace OpenKh.Tools.ModManager.Classes
         public static implicit operator SafePtr(int value) => new SafePtr(value);
         public static implicit operator SafePtr(long value) => new SafePtr(value);
         public static implicit operator SafePtr(string value) => new SafePtr(value);
+        public static implicit operator SafePtr(double value) => new SafePtr(value);
 
         public void operator /= (byte value) => Marshal.WriteByte(_internalPtr, value);
         public void operator /= (short value) => Marshal.WriteInt16(_internalPtr, value);
         public void operator /= (int value) => Marshal.WriteInt32(_internalPtr, value);
         public void operator /= (long value) => Marshal.WriteInt64(_internalPtr, value);
+        public void operator /= (double value) => Marshal.WriteInt64(_internalPtr, BitConverter.DoubleToInt64Bits(value));
         public void operator /= (string value)
         {
             var _fetchString = value + "\x00";
@@ -62,6 +67,7 @@ namespace OpenKh.Tools.ModManager.Classes
         public static implicit operator short?(SafePtr value) => value == null || value._internalPtr == IntPtr.Zero ? null : Marshal.ReadInt16(value._internalPtr);
         public static implicit operator int?(SafePtr value) => value == null || value._internalPtr == IntPtr.Zero ? null : Marshal.ReadInt32(value._internalPtr);
         public static implicit operator long?(SafePtr value) => value == null || value._internalPtr == IntPtr.Zero ? null : Marshal.ReadInt64(value._internalPtr);
+        public static implicit operator double?(SafePtr value) => value == null || value._internalPtr == IntPtr.Zero ? null : BitConverter.Int64BitsToDouble(Marshal.ReadInt64(value._internalPtr));
         public static implicit operator string?(SafePtr value)
         {
             var _fetchValue = new byte[0xFF];

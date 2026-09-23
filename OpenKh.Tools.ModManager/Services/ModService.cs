@@ -259,7 +259,7 @@ namespace OpenKh.Tools.ModManager.Services
         /// <param name="currentConfig">The current active configuration.</param>
         /// <param name="reportProgress">[Optional] Callback function for this function.</param>
         /// <returns> 0x00 if it succeeds, 0x01 if it fails, 0x03 if it is cancelled.</returns>
-        public static async Task<byte> InstallGit(string repoName, Config currentConfig, TransferProgressHandler? reportProgress = null)
+        public static async Task<byte> InstallGit(string repoName, Config currentConfig, Func<long, long, bool, bool>? reportProgress = null)
         {
             // Reset the cancel token if it was called prior.
             RenewCancelToken();
@@ -279,45 +279,7 @@ namespace OpenKh.Tools.ModManager.Services
             // P.S. - I know my string handling is SHIT and can break. If anyone knows how to do this in C# with regex I highly advise you to fix this.
 
             var _fetchModPath = PathService.ResolveMod(currentConfig);
-
-            // Construct the mod and git directories.
             var _fetchCurrentModDir = Path.Combine(_fetchModPath, _fetchAuthor, _fetchName);
-            var _fetchCurrentGitPath = Path.Combine(_fetchCurrentModDir, ".git");
-
-            // Create the Uri to be used with Git.
-            var _fetchBaseUri = new Uri("https://" + (_fetchPlatform != null ? _fetchPlatform : "github.com"));
-            var _fetchRelativeUri = new Uri(_fetchBaseUri, $"{repoName}");
-
-            // Construct the clone options.
-
-            var _cloneOptions = new CloneOptions
-            {
-                Checkout = true,
-                BranchName = _fetchBranch,
-            };
-
-            // Do the least amount of fetching humanly possible.
-
-            _cloneOptions.FetchOptions.Depth = 1;
-            _cloneOptions.FetchOptions.Prune = true;
-
-            // If we have a progress handler, pass it on in fetch options.
-
-            if (reportProgress != null)
-                _cloneOptions.FetchOptions.OnTransferProgress = reportProgress;
-
-            // Otherwise, create one of our own. This is needed to be able to cancel Git transactions at will.
-
-            else
-            {
-                _cloneOptions.FetchOptions.OnTransferProgress = new TransferProgressHandler((progress) =>
-                {
-                    if (CancelToken.IsCancellationRequested)
-                        return false;
-
-                    return true;
-                });
-            }
 
             // If the directory does not exist, create it. 
             if (!Directory.Exists(_fetchCurrentModDir))
@@ -341,124 +303,123 @@ namespace OpenKh.Tools.ModManager.Services
                 }, CancellationToken.None);
             }
 
-            // This is being done with a try-catch because if the git doesn't exist this throws an exception.
-            // If it does, consider this is not a valid mod and abort.
+            var _fetchMetadataResponse = await GitService.CheckFile(_fetchPlatform == null ? "github.com" : _fetchPlatform.ToLower(), _fetchAuthor, _fetchName, "mod.yml", _fetchBranch);
 
-            IEnumerable<Reference>? _fetchRemotes = null;
-
-            try
-            { _fetchRemotes = Repository.ListRemoteReferences(_fetchRelativeUri.ToString()); }
-
-            catch (LibGit2SharpException)
+            // If the file doesn't exist, abort.
+            if (!_fetchMetadataResponse)
             {
                 Directory.Delete(_fetchCurrentModDir, true);
                 return 0x01;
             }
 
-            // If there is not a platform given, meaning it is a GitHub mod. Or if it is LITERALLY GitHub:
-            if (_fetchPlatform == null || _fetchPlatform == "github.com")
+            // Otherwise, clone the mod.
+            // This is being done on an awaited task because otherwise even though THIS is a task it will still block UI execution.
+            // Also there is a try-catch here, LibGit2Sharp will throw an exception if the user cancels an operation.
+
+            await Task.Run(async () =>
             {
-                // Fetch the branch string. If branch is not given, default to whatever the HEAD branch is.
-                // This took far too long for me to admit.
-                var _branchString = _fetchBranch != null ? _fetchBranch : _fetchRemotes.First().TargetIdentifier;
-
-                // Make an HTTP client and use GitHub's RAW API to see if the mod.yml exists.
-                // This is the fastest way to handle this, otherwise I sadly have to fetch the mod FIRST and then check it.
-                using var _makeClient = new HttpClient();
-                using var _fetchResponse = await _makeClient.GetAsync($"https://raw.githubusercontent.com/{repoName}/{_branchString}/mod.yml", HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
-
-                // If the file doesn't exist, abort.
-                if (_fetchResponse.StatusCode != HttpStatusCode.OK)
+                if (_fetchPlatform != null && _fetchPlatform.ToLower() != "github.com")
                 {
-                    Directory.Delete(_fetchCurrentModDir, true);
-                    return 0x01;
+                    var _fetchZipball = await GitService.FetchZipball(_fetchPlatform, _fetchAuthor, _fetchName, _fetchBranch, reportProgress);
+
+                    using (var _fetchMemStr = new MemoryStream(_fetchZipball))
+                    {
+                        var _fetchArchive = new ZipArchive(_fetchMemStr);
+
+                        for (int i = 1; i < _fetchArchive.Entries.Count; i++)
+                        {
+                            // Fetch the current entry.
+                            var _fetchEntry = _fetchArchive.Entries[i];
+                            var _fetchRoot = _fetchArchive.Entries[0].FullName;
+
+                            var _normalizePath = Path.GetRelativePath(_fetchRoot, _fetchEntry.FullName);
+                            _normalizePath = _normalizePath.Replace("\\", "/");
+
+                            // If the entry is a directory (yes, really): Move on to the next one.
+                            if (_normalizePath.EndsWith('/'))
+                                continue;
+
+                            if (_normalizePath.Contains("../") || _normalizePath.Contains("/.."))
+                                continue;
+
+                            // Construct the target paths for the file and the directory.
+                            var _fetchFileTarget = Path.Combine(_fetchCurrentModDir, _normalizePath);
+                            var _fetchDirectory = Path.Combine(_fetchCurrentModDir, Path.GetDirectoryName(_normalizePath));
+
+                            // Should the target directory not exist, we make it exist.
+                            if (!Directory.Exists(_fetchDirectory))
+                                Directory.CreateDirectory(_fetchDirectory);
+
+                            // Extract the file.
+                            _fetchEntry.ExtractToFile(_fetchFileTarget, true);
+
+                            // If the progress feedback exists:
+                            if (reportProgress != null)
+                            {
+                                // Feedback to the progress and see the result.
+                                var _fetchProgress = reportProgress(i + 1, _fetchArchive.Entries.Count, true);
+
+                                // If the result is false, meaning cancellation requested, break out immediately.
+                                if (!_fetchProgress)
+                                    break;
+                            }
+
+                            // Otherwise manually check for cancellation and break out if it's requested.
+                            else if (CancelToken.IsCancellationRequested)
+                                break;
+                        }
+                    }
                 }
 
-                // Otherwise, clone the mod.
-                // This is being done on an awaited task because otherwise even though THIS is a task it will still block UI execution.
-                // Also there is a try-catch here, LibGit2Sharp will throw an exception if the user cancels an operation.
-
-                await Task.Run(() =>
+                else
                 {
-                    try
-                    { Repository.Clone(_fetchRelativeUri.ToString(), _fetchCurrentModDir, _cloneOptions); }
+                    var _fetchSource = await GitService.FetchSource(_fetchAuthor, _fetchName, _fetchBranch, reportProgress);
 
-                    catch (LibGit2SharpException) { }
+                    for (int i = 0; i < _fetchSource.Count; i++)
+                    {
+                        // Fetch the current entry.
+                        var _fetchEntry = _fetchSource.ElementAt(i);
 
-                }, CancelToken);
+                        var _fetchFilePath = _fetchEntry.Key;
+                        var _fetchFileData = _fetchEntry.Value;
 
-                // After the task finishes/aborts, if we requested cancellation, abort.
-                if (CancelToken.IsCancellationRequested)
-                {
-                    Directory.Delete(_fetchCurrentModDir, true);
-                    return 0x03;
+                        // Construct the target paths for the file and the directory.
+                        var _fetchFileTarget = Path.Combine(_fetchCurrentModDir, _fetchFilePath);
+                        var _fetchDirectory = Path.Combine(_fetchCurrentModDir, Path.GetDirectoryName(_fetchFilePath));
+
+                        // Should the target directory not exist, we make it exist.
+                        if (!Directory.Exists(_fetchDirectory))
+                            Directory.CreateDirectory(_fetchDirectory);
+
+                        // Extract the file.
+                        await File.WriteAllBytesAsync(_fetchFileTarget, _fetchFileData);
+
+                        // If the progress feedback exists:
+                        if (reportProgress != null)
+                        {
+                            // Feedback to the progress and see the result.
+                            var _fetchProgress = reportProgress(i + 1, _fetchSource.Count, true);
+
+                            // If the result is false, meaning cancellation requested, break out immediately.
+                            if (!_fetchProgress)
+                                break;
+                        }
+
+                        // Otherwise manually check for cancellation and break out if it's requested.
+                        else if (CancelToken.IsCancellationRequested)
+                            break;
+                    }
                 }
 
-                // Fetch the Git directory and fix all permissions before moving on.
-                // We have to do this on each case because the second case requires deletion if the YAML isn't found AFTER it initializes a Git.
-                // While it may TECHNICALLY may not be required HERE, I ain't risking it.
+            }, CancelToken);
 
-                var _fetchGitDir = new DirectoryInfo(_fetchCurrentGitPath);
-
-                foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                    _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
+            // After the task finishes/aborts, if we requested cancellation, abort.
+            if (CancelToken.IsCancellationRequested)
+            {
+                Directory.Delete(_fetchCurrentModDir, true);
+                return 0x03;
             }
 
-            // If a platform was specified:
-            else
-            {
-                // First, clone the mod.
-                // We gotta do this because every Git platform has a different REST API and I want to support ALL of them.
-                await Task.Run(() =>
-                {
-                    try
-                    { Repository.Clone(_fetchRelativeUri.ToString(), _fetchCurrentModDir, _cloneOptions); }
-
-                    catch (LibGit2SharpException) { }
-
-                }, CancelToken);
-
-                // Fetch the Git directory and fix all permissions before moving on.
-                // Again, may not be necessary here. Again, not risking it.
-
-                var _fetchGitDir = new DirectoryInfo(_fetchCurrentGitPath);
-
-                if (_fetchGitDir.Exists)
-                    foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                        _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
-
-                // After the task finishes/aborts, if we requested cancellation, abort.
-                if (CancelToken.IsCancellationRequested)
-                {
-                    Directory.Delete(_fetchCurrentModDir, true);
-                    return 0x03;
-                }
-
-                // Init the repository we just cloned.
-                var _fetchGit = new Repository(_fetchCurrentModDir);
-
-                // Fetch the absolute latest commit and see if it has the YAML in it.
-                var _fetchCommit = _fetchGit.Head.Tip;
-                var _doesModFileExist = _fetchCommit["mod.yml"] != null;
-
-                // Dispose the repository.
-                _fetchGit.Dispose();
-
-                // Fix permissions before moving on.
-                // It IS necessary here.
-
-                foreach (var _fetchFile in _fetchGitDir.GetFiles("*", SearchOption.AllDirectories))
-                    _fetchFile.Attributes &= ~FileAttributes.ReadOnly;
-
-                // If the YAML does not exist, delete the "mod" and abort.
-                if (!_doesModFileExist)
-                {
-                    Directory.Delete(_fetchCurrentModDir, true);
-                    return 0x01;
-                }
-            }
-
-            // All is well, return success.
             return 0x00;
         }
 
