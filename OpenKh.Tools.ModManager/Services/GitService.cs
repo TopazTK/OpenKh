@@ -11,6 +11,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection.Metadata;
 using System.Text;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using static OpenKh.Kh2.SystemData.Item;
@@ -30,10 +32,9 @@ namespace OpenKh.Tools.ModManager.Services
                 var _fetchBranch = branch != null ? branch : _fetchRemotes.First().TargetIdentifier.Replace("refs/heads/", "");
 
                 var _fetchGitHubAPI = $"https://raw.githubusercontent.com/{author}/{repository}/{_fetchBranch}/{filePath}";
-                var _fetchGitLabAPI = $"https://gitlab.com/{author}/{repository}/-/raw/{_fetchBranch}/{filePath}";
                 var _fetchForgejoAPI = $"https://{host}/{author}/{repository}/raw/{_fetchBranch}/{filePath}";
 
-                var _fetchTargetAPI = host == "github.com" ? _fetchGitHubAPI : (host == "gitlab.com" ? _fetchGitLabAPI : _fetchForgejoAPI);
+                var _fetchTargetAPI = host == "github.com" ? _fetchGitHubAPI : _fetchForgejoAPI;
 
                 using var _makeClient = new HttpClient();
                 using var _fetchResponse = await _makeClient.GetAsync(_fetchTargetAPI, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
@@ -51,7 +52,60 @@ namespace OpenKh.Tools.ModManager.Services
             }
         }
 
-        public static async Task<byte[]> FetchZipball(string host, string author, string repository, string? branch = "main", Func<long, long, bool, bool>? progressCallback = null)
+        public static async Task<DateTime?> FetchLatestCommit(string host, string author, string repository, string filePath, string? branch = "main")
+        {
+            try
+            {
+                var _fetchBaseUri = new Uri($"https://{host}");
+                var _fetchRelativeUri = new Uri(_fetchBaseUri, $"{author}/{repository}");
+
+                var _fetchRemotes = LibGit2Sharp.Repository.ListRemoteReferences(_fetchRelativeUri.ToString());
+                var _fetchBranch = branch != null ? branch : _fetchRemotes.First().TargetIdentifier.Replace("refs/heads/", "");
+
+                var _fetchGitHubAPI = $"https://api.github.com/repos/{author}/{repository}/commits?sha={_fetchBranch}";
+                var _fetchForgejoAPI = $"https://{host}/api/v1/repos/{author}/{repository}/commits?sha={_fetchBranch}";
+
+                var _fetchTargetAPI = host == "github.com" ? _fetchGitHubAPI : _fetchForgejoAPI;
+
+                using var _makeClient = new HttpClient();
+
+                if (_fetchTargetAPI == _fetchGitHubAPI)
+                {
+                    _makeClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("openkh.modmanager.gitfetcher", "no-ver"));
+                    _makeClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+                }
+
+                using var _fetchResponse = await _makeClient.GetAsync(_fetchTargetAPI, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+
+                if (_fetchResponse.StatusCode == HttpStatusCode.OK)
+                {
+                    var _fetchJsonRAW = await _fetchResponse.Content.ReadAsStringAsync();
+                    var _fetchJson = JsonNode.Parse(_fetchJsonRAW) as JsonArray;
+
+                    var _fetchTimeRegex = new Regex("(\\d*-\\d*-\\d*)T(\\d*:\\d*:\\d*)", RegexOptions.None, TimeSpan.FromMilliseconds(100));
+
+                    var _fetchLatestTimestamp = _fetchTargetAPI == _fetchGitHubAPI ? _fetchTimeRegex.Match(_fetchJson.First()["commit"]["author"]["date"].ToString()) 
+                                                                                   : _fetchTimeRegex.Match(_fetchJson.First()["created"].ToString());
+
+                    var _fetchDateOnly = DateOnly.Parse(_fetchLatestTimestamp.Groups[1].Value);
+                    var _fetchTimeOnly = TimeOnly.Parse(_fetchLatestTimestamp.Groups[2].Value);
+
+                    var _fetchDateTime = new DateTime(_fetchDateOnly, _fetchTimeOnly);
+
+                    return _fetchDateTime;
+                }
+
+                else
+                    return null;
+            }
+
+            catch (LibGit2SharpException)
+            {
+                return null;
+            }
+        }
+
+        public static async Task<byte[]> FetchZipball(string host, string author, string repository, CancellationToken cancelToken, string? branch = "main", Func<long, long, bool, bool>? progressCallback = null)
         {
             var _fetchBaseUri = new Uri($"https://{host}");
             var _fetchRelativeUri = new Uri(_fetchBaseUri, $"{author}/{repository}");
@@ -86,43 +140,60 @@ namespace OpenKh.Tools.ModManager.Services
 
                     _fetchTasks[i] = Task.Run(async () =>
                     {
-                        using (var _makeClient = new HttpClient())
+                        try
                         {
-                            using (var _fetchRequest = new HttpRequestMessage(HttpMethod.Get, _fetchForgejoAPI))
+                            using (var _makeClient = new HttpClient())
                             {
-                                _fetchRequest.Headers.Range = new RangeHeaderValue(_chunkStart, _chunkEnd);
-
-                                using var _chunkResponse = await _makeClient.SendAsync(_fetchRequest, HttpCompletionOption.ResponseHeadersRead);
-
-                                if (_chunkResponse.StatusCode == HttpStatusCode.PartialContent)
+                                using (var _fetchRequest = new HttpRequestMessage(HttpMethod.Get, _fetchForgejoAPI))
                                 {
-                                    using (var _fetchContent = await _chunkResponse.Content.ReadAsStreamAsync())
+                                    _fetchRequest.Headers.Range = new RangeHeaderValue(_chunkStart, _chunkEnd);
+
+                                    using var _chunkResponse = await _makeClient.SendAsync(_fetchRequest, HttpCompletionOption.ResponseHeadersRead, cancelToken);
+
+                                    if (_chunkResponse.StatusCode == HttpStatusCode.PartialContent)
                                     {
-                                        using (var _fetchStream = new MemoryStream(_fetchMemory))
+                                        using (var _fetchContent = await _chunkResponse.Content.ReadAsStreamAsync(cancelToken))
                                         {
-                                            int _readProgress = 0;
-                                            byte[] _fetchBuffer = new byte[262144];
-
-                                            _fetchStream.Position = _chunkStart;
-
-                                            while ((_readProgress = await _fetchContent.ReadAsync(_fetchBuffer)) != 0x00)
+                                            using (var _fetchStream = new MemoryStream(_fetchMemory))
                                             {
-                                                await _fetchStream.WriteAsync(_fetchBuffer, 0, _readProgress);
+                                                int _readProgress = 0;
+                                                byte[] _fetchBuffer = new byte[262144];
 
-                                                _totalReadProgress += _readProgress;
+                                                _fetchStream.Position = _chunkStart;
 
-                                                if (progressCallback != null)
-                                                    progressCallback(_totalReadProgress, _fetchLength, false);
+                                                while ((_readProgress = await _fetchContent.ReadAsync(_fetchBuffer, cancelToken)) != 0x00)
+                                                {
+                                                    await _fetchStream.WriteAsync(_fetchBuffer, 0, _readProgress, cancelToken);
+
+                                                    _totalReadProgress += _readProgress;
+
+                                                    if (progressCallback != null)
+                                                    {
+                                                        var _fetchProgress = progressCallback(_totalReadProgress, _fetchLength, false);
+
+                                                        if (!_fetchProgress)
+                                                            break;
+                                                    }
+
+                                                    if (cancelToken.IsCancellationRequested)
+                                                        break;
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                    });
+
+                        catch (TaskCanceledException) { }
+
+                    }, cancelToken);
                 }
 
                 await Task.WhenAll(_fetchTasks);
+
+                if (cancelToken.IsCancellationRequested)
+                    return null;
 
                 return _fetchMemory;
             }
@@ -131,7 +202,7 @@ namespace OpenKh.Tools.ModManager.Services
                 return null;
         }
 
-        public static async Task<IDictionary<string, byte[]>?> FetchSource(string author, string repository, string? branch = "main", Func<long, long, bool, bool>? progressCallback = null)
+        public static async Task<IDictionary<string, byte[]>?> FetchSource(string author, string repository, CancellationToken cancelToken, string? branch = "main", Func<long, long, bool, bool>? progressCallback = null)
         {
             try
             {
@@ -170,31 +241,48 @@ namespace OpenKh.Tools.ModManager.Services
 
                     _fetchTasks[i] = Task.Run(async () =>
                     {
-                        for (int z = _startIndex; z < _endIndex; z++)
+                        try
                         {
-                            var _fetchFile = _fetchFileBlob.ElementAt(z);
-
-                            var _rawGitHubURL = $"https://raw.githubusercontent.com/{author}/{repository}/{_fetchBranch}/{_fetchFile.Path}";
-
-                            using var _makeClient = new HttpClient();
-                            using var _fetchResponse = await _makeClient.GetAsync(_rawGitHubURL, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
-
-                            if (_fetchResponse.StatusCode == HttpStatusCode.OK)
+                            for (int z = _startIndex; z < _endIndex; z++)
                             {
-                                var _fetchContent = await _fetchResponse.Content.ReadAsByteArrayAsync();
-                                _fetchFileDict.TryAdd(_fetchFile.Path, _fetchContent);
+                                var _fetchFile = _fetchFileBlob.ElementAt(z);
+
+                                var _rawGitHubURL = $"https://raw.githubusercontent.com/{author}/{repository}/{_fetchBranch}/{_fetchFile.Path}";
+
+                                using var _makeClient = new HttpClient();
+                                using var _fetchResponse = await _makeClient.GetAsync(_rawGitHubURL, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+
+                                if (_fetchResponse.StatusCode == HttpStatusCode.OK)
+                                {
+                                    var _fetchContent = await _fetchResponse.Content.ReadAsByteArrayAsync(cancelToken);
+                                    _fetchFileDict.TryAdd(_fetchFile.Path, _fetchContent);
+                                }
+
+                                _fetchTotalRead += _fetchFile.Size;
+                                _fetchFileRead++;
+
+                                if (progressCallback != null)
+                                {
+                                    var _fetchResult = progressCallback(_fetchTotalRead, _fetchTotalSize, false);
+
+                                    if (!_fetchResult)
+                                        break;
+                                }
+
+                                if (cancelToken.IsCancellationRequested)
+                                    break;
                             }
-
-                            _fetchTotalRead += _fetchFile.Size;
-                            _fetchFileRead++;
-
-                            if (progressCallback != null)
-                                progressCallback(_fetchTotalRead, _fetchTotalSize, false);
                         }
-                    });
+
+                        catch (TaskCanceledException) { }
+                    }, cancelToken);
                 }
 
                 await Task.WhenAll(_fetchTasks);
+
+                if (cancelToken.IsCancellationRequested)
+                    return null;
+
                 return _fetchFileDict;
             }
 
