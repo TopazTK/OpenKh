@@ -375,6 +375,8 @@ public partial class MainViewModel : ViewModelBase
 
                     var _fetchPathGit = Path.Combine(_fetchPath, "git_info.yml");
 
+                    GitModel? _fetchGitModel = null;
+
                     PresetModel _fetchLinkPreset = null;
 
                     // YAML don't do it? Don't do it!
@@ -474,41 +476,38 @@ public partial class MainViewModel : ViewModelBase
                         if (File.Exists(_fetchPathGit))
                         {
                             var _fetchGitRAW = await File.ReadAllTextAsync(_fetchPathGit);
-                            var _fetchSerial = YamlSerializer.Deserialize<GitModel>(_fetchGitRAW);
+                            _fetchGitModel = YamlSerializer.Deserialize<GitModel>(_fetchGitRAW);
 
-                            if (_fetchSerial != null)
+                            if (_fetchGitModel != null)
                             {
-                                _modModel.ModTitle = String.IsNullOrEmpty(_modModel.ModTitle) ? _fetchSerial.Repository : _modModel.ModTitle;
-                                _modModel.ModAuthor = String.IsNullOrEmpty(_modModel.ModAuthor) ? _fetchSerial.Author : _modModel.ModAuthor;
+                                _modModel.ModTitle = String.IsNullOrEmpty(_modModel.ModTitle) ? _fetchGitModel.Repository : _modModel.ModTitle;
+                                _modModel.ModAuthor = String.IsNullOrEmpty(_modModel.ModAuthor) ? _fetchGitModel.Author : _modModel.ModAuthor;
 
-                                _modModel.ModSource = new Uri($"https://{_fetchSerial.Platform}/{_fetchSerial.Author}/{_fetchSerial.Repository}");
-                                _modModel.ModIssues = new Uri($"https://{_fetchSerial.Platform}/{_fetchSerial.Author}/{_fetchSerial.Repository}/issues");
+                                _modModel.ModSource = new Uri($"https://{_fetchGitModel.Platform}/{_fetchGitModel.Author}/{_fetchGitModel.Repository}");
+                                _modModel.ModIssues = new Uri($"https://{_fetchGitModel.Platform}/{_fetchGitModel.Author}/{_fetchGitModel.Repository}/issues");
 
-                                _modModel.ModPlatform = _fetchSerial.Platform;
-                                _modModel.ModGitAddress = $"{Path.GetFileName(_fetchDirectory)}/{Path.GetFileName(_fetchChild)}@{_fetchSerial.Platform}";
+                                _modModel.ModPlatform = _fetchGitModel.Platform;
+                                _modModel.ModGitAddress = $"{Path.GetFileName(_fetchDirectory)}/{Path.GetFileName(_fetchChild)}@{_fetchGitModel.Platform}";
 
-                                _modModel.ModLatestCommit = _fetchSerial.LatestCommit ?? new DateTime();
+                                _modModel.ModLatestCommit = _fetchGitModel.LatestCommit ?? new DateTime();
                             }
                         }
 
                         _fetchMods.Add(_modModel);
 
-                        Task.Run(async () =>
+                        if (_fetchGitModel != null)
                         {
-                            var _fetchModIndex = _fetchMods.IndexOf(_modModel);
-
-                            var _fetchGitRAW = await File.ReadAllTextAsync(_fetchPathGit);
-                            var _fetchSerial = YamlSerializer.Deserialize<GitModel>(_fetchGitRAW);
-
-                            if (_fetchSerial != null)
+                            Task.Run(async () =>
                             {
-                                var _fetchLatest = await GitService.FetchLatestCommit(_fetchSerial.Platform, _fetchSerial.Author, _fetchSerial.Repository, _fetchSerial.Branch);
+                                var _fetchModIndex = _fetchMods.IndexOf(_modModel);
+
+                                var _fetchLatest = await GitService.FetchLatestCommit(_fetchGitModel.Platform, _fetchGitModel.Author, _fetchGitModel.Repository, _fetchGitModel.Branch);
                                 var _fetchCompare = DateTime.Compare(_modModel.ModLatestCommit, _fetchLatest ?? _modModel.ModLatestCommit);
 
                                 if (_fetchCompare > 0x00)
                                     _fetchMods[_fetchModIndex].ModUpdate = true;
-                            }
-                        });
+                            });
+                        }
                     }
 
                     // Otherwise, make it known that the mod sucks ASS and is no good for us, but still push it to the ViewModel so we know about it :D
@@ -1110,7 +1109,7 @@ public partial class MainViewModel : ViewModelBase
 
                             if (File.Exists(_fetchPathGit))
                             {
-                                var _fetchGitRAW = File.ReadAllText(_fetchPathGit);
+                                var _fetchGitRAW = await File.ReadAllTextAsync(_fetchPathGit);
                                 var _fetchSerial = YamlSerializer.Deserialize<GitModel>(_fetchGitRAW);
 
                                 if (_fetchSerial != null)
@@ -1312,7 +1311,7 @@ public partial class MainViewModel : ViewModelBase
 
                                 if (File.Exists(_fetchPathGit))
                                 {
-                                    var _fetchGitRAW = File.ReadAllText(_fetchPathGit);
+                                    var _fetchGitRAW = await File.ReadAllTextAsync(_fetchPathGit);
                                     var _fetchSerial = YamlSerializer.Deserialize<GitModel>(_fetchGitRAW);
 
                                     if (_fetchSerial != null)
