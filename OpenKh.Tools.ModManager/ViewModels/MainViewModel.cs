@@ -1,37 +1,33 @@
 #pragma warning disable S4790
 #pragma warning disable CS4014
 
-using Avalonia.Input;
-using Avalonia.Platform;
 using Avalonia.Controls;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform.Storage;
 using Avalonia.Controls.ApplicationLifetimes;
-
-using CommunityToolkit.Mvvm.Input;
+using Avalonia.Input;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
-
+using CommunityToolkit.Mvvm.Input;
 using LibGit2Sharp;
 using LibGit2Sharp.Handlers;
-
 using OpenKh.Patcher;
 using OpenKh.Tools.ModManager.Classes;
 using OpenKh.Tools.ModManager.Dialogs;
 using OpenKh.Tools.ModManager.Models;
 using OpenKh.Tools.ModManager.Services;
 using OpenKh.Tools.ModManager.Views;
-
 using SharpYaml;
-
 using System;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
+using static OpenKh.Kh2.Ard.AreaDataScript;
 
 namespace OpenKh.Tools.ModManager.ViewModels;
 
@@ -819,10 +815,10 @@ public partial class MainViewModel : ViewModelBase
                         SafePtr _firstMaximumPtr = 0x00;
 
                         SafePtr _secondCurrentPtr = 0.00;
-                        SafePtr _secondMaximumPtr = 0.00;
+                        SafePtr _secondMaximumPtr = -1.00;
 
                         SafePtr _firstTextPtr = $"Processing Mod: N/A";
-                        SafePtr _secondTextPtr = "Receiving Git Objects: {0} / {3}";
+                        SafePtr _secondTextPtr = "Sending REST Request... Please wait...";
 
                         // Show the dialog.
 
@@ -913,6 +909,9 @@ public partial class MainViewModel : ViewModelBase
                                 }
                             }
 
+
+
+
                             var _fetchInstallStatus =
                             await ModService.InstallGit
                             (
@@ -920,14 +919,32 @@ public partial class MainViewModel : ViewModelBase
                                 CurrentConfig,
                                 (progress, totalLength, isLocal) =>
                                 {
-                                    var _fetchCurrMebibyte = (double)progress / Math.Pow(1024, 2);
-                                    var _fetchTotalMebibyte = (double)totalLength / Math.Pow(1024, 2);
+                                    _firstTextPtr /= $"Processing Mod: {_fetchMod}";
 
                                     _firstCurrentPtr /= i + 0x01;
                                     _firstMaximumPtr /= _fetchMultiInstall.Length;
 
-                                    _secondCurrentPtr /= _fetchCurrMebibyte;
-                                    _secondMaximumPtr /= _fetchTotalMebibyte;
+                                    if (!isLocal)
+                                    {
+                                        var _isGibibyte = totalLength > 1073741824;
+                                        var _isMebibyte = totalLength > 1048576;
+
+                                        _secondTextPtr /= "Downloading Zipball: {0:0.00} / {3:0.00} " + (_isGibibyte ? "GiB" : (_isMebibyte ? "MiB" : "KiB"));
+
+                                        var _fetchCurrByte = (double)progress / Math.Pow(1024, Convert.ToInt32(_isMebibyte) + Convert.ToInt32(_isGibibyte) + 1);
+                                        var _fetchTotalByte = (double)totalLength / Math.Pow(1024, Convert.ToInt32(_isMebibyte) + Convert.ToInt32(_isGibibyte) + 1);
+
+                                        _secondCurrentPtr /= _fetchCurrByte;
+                                        _secondMaximumPtr /= _fetchTotalByte;
+                                    }
+
+                                    else
+                                    {
+                                        _secondTextPtr /= "Extracting Zipball: {0} / {3}";
+
+                                        _secondCurrentPtr /= Convert.ToDouble(progress);
+                                        _secondMaximumPtr /= Convert.ToDouble(totalLength);
+                                    }
 
                                     if (ModService.CancelToken.IsCancellationRequested)
                                         return false;

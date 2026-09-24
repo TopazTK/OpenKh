@@ -53,6 +53,8 @@ namespace OpenKh.Tools.ModManager.Views
                             _fetchContext.CurrentConfig = _referenceModel.CurrentConfig;
 
                             await _fetchContext.InitializeView();
+
+                            MainSearch.IsEnabled = true;
                             MainProgress.IsVisible = false;
                         }
                     }
