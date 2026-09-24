@@ -146,7 +146,7 @@ namespace OpenKh.Tools.ModManager.Services
                 await Task.Run(() =>
                 {
                     // Start a parallel for every header parsed:
-                    Parallel.ForEach(_fetchExtractList.AsParallel(), async (_fetchExtractGame, _fetchStateGame) =>
+                    Parallel.ForEach(_fetchExtractList.AsParallel(), (_fetchExtractGame, _fetchStateGame) =>
                     {
                         // Fetch the game path accounting for DDD and the game region. If the region was not able to be processed, consider it to be International.
                         var _fetchGamePath = _fetchExtractGame == "kh3d" ? PathService.ResolvePath28(currentConfig) : PathService.ResolvePath1525(currentConfig);
@@ -157,7 +157,7 @@ namespace OpenKh.Tools.ModManager.Services
                         var _fetchHeaderFiles = Directory.GetFiles(_fetchPackagePath).Where(x => x.Contains(_fetchExtractGame) && x.EndsWith(".hed"));
 
                         // Start a parallel for every header parsed:
-                        Parallel.ForEach(_fetchHeaderFiles.AsParallel(), async (_fetchHeader, _fetchStateHeader) =>
+                        Parallel.ForEach(_fetchHeaderFiles.AsParallel(), (_fetchHeader, _fetchStateHeader) =>
                         {
                             // Resolve the package name derived from the header.
                             var _fetchPackage = Path.ChangeExtension(_fetchHeader, ".pkg");
@@ -195,7 +195,7 @@ namespace OpenKh.Tools.ModManager.Services
                                         var _fetchData = new EgsHdAsset(_fetchPkgStream);
 
                                         // Write the file to the disk.
-                                        await File.WriteAllBytesAsync(_fetchFilePath, _fetchData.OriginalData, CancelToken);
+                                        File.WriteAllBytes(_fetchFilePath, _fetchData.OriginalData);
 
                                         // If the file has any remastered assets:
                                         if (_fetchData.Assets.Count() != 0x00)
@@ -215,7 +215,7 @@ namespace OpenKh.Tools.ModManager.Services
 
                                                 // Fetch the data for the asset and write it.
                                                 var _fetchAssetData = _fetchData.RemasteredAssetsDecompressedData[_fetchAsset];
-                                                await File.WriteAllBytesAsync(_fetchAssetPath, _fetchAssetData, CancelToken);
+                                                File.WriteAllBytes(_fetchAssetPath, _fetchAssetData);
 
                                                 if (CancelToken.IsCancellationRequested)
                                                     break;
@@ -242,7 +242,6 @@ namespace OpenKh.Tools.ModManager.Services
                         if (CancelToken.IsCancellationRequested)
                             _fetchStateGame.Stop();
                     });
-
                 }, CancelToken);
 
                 if (CancelToken.IsCancellationRequested)

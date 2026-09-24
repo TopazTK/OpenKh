@@ -921,8 +921,8 @@ public partial class MainViewModel : ViewModelBase
                                 {
                                     _firstTextPtr /= $"Processing Mod: {_fetchMod}";
 
-                                    _firstCurrentPtr /= i + 0x01;
-                                    _firstMaximumPtr /= _fetchMultiInstall.Length;
+                                    _firstCurrentPtr /= Convert.ToDouble(i + 0x01);
+                                    _firstMaximumPtr /= Convert.ToDouble(_fetchMultiInstall.Length);
 
                                     if (!isLocal)
                                     {
