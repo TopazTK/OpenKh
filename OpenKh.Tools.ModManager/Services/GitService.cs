@@ -37,7 +37,7 @@ namespace OpenKh.Tools.ModManager.Services
                 var _fetchTargetAPI = host == "github.com" ? _fetchGitHubAPI : _fetchForgejoAPI;
 
                 using var _makeClient = new HttpClient();
-                using var _fetchResponse = await _makeClient.GetAsync(_fetchTargetAPI, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+                using var _fetchResponse = await _makeClient.GetAsync(_fetchTargetAPI, HttpCompletionOption.ResponseContentRead, CancellationToken.None);
 
                 if (_fetchResponse.StatusCode == HttpStatusCode.OK)
                     return true;
@@ -75,7 +75,7 @@ namespace OpenKh.Tools.ModManager.Services
                     _makeClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
                 }
 
-                using var _fetchResponse = await _makeClient.GetAsync(_fetchTargetAPI, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+                using var _fetchResponse = await _makeClient.GetAsync(_fetchTargetAPI, HttpCompletionOption.ResponseContentRead, CancellationToken.None);
 
                 if (_fetchResponse.StatusCode == HttpStatusCode.OK)
                 {
@@ -121,6 +121,10 @@ namespace OpenKh.Tools.ModManager.Services
             var _fetchForgejoAPI = $"https://{host}/{author}/{repository}/archive/{_fetchBranch}.zip";
 
             using var _makeClient = new HttpClient();
+
+            _makeClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("openkh.modmanager.gitfetcher", "no-ver"));
+            _makeClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+
             using var _fetchResponse = await _makeClient.GetAsync(_fetchForgejoAPI, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
 
             if (_fetchResponse.StatusCode == HttpStatusCode.OK)

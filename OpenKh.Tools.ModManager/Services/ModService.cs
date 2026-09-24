@@ -323,53 +323,56 @@ namespace OpenKh.Tools.ModManager.Services
                 {
                     var _fetchZipball = await GitService.FetchZipball(_fetchPlatform, _fetchAuthor, _fetchName, CancelToken, _fetchBranch, reportProgress);
 
-                    using (var _fetchMemStr = new MemoryStream(_fetchZipball))
+                    if (_fetchZipball != null)
                     {
-                        var _fetchArchive = new ZipArchive(_fetchMemStr);
-
-                        if (_fetchArchive != null)
+                        using (var _fetchMemStr = new MemoryStream(_fetchZipball))
                         {
-                            for (int i = 1; i < _fetchArchive.Entries.Count; i++)
+                            var _fetchArchive = new ZipArchive(_fetchMemStr);
+
+                            if (_fetchArchive != null)
                             {
-                                // Fetch the current entry.
-                                var _fetchEntry = _fetchArchive.Entries[i];
-                                var _fetchRoot = _fetchArchive.Entries[0].FullName;
-
-                                var _normalizePath = Path.GetRelativePath(_fetchRoot, _fetchEntry.FullName);
-                                _normalizePath = _normalizePath.Replace("\\", "/");
-
-                                // If the entry is a directory (yes, really): Move on to the next one.
-                                if (_normalizePath.EndsWith('/'))
-                                    continue;
-
-                                if (_normalizePath.Contains("../") || _normalizePath.Contains("/.."))
-                                    continue;
-
-                                // Construct the target paths for the file and the directory.
-                                var _fetchFileTarget = Path.Combine(_fetchCurrentModDir, _normalizePath);
-                                var _fetchDirectory = Path.Combine(_fetchCurrentModDir, Path.GetDirectoryName(_normalizePath));
-
-                                // Should the target directory not exist, we make it exist.
-                                if (!Directory.Exists(_fetchDirectory))
-                                    Directory.CreateDirectory(_fetchDirectory);
-
-                                // Extract the file.
-                                _fetchEntry.ExtractToFile(_fetchFileTarget, true);
-
-                                // If the progress feedback exists:
-                                if (reportProgress != null)
+                                for (int i = 1; i < _fetchArchive.Entries.Count; i++)
                                 {
-                                    // Feedback to the progress and see the result.
-                                    var _fetchProgress = reportProgress(i + 1, _fetchArchive.Entries.Count, true);
+                                    // Fetch the current entry.
+                                    var _fetchEntry = _fetchArchive.Entries[i];
+                                    var _fetchRoot = _fetchArchive.Entries[0].FullName;
 
-                                    // If the result is false, meaning cancellation requested, break out immediately.
-                                    if (!_fetchProgress)
+                                    var _normalizePath = Path.GetRelativePath(_fetchRoot, _fetchEntry.FullName);
+                                    _normalizePath = _normalizePath.Replace("\\", "/");
+
+                                    // If the entry is a directory (yes, really): Move on to the next one.
+                                    if (_normalizePath.EndsWith('/'))
+                                        continue;
+
+                                    if (_normalizePath.Contains("../") || _normalizePath.Contains("/.."))
+                                        continue;
+
+                                    // Construct the target paths for the file and the directory.
+                                    var _fetchFileTarget = Path.Combine(_fetchCurrentModDir, _normalizePath);
+                                    var _fetchDirectory = Path.Combine(_fetchCurrentModDir, Path.GetDirectoryName(_normalizePath));
+
+                                    // Should the target directory not exist, we make it exist.
+                                    if (!Directory.Exists(_fetchDirectory))
+                                        Directory.CreateDirectory(_fetchDirectory);
+
+                                    // Extract the file.
+                                    _fetchEntry.ExtractToFile(_fetchFileTarget, true);
+
+                                    // If the progress feedback exists:
+                                    if (reportProgress != null)
+                                    {
+                                        // Feedback to the progress and see the result.
+                                        var _fetchProgress = reportProgress(i + 1, _fetchArchive.Entries.Count, true);
+
+                                        // If the result is false, meaning cancellation requested, break out immediately.
+                                        if (!_fetchProgress)
+                                            break;
+                                    }
+
+                                    // Otherwise manually check for cancellation and break out if it's requested.
+                                    else if (CancelToken.IsCancellationRequested)
                                         break;
                                 }
-
-                                // Otherwise manually check for cancellation and break out if it's requested.
-                                else if (CancelToken.IsCancellationRequested)
-                                    break;
                             }
                         }
                     }
