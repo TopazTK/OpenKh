@@ -120,6 +120,25 @@ namespace OpenKh.Tools.ModManager.Services
                 return null;
         }
 
+        public static string? ResolveEmulator(Config input, bool barePath = false)
+        {
+            if (String.IsNullOrEmpty(input.Emulator.EmuPath[0]))
+                return null;
+
+            var _fetchEmulatorOLD = Path.Combine(input.Emulator.EmuPath[0], "pcsx2.exe");
+            var _fetchEmulatorNEW = Path.Combine(input.Emulator.EmuPath[0], "pcsx2-qt.exe");
+
+            if (File.Exists(_fetchEmulatorOLD))
+                return _fetchEmulatorOLD;
+
+            else if (File.Exists(_fetchEmulatorNEW))
+                return _fetchEmulatorNEW;
+
+            else
+                return null;
+        }
+
+
         public static string ResolvePath1525(Config input)
         {
             var _fetchGamePath = input.Frontend.GamePath;

@@ -36,6 +36,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OpenKh.Patcher\OpenKh.Patcher.csproj" />
+    <ProjectReference Include="..\OpenKh.Tools.Common\OpenKh.Tools.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>

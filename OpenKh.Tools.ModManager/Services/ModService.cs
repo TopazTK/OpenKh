@@ -889,77 +889,87 @@ namespace OpenKh.Tools.ModManager.Services
             var _fetchTargetGame = currentConfig.Frontend.TargetGame;
             var _fetchTargetPlatform = currentConfig.Frontend.TargetPlatform;
 
-            var _fetchGamePath = PathService.ResolveGame(currentConfig);
-
-            var _fetchAPIFilePath = Path.Combine(_fetchGamePath, "steam_appid.txt");
-
-            var _fetchLauncherPath = Path.Combine(AppContext.BaseDirectory, "assembly", "OpenKh.Command.Interceptor.exe");
-            var _fetchTargetGamePath = Path.Combine(_fetchGamePath, Config.GameExecutable[_fetchTargetGame]);
-
-            var _fetchAPIExists = _fetchTargetPlatform == Platform.STEAM ? File.Exists(_fetchAPIFilePath) : false;
-
-            var _fetchSteamId = currentConfig.Frontend.TargetGame == Game.DREAM_DROP_DISTANCE ? 2552440 : 2552430;
-            var _fetchReMIXFilePath = currentConfig.Frontend.TargetGame == Game.DREAM_DROP_DISTANCE ? Path.Combine(_fetchGamePath, "KINGDOM HEARTS HD 2.8 Final Chapter Prologue.exe") : Path.Combine(_fetchGamePath, "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe");
-
-            var _fetchArguments = currentConfig.Frontend.LaunchArguments;
-
-            var _fetchDeletePath = Path.Combine(_fetchGamePath, "delete.this");
-            var _fetchArgumentPath = Path.Combine(_fetchGamePath, "launch_args.txt");
-
-            if (_fetchAPIExists)
-                _fetchArguments = $"{Config.GameShorthand[_fetchTargetGame]} {_fetchArguments}";
-
-            Uri _fetchTargetUri = null;
-            FileInfo _fetchTargetFile = null;
-
-            if (File.Exists(_fetchDeletePath))
-                File.Delete(_fetchDeletePath);
-
-            if (!OperatingSystem.IsWindows() || !_fetchAPIExists)
+            if (_fetchTargetPlatform != Platform.PCSX2)
             {
-                switch (_fetchTargetPlatform)
-                {
-                    case Platform.STEAM:
-                        _fetchTargetUri = new Uri($"steam://rungameid/{_fetchSteamId}");
-                        break;
-                    case Platform.EPIC_GAMES_STORE:
-                        _fetchTargetUri = new Uri("com.epicgames.launcher://apps/4158b699dd70447a981fee752d970a3e%3A5aac304f0e8948268ddfd404334dbdc7%3A68c214c58f694ae88c2dab6f209b43e4?action=launch");
-                        break;
-                }
-            }
+                var _fetchGamePath = PathService.ResolveGame(currentConfig);
 
-            if (topLevelObject.Launcher != null && _fetchTargetUri != null)
-            {
-                if (!String.IsNullOrEmpty(_fetchArguments))
-                    await File.WriteAllTextAsync(_fetchArgumentPath, _fetchArguments, CancelToken);
+                var _fetchAPIFilePath = Path.Combine(_fetchGamePath, "steam_appid.txt");
+
+                var _fetchLauncherPath = Path.Combine(AppContext.BaseDirectory, "assembly", "OpenKh.Command.Interceptor.exe");
+                var _fetchTargetGamePath = Path.Combine(_fetchGamePath, Config.GameExecutable[_fetchTargetGame]);
+
+                var _fetchAPIExists = _fetchTargetPlatform == Platform.STEAM ? File.Exists(_fetchAPIFilePath) : false;
+
+                var _fetchSteamId = currentConfig.Frontend.TargetGame == Game.DREAM_DROP_DISTANCE ? 2552440 : 2552430;
+                var _fetchReMIXFilePath = currentConfig.Frontend.TargetGame == Game.DREAM_DROP_DISTANCE ? Path.Combine(_fetchGamePath, "KINGDOM HEARTS HD 2.8 Final Chapter Prologue.exe") : Path.Combine(_fetchGamePath, "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe");
+
+                var _fetchArguments = currentConfig.Frontend.LaunchArguments;
+
+                var _fetchDeletePath = Path.Combine(_fetchGamePath, "delete.this");
+                var _fetchArgumentPath = Path.Combine(_fetchGamePath, "launch_args.txt");
 
                 if (_fetchAPIExists)
-                {
-                    var _fetchReMIXBackup = Path.ChangeExtension(_fetchReMIXFilePath, ".bak");
+                    _fetchArguments = $"{Config.GameShorthand[_fetchTargetGame]} {_fetchArguments}";
 
-                    if (!File.Exists(_fetchReMIXBackup))
+                Uri _fetchTargetUri = null;
+                FileInfo _fetchTargetFile = null;
+
+                if (File.Exists(_fetchDeletePath))
+                    File.Delete(_fetchDeletePath);
+
+                if (!OperatingSystem.IsWindows() || !_fetchAPIExists)
+                {
+                    switch (_fetchTargetPlatform)
                     {
-                        File.Move(_fetchReMIXFilePath, _fetchReMIXBackup);
-                        File.Copy(_fetchLauncherPath, _fetchReMIXFilePath, true);
+                        case Platform.STEAM:
+                            _fetchTargetUri = new Uri($"steam://rungameid/{_fetchSteamId}");
+                            break;
+                        case Platform.EPIC_GAMES_STORE:
+                            _fetchTargetUri = new Uri("com.epicgames.launcher://apps/4158b699dd70447a981fee752d970a3e%3A5aac304f0e8948268ddfd404334dbdc7%3A68c214c58f694ae88c2dab6f209b43e4?action=launch");
+                            break;
                     }
                 }
 
-                await topLevelObject.Launcher.LaunchUriAsync(_fetchTargetUri);
+                if (topLevelObject.Launcher != null && _fetchTargetUri != null)
+                {
+                    if (!String.IsNullOrEmpty(_fetchArguments))
+                        await File.WriteAllTextAsync(_fetchArgumentPath, _fetchArguments, CancelToken);
+
+                    if (_fetchAPIExists)
+                    {
+                        var _fetchReMIXBackup = Path.ChangeExtension(_fetchReMIXFilePath, ".bak");
+
+                        if (!File.Exists(_fetchReMIXBackup))
+                        {
+                            File.Move(_fetchReMIXFilePath, _fetchReMIXBackup);
+                            File.Copy(_fetchLauncherPath, _fetchReMIXFilePath, true);
+                        }
+                    }
+
+                    await topLevelObject.Launcher.LaunchUriAsync(_fetchTargetUri);
+                }
+
+                else
+                {
+                    var _fetchProcessInfo = new ProcessStartInfo
+                    {
+                        FileName = _fetchTargetGamePath,
+                        WorkingDirectory = _fetchGamePath,
+                        UseShellExecute = true
+                    };
+
+                    Process.Start(_fetchProcessInfo);
+                }
+
+                return true;
             }
 
             else
             {
-                var _fetchProcessInfo = new ProcessStartInfo
-                {
-                    FileName = _fetchTargetGamePath,
-                    WorkingDirectory = _fetchGamePath,
-                    UseShellExecute = true
-                };
+                var _fetchService = new InjectorService(currentConfig);
 
-                Process.Start(_fetchProcessInfo);
+                return true;
             }
-
-            return true;
         }
     }
 }

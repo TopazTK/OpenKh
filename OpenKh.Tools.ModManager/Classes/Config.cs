@@ -158,10 +158,8 @@ namespace OpenKh.Tools.ModManager.Classes
                 }
             }
 
-            // TODO: EMULATOR Configuration Check.
-
             else
-                return false;
+                return true;
         }
 
         public void Commit()
