@@ -199,7 +199,6 @@ namespace OpenKh.Tools.ModManager.Services
 
                     catch (FileNotFoundException) { _fetchStream = new ProcessStream(_targetProcess, 0x20000000, 0x20000000); }
                 }
-                
 
                 if (_fetchStream == null)
                 {
@@ -215,7 +214,6 @@ namespace OpenKh.Tools.ModManager.Services
                         return;
 
                     _fetchStream.SetPosition(_hookPtrLoad);
-
 
                     uint[] _fetchHookLoad =
                     [
@@ -315,8 +313,6 @@ namespace OpenKh.Tools.ModManager.Services
 
                     /////////////////////////////////////////////////////////////////////
 
-                START_PROC:
-
                     var _fetchOpcodeAddr = (0x0F << 0x10) - 0x04;
 
                     _fetchStream.SetPosition(_fetchOpcodeAddr);
@@ -340,10 +336,7 @@ namespace OpenKh.Tools.ModManager.Services
                             var _fetchName = _fetchStream.ReadString(0x30, Encoding.ASCII);
 
                             if (String.IsNullOrEmpty(_fetchName))
-                            {
-                                Debug.WriteLine("CAUGHT NO-NAME FILE!");
                                 goto LOOP_START;
-                            }
 
                             Debug.WriteLine(_fetchName);
 
