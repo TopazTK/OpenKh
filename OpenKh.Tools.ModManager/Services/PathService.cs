@@ -125,17 +125,23 @@ namespace OpenKh.Tools.ModManager.Services
             if (String.IsNullOrEmpty(input.Emulator.EmuPath[0]))
                 return null;
 
-            var _fetchEmulatorOLD = Path.Combine(input.Emulator.EmuPath[0], "pcsx2.exe");
-            var _fetchEmulatorNEW = Path.Combine(input.Emulator.EmuPath[0], "pcsx2-qt.exe");
+            if (OperatingSystem.IsWindows())
+            {
+                var _fetchEmulatorOLD = Path.Combine(input.Emulator.EmuPath[0], "pcsx2.exe");
+                var _fetchEmulatorNEW = Path.Combine(input.Emulator.EmuPath[0], "pcsx2-qt.exe");
 
-            if (File.Exists(_fetchEmulatorOLD))
-                return _fetchEmulatorOLD;
+                if (File.Exists(_fetchEmulatorOLD))
+                    return _fetchEmulatorOLD;
 
-            else if (File.Exists(_fetchEmulatorNEW))
-                return _fetchEmulatorNEW;
+                else if (File.Exists(_fetchEmulatorNEW))
+                    return _fetchEmulatorNEW;
+
+                else
+                    return null;
+            }
 
             else
-                return null;
+                return Path.Combine(input.Emulator.EmuPath[0], "pcsx2.appimage");
         }
 
 
