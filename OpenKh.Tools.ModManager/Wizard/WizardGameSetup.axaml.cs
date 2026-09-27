@@ -73,6 +73,46 @@ namespace OpenKh.Tools.ModManager.Wizard
             }
         }
 
+        private async void OnFolderClickEmuFirst(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            var _fetchTopLevel = TopLevel.GetTopLevel(this);
+            var _storageProvider = _fetchTopLevel != null ? _fetchTopLevel.StorageProvider : null;
+
+            if (_storageProvider != null)
+            {
+                var _fetchFolder = await _storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                {
+                    Title = "Select a PCSX2 Installation...",
+                    AllowMultiple = false,
+                    FileTypeFilter =
+                    [
+                        OperatingSystem.IsWindows() ? new FilePickerFileType("Executable File") { Patterns = ["*.exe"] }: new FilePickerFileType("AppImage Archive") { Patterns = ["*.AppImage"] }
+                    ]
+                });
+
+                if (_fetchFolder.Count >= 1)
+                    PathEmulator.Text = _fetchFolder[0].Path.LocalPath;
+            }
+        }
+
+        private async void OnFolderClickEmuSecond(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            var _fetchTopLevel = TopLevel.GetTopLevel(this);
+            var _storageProvider = _fetchTopLevel != null ? _fetchTopLevel.StorageProvider : null;
+
+            if (_storageProvider != null)
+            {
+                var _fetchFolder = await _storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+                {
+                    Title = "Select a Folder for the ISO Files...",
+                    AllowMultiple = false
+                });
+
+                if (_fetchFolder.Count >= 1)
+                    PathRoms.Text = _fetchFolder[0].Path.LocalPath;
+            }
+        }
+
         private async void OnDetectClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             var _fetchContext = DataContext as MainViewModel;
@@ -214,20 +254,38 @@ namespace OpenKh.Tools.ModManager.Wizard
         }
 
         private void OnPathChanged(object? sender, TextChangedEventArgs e)
-        {
+        { 
             if (PlatformBox.SelectedItem != null)
             {
-                var _fetchPath1525 = PathCollectionFirst.Text;
-                var _fetchPath28 = PathCollectionSecond.Text;
+                if (PlatformBox.SelectedIndex == 0x00)
+                {
+                    var _fetchPathEmulator = PathEmulator.Text;
+                    var _fetchPathRoms = PathRoms.Text;
 
-                var _isValid1525 = !String.IsNullOrEmpty(_fetchPath1525) && File.Exists(Path.Combine(_fetchPath1525, "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe"));
-                var _isValid28 = !String.IsNullOrEmpty(_fetchPath28) && File.Exists(Path.Combine(_fetchPath28, "KINGDOM HEARTS HD 2.8 Final Chapter Prologue.exe"));
+                    var _isValidEmulator = !String.IsNullOrEmpty(_fetchPathEmulator) && File.Exists(_fetchPathEmulator);
+                    var _isValidRoms = !String.IsNullOrEmpty(_fetchPathRoms) && Directory.Exists(_fetchPathRoms);
 
-                if (!_isValid1525 && !_isValid28)
-                    WeakReferenceMessenger.Default.Send(new BlockNextRequest());
+                    if (!_isValidEmulator && !_isValidRoms)
+                        WeakReferenceMessenger.Default.Send(new BlockNextRequest());
+
+                    else
+                        WeakReferenceMessenger.Default.Send(new UnblockNextRequest());
+                }
 
                 else
-                    WeakReferenceMessenger.Default.Send(new UnblockNextRequest());
+                {
+                    var _fetchPath1525 = PathCollectionFirst.Text;
+                    var _fetchPath28 = PathCollectionSecond.Text;
+
+                    var _isValid1525 = !String.IsNullOrEmpty(_fetchPath1525) && File.Exists(Path.Combine(_fetchPath1525, "KINGDOM HEARTS HD 1.5+2.5 ReMIX.exe"));
+                    var _isValid28 = !String.IsNullOrEmpty(_fetchPath28) && File.Exists(Path.Combine(_fetchPath28, "KINGDOM HEARTS HD 2.8 Final Chapter Prologue.exe"));
+
+                    if (!_isValid1525 && !_isValid28)
+                        WeakReferenceMessenger.Default.Send(new BlockNextRequest());
+
+                    else
+                        WeakReferenceMessenger.Default.Send(new UnblockNextRequest());
+                }
             }
         }
     }

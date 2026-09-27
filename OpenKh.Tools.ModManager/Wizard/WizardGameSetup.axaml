@@ -109,7 +109,7 @@
             </StackPanel.IsVisible>
 
             <TextBlock TextWrapping="Wrap" Margin="0, 10, 0, 5">
-                <Bold>NOTE:</Bold> Please be advised that all Lua related features will only with with <Bold>PCSX2-EX</Bold>. 
+                <Bold>NOTE:</Bold> Please be advised that all Lua related features will only with with <Bold>PCSX2-EX</Bold>. On Linux, only the AppImage release is supported.
             </TextBlock>
 
             <TextBlock TextTrimming="CharacterEllipsis" Margin="0, 5, 0, 0"> Enter path for the <Bold>
@@ -124,8 +124,8 @@
                     Text="{ReflectionBinding CurrentConfig.Emulator.EmuPath[0]}"
                     HorizontalAlignment="Stretch" PlaceholderText="Path goes here..."
                     Margin="0, 0, 10, 0" />
-                <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32" Background="Transparent" VerticalAlignment="Stretch">
-                    <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />
+                <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32" Background="Transparent" VerticalAlignment="Stretch" Click="OnFolderClickEmuFirst">
+                    <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24"/>
                 </Button>
             </Grid>
 
@@ -141,8 +141,8 @@
                     Text="{ReflectionBinding CurrentConfig.Emulator.RomPath[0]}"
                     HorizontalAlignment="Stretch" PlaceholderText="Path goes here..."
                     Margin="0, 0, 10, 0" />
-                <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32" Background="Transparent" VerticalAlignment="Stretch">
-                    <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24" />
+                <Button Grid.Column="1" HorizontalAlignment="Stretch" Width="32" Height="32" Background="Transparent" VerticalAlignment="Stretch" Click="OnFolderClickEmuSecond">
+                    <PathIcon Data="{StaticResource icon_open_folder}" Height="24" Width="24"/>
                 </Button>
             </Grid>
             <TextBlock TextWrapping="Wrap">
