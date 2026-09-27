@@ -98,35 +98,19 @@ namespace OpenKh.Tools.ModManager.Classes
 
         public PINEStream(int slot = 28011)
         {
-            if (slot < 1 || slot > 65535)
-                throw new ArgumentOutOfRangeException(nameof(slot));
-
-            var _fetchRuntimePath = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
-
-            _socketPath = String.IsNullOrEmpty(_fetchRuntimePath) ? "/tmp/pcsx2.sock" : Path.Combine(_fetchRuntimePath, "pcsx2.sock");
-
-            if (slot != 28011)
-                _socketPath += "." + slot;
-
-            var _fetchSocket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-
-            try
+            if (OperatingSystem.IsLinux())
             {
-                var _fetchEndPoint = new UnixDomainSocketEndPoint(_socketPath);
-                _fetchSocket.Connect(_fetchEndPoint);
+                if (slot < 1 || slot > 65535)
+                    throw new ArgumentOutOfRangeException(nameof(slot));
 
-                _mainSocket = _fetchSocket;
-            }
+                var _fetchRuntimePath = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
 
-            catch
-            {
-                _fetchSocket.Dispose();
-                _fetchSocket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-
-                _socketPath = "/tmp/pcsx2.sock";
+                _socketPath = String.IsNullOrEmpty(_fetchRuntimePath) ? "/tmp/pcsx2.sock" : Path.Combine(_fetchRuntimePath, "pcsx2.sock");
 
                 if (slot != 28011)
                     _socketPath += "." + slot;
+
+                var _fetchSocket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
 
                 try
                 {
@@ -136,7 +120,51 @@ namespace OpenKh.Tools.ModManager.Classes
                     _mainSocket = _fetchSocket;
                 }
 
-                catch { _fetchSocket.Dispose(); }
+                catch
+                {
+                    _fetchSocket.Dispose();
+                    _fetchSocket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+
+                    _socketPath = "/tmp/pcsx2.sock";
+
+                    if (slot != 28011)
+                        _socketPath += "." + slot;
+
+                    try
+                    {
+                        var _fetchEndPoint = new UnixDomainSocketEndPoint(_socketPath);
+                        _fetchSocket.Connect(_fetchEndPoint);
+
+                        _mainSocket = _fetchSocket;
+                    }
+
+                    catch { _fetchSocket.Dispose(); }
+                }
+            }
+
+            else
+            {
+                if (slot < 1 || slot > 65535)
+                    throw new ArgumentOutOfRangeException(nameof(slot));
+
+                try
+                {
+                    var socket = new Socket(
+                        AddressFamily.InterNetwork,
+                        SocketType.Stream,
+                        ProtocolType.Tcp
+                    );
+
+                    socket.Connect(IPAddress.Loopback, slot);
+
+                    _mainSocket = socket;
+                    _isValid = true;
+                }
+                catch (SocketException)
+                {
+                    _mainSocket = null;
+                    _isValid = false;
+                }
             }
 
             _isValid = _mainSocket != null;
