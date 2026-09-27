@@ -1662,11 +1662,11 @@ public partial class MainViewModel : ViewModelBase
 
             // Allocate all the pointers to use for the progress bars.
 
-            SafePtr _firstCurrentPtr = 0x00;
-            SafePtr _firstMaximumPtr = 0x00;
+            SafePtr _firstCurrentPtr = 0.00;
+            SafePtr _firstMaximumPtr = 0.00;
 
-            SafePtr _secondCurrentPtr = 0x00;
-            SafePtr _secondMaximumPtr = 0x00;
+            SafePtr _secondCurrentPtr = 0.00;
+            SafePtr _secondMaximumPtr = 0.00;
 
             SafePtr _firstTextPtr = "Currently building: N/A";
             SafePtr _secondTextPtr = "Processing Files: {0} / {3}";
@@ -1689,8 +1689,8 @@ public partial class MainViewModel : ViewModelBase
 
                         _firstTextPtr /= $"Currently building: {currModName}";
 
-                        _firstCurrentPtr /= procMod;
-                        _firstMaximumPtr /= totalMod;
+                        _firstCurrentPtr /= Convert.ToDouble(procMod);
+                        _firstMaximumPtr /= Convert.ToDouble(totalMod);
 
                         if (ModService.CancelToken.IsCancellationRequested)
                             return false;
@@ -1700,8 +1700,8 @@ public partial class MainViewModel : ViewModelBase
 
                     (int processed, int total) =>
                     {
-                        _secondCurrentPtr /= processed;
-                        _secondMaximumPtr /= total;
+                        _secondCurrentPtr /= Convert.ToDouble(processed);
+                        _secondMaximumPtr /= Convert.ToDouble(total);
 
                         if (ModService.CancelToken.IsCancellationRequested)
                             return false;
