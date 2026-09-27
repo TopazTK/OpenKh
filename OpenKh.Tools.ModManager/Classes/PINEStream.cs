@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Linq;
 using System.Net;
+using System.Diagnostics;
 
 namespace OpenKh.Tools.ModManager.Classes
 {
@@ -100,6 +101,8 @@ namespace OpenKh.Tools.ModManager.Classes
         {
             if (OperatingSystem.IsLinux())
             {
+                TRY_SOCK_CONNECT:
+
                 if (slot < 1 || slot > 65535)
                     throw new ArgumentOutOfRangeException(nameof(slot));
 
@@ -138,7 +141,11 @@ namespace OpenKh.Tools.ModManager.Classes
                         _mainSocket = _fetchSocket;
                     }
 
-                    catch { _fetchSocket.Dispose(); }
+                    catch 
+                    {
+                        _fetchSocket.Dispose();
+                        goto TRY_SOCK_CONNECT;
+                    }
                 }
             }
 
