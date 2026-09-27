@@ -1,26 +1,16 @@
-using LibGit2Sharp;
 using OpenKh.Common;
 using OpenKh.Tools.Common;
 using OpenKh.Tools.ModManager.Classes;
-using SkiaSharp;
 using System;
 using System.Buffers;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Xe.BinaryMapper;
-using static Antlr4.Runtime.Atn.SemanticContext;
-using static OpenKh.Kh2.Ard.AreaDataScript;
-using static OpenKh.Kh2.Ard.Event.Light;
-using static OpenKh.Kh2.Constants;
 
 namespace OpenKh.Tools.ModManager.Services
 {
@@ -344,19 +334,11 @@ namespace OpenKh.Tools.ModManager.Services
 
                             if (_couldResolve != 0x00 && _couldResolve != 0x03)
                             {
-                                using (var mmf = MemoryMappedFile.CreateFromFile(_filePath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read))
-                                {
-                                    using (var accessor = mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read))
-                                    {
-                                        _fetchSize = (int) accessor.Capacity;
-                                        var _fetchData = new byte[_fetchSize];
+                                var _fetchData = File.ReadAllBytes(_filePath);
+                                _fetchSize = _fetchData.Length;
 
-                                        accessor.ReadArray(0x00, _fetchData, 0x00, _fetchSize);
-
-                                        _fetchStream.SetPosition(_destinationPtr);
-                                        _fetchStream.Write(_fetchData);
-                                    }
-                                }
+                                _fetchStream.SetPosition(_destinationPtr);
+                                _fetchStream.Write(_fetchData);
                             }
 
                             _fetchStream.SetPosition(_fetchOpcodeAddr - 0x04);
