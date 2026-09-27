@@ -83,7 +83,8 @@ namespace OpenKh.Tools.ModManager.Classes
             IPC_FAIL = 0xFF
         };
 
-        const int MAX_PACKET_LENGTH = 640000;
+        const int MAX_SEND_LENGTH = 640000;
+        const int MAX_RECEIVE_LENGTH = 440000;
 
         readonly object _syncLock = new();
         readonly string _socketPath;
@@ -178,6 +179,9 @@ namespace OpenKh.Tools.ModManager.Classes
         {
             lock (_syncLock)
             {
+                uint _initialPosition = _currPosition;
+                uint _pastByteLength = 0x00;
+
                 if (_hasDisposed)
                     throw new ObjectDisposedException(nameof(PINEStream));
 
@@ -190,14 +194,14 @@ namespace OpenKh.Tools.ModManager.Classes
                 if (offset < 0 || count <= 0 || offset > buffer.Length - count || count > Length - _currPosition)
                     throw new ArgumentOutOfRangeException();
 
-                var _makePacket = new List<byte>();
-                var _messageList = new List<PINE_MESSAGE>();
-
-                for (int i = 0; i < count;)
+                for (uint _packageLength = 0x00, _packageBytes = 0x00, _packageReceive = 0x00; _packageBytes < count;)
                 {
-                    for (uint z = 0, s = 0; s < MAX_PACKET_LENGTH - 0x04 && z < i + count;)
+                    var _makePacket = new List<byte>();
+                    var _messageList = new List<PINE_MESSAGE>();
+
+                    for (; _packageLength < MAX_SEND_LENGTH - 0x04 && _packageReceive < MAX_RECEIVE_LENGTH - 0x04 && _packageBytes < count;)
                     {
-                        var _byteRemain = count - i - z;
+                        var _byteRemain = count - _packageBytes;
 
                         var _makeMessage = new PINE_MESSAGE
                         {
@@ -205,17 +209,20 @@ namespace OpenKh.Tools.ModManager.Classes
                                       _byteRemain >= 0x04 ? PINE_COMMAND.READ_INT32 :
                                       _byteRemain >= 0x02 ? PINE_COMMAND.READ_INT16 : PINE_COMMAND.READ_INT08,
 
-                            Address = _currPosition + z
+                            Address = _initialPosition + _packageBytes
                         };
 
                         _messageList.Add(_makeMessage);
                         _makePacket.AddRange(_makeMessage.ToArray());
 
-                        z += _byteRemain >= 0x08 ? 0x08U :
-                             _byteRemain >= 0x04 ? 0x04U :
-                             _byteRemain >= 0x02 ? 0x02U : 0x01U;
+                        var _currLength = _byteRemain >= 0x08 ? 0x08U :
+                                          _byteRemain >= 0x04 ? 0x04U :
+                                          _byteRemain >= 0x02 ? 0x02U : 0x01U;
 
-                        s += _makeMessage.Length;
+                        _packageBytes += _currLength;
+                        _packageReceive += _currLength;
+
+                        _packageLength += _makeMessage.Length;
                     }
 
                     var _finalSize = _makePacket.Count + 0x04;
@@ -243,13 +250,14 @@ namespace OpenKh.Tools.ModManager.Classes
                     var _fetchCodeResponse = _fetchDataResponse[0x00];
 
                     if (_fetchCodeResponse == (byte)PINE_RESPONSE.IPC_FAIL)
-                        return i;
+                        return (int) _packageBytes;
 
                     if (_fetchCodeResponse != (byte)PINE_RESPONSE.IPC_OK)
                         throw new IOException($"Unknown PINE response: 0x{_fetchCodeResponse.ToString("X2")}");
 
                     for (int s = 0; s < _fetchDataResponse.Length - 0x05;)
                     {
+                        var _fetchOffset = offset + s + (int)_pastByteLength;
                         var _byteRemain = _fetchDataResponse.Length - 0x05 - s;
 
                         var _readLength = _byteRemain >= 0x08 ? 0x08 :
@@ -257,7 +265,7 @@ namespace OpenKh.Tools.ModManager.Classes
                                           _byteRemain >= 0x02 ? 0x02 : 0x01;
 
                         var _fetchSpanRead = _fetchDataResponse.AsSpan(0x01 + s, _readLength);
-                        var _fetchSpanWrite = buffer.AsSpan(offset + i + s, _readLength);
+                        var _fetchSpanWrite = buffer.AsSpan(_fetchOffset, _readLength);
 
                         switch (_readLength)
                         {
@@ -283,15 +291,18 @@ namespace OpenKh.Tools.ModManager.Classes
                             break;
 
                             default:
-                                buffer[offset + i] = _fetchDataResponse[0x05];
+                                buffer[_fetchOffset] = _fetchDataResponse[0x05];
                                 break;
                         }
 
                         s += _readLength;
                     }
 
-                    i += _finalSize - 0x05;
-                    _currPosition += (uint)_finalSize - 0x05;
+                    _pastByteLength = _packageBytes;
+                    _currPosition = _initialPosition + _packageBytes;
+
+                    _packageReceive = 0x00;
+                    _packageLength = 0x00;
                 }
 
                 return count;
@@ -303,7 +314,6 @@ namespace OpenKh.Tools.ModManager.Classes
             lock (_syncLock)
             {
                 uint _initialPosition = _currPosition;
-                string _fileName = "fileDebug_" + count + ".dbg";
 
                 if (_hasDisposed || !_isValid)
                     throw new ObjectDisposedException(nameof(PINEStream));
@@ -319,9 +329,7 @@ namespace OpenKh.Tools.ModManager.Classes
                     var _makePacket = new List<byte>();
                     var _messageList = new List<PINE_MESSAGE>();
 
-                    var _fetchData = new List<byte>();
-
-                    for (; _packageLength < MAX_PACKET_LENGTH - 0x04 && _packageBytes < count;)
+                    for (; _packageLength < MAX_SEND_LENGTH - 0x04 && _packageBytes < count;)
                     {
                         var _makeMessage = new PINE_MESSAGE();
 
