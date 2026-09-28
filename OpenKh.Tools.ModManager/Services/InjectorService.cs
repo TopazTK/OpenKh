@@ -1,4 +1,5 @@
 using OpenKh.Common;
+using OpenKh.Engine.Input;
 using OpenKh.Tools.Common;
 using OpenKh.Tools.ModManager.Classes;
 using System;
@@ -101,36 +102,8 @@ namespace OpenKh.Tools.ModManager.Services
                 return 0x01;
             }
 
-            var _fetchDataFile = Path.Combine(_fetchDataPath, input);
-            var _fetchDataFileRegion = Path.Combine(_fetchDataPath, _fetchRegionInput);
-
-            if (File.Exists(_fetchDataFile))
-            {
-                finalPath = _fetchDataFile;
-                return 0x02;
-            }
-
-            else if (File.Exists(_fetchDataFileRegion))
-            {
-                finalPath = _fetchDataFileRegion;
-                return 0x02;
-            }
-
             finalPath = null;
             return 0x03;
-        }
-        
-        public int ResolveSize(string input)
-        {
-            var _couldResolve = ResolvePath(input, out var _filePath);
-
-            if (_couldResolve != 0x00 && _couldResolve != 0x03)
-            {
-                var _fetchInfo = new FileInfo(_filePath);
-                return (int)_fetchInfo.Length;
-            }
-
-            return -1;
         }
 
         public InjectorService(Config _targetConfig)
@@ -200,7 +173,7 @@ namespace OpenKh.Tools.ModManager.Services
                 {
                 LOOP_START:
 
-                    if (_cancelToken.IsCancellationRequested)
+                    if (_cancelToken.IsCancellationRequested || _targetProcess.HasExited)
                         return;
 
                     _fetchStream.SetPosition(_hookPtrLoad);
@@ -208,42 +181,42 @@ namespace OpenKh.Tools.ModManager.Services
                     uint[] _fetchHookLoad =
                     [
                         MIPS.LUI(MIPS.T6, 0x0F),
-                            MIPS.SW(MIPS.A0, MIPS.T6, -0x08),
-                            MIPS.SW(MIPS.A1, MIPS.T6, -0x0C),
-                            MIPS.SW(MIPS.T5, MIPS.T6, -0x04),
-                            MIPS.LW(MIPS.T5, MIPS.T6, -0x04),
-                            MIPS.BNE(MIPS.T5, 0x00, -2),
-                            MIPS.LW(MIPS.V0, MIPS.T6, -0x08),
-                            MIPS.BEQ(MIPS.V0, MIPS.Zero, 0x02),
-                            MIPS.NOP(),
-                            MIPS.ADDIU(MIPS.RA, MIPS.RA, 4),
-                            MIPS.ADDIU(MIPS.SP, MIPS.SP, -0x10),
-                            MIPS.SD(MIPS.T4, MIPS.SP, 0x08),
-                            MIPS.SD(MIPS.S0, MIPS.SP, 0x00),
-                            MIPS.JR(MIPS.RA),
-                            MIPS.NOP()
+                        MIPS.SW(MIPS.A0, MIPS.T6, -0x08),
+                        MIPS.SW(MIPS.A1, MIPS.T6, -0x0C),
+                        MIPS.SW(MIPS.T5, MIPS.T6, -0x04),
+                        MIPS.LW(MIPS.T5, MIPS.T6, -0x04),
+                        MIPS.BNE(MIPS.T5, 0x00, -2),
+                        MIPS.LW(MIPS.V0, MIPS.T6, -0x08),
+                        MIPS.BEQ(MIPS.V0, MIPS.Zero, 0x02),
+                        MIPS.NOP(),
+                        MIPS.ADDIU(MIPS.RA, MIPS.RA, 4),
+                        MIPS.ADDIU(MIPS.SP, MIPS.SP, -0x10),
+                        MIPS.SD(MIPS.T4, MIPS.SP, 0x08),
+                        MIPS.SD(MIPS.S0, MIPS.SP, 0x00),
+                        MIPS.JR(MIPS.RA),
+                        MIPS.NOP()
                     ];
 
                     uint[] _fetchHookSize =
                     [
                         MIPS.LUI(MIPS.T6, 0x0F),
-                            MIPS.SW(MIPS.A0, MIPS.T6, -0x08),
-                            MIPS.SW(MIPS.A1, MIPS.T6, -0x0C),
-                            MIPS.SW(MIPS.A2, MIPS.T6, -0x10),
-                            MIPS.SW(MIPS.A3, MIPS.T6, -0x14),
-                            MIPS.SW(MIPS.T5, MIPS.T6, -0x04),
-                            MIPS.LW(MIPS.T5, MIPS.T6, -0x04),
-                            MIPS.BNE(MIPS.T5, 0x00, -2),
-                            MIPS.LW(MIPS.V0, MIPS.T6, -0x08),
-                            MIPS.BEQ(MIPS.V0, MIPS.Zero, 2),
-                            MIPS.NOP(),
-                            MIPS.JR(MIPS.T4),
-                            MIPS.NOP(),
-                            MIPS.ADDIU(MIPS.SP, MIPS.SP, -0x10),
-                            MIPS.SD(MIPS.T4, MIPS.SP, 0x08),
-                            MIPS.SD(MIPS.S0, MIPS.SP, 0x00),
-                            MIPS.JR(MIPS.RA),
-                            MIPS.NOP()
+                        MIPS.SW(MIPS.A0, MIPS.T6, -0x08),
+                        MIPS.SW(MIPS.A1, MIPS.T6, -0x0C),
+                        MIPS.SW(MIPS.A2, MIPS.T6, -0x10),
+                        MIPS.SW(MIPS.A3, MIPS.T6, -0x14),
+                        MIPS.SW(MIPS.T5, MIPS.T6, -0x04),
+                        MIPS.LW(MIPS.T5, MIPS.T6, -0x04),
+                        MIPS.BNE(MIPS.T5, 0x00, -2),
+                        MIPS.LW(MIPS.V0, MIPS.T6, -0x08),
+                        MIPS.BEQ(MIPS.V0, MIPS.Zero, 0x03),
+                        MIPS.NOP(),
+                        MIPS.JR(MIPS.T4),
+                        MIPS.NOP(),
+                        MIPS.ADDIU(MIPS.SP, MIPS.SP, -0x10),
+                        MIPS.SD(MIPS.T4, MIPS.SP, 0x08),
+                        MIPS.SD(MIPS.S0, MIPS.SP, 0x00),
+                        MIPS.JR(MIPS.RA),
+                        MIPS.NOP()
                     ];
 
                     if (_fetchStream.ReadUInt32() == 0x00)
@@ -280,17 +253,17 @@ namespace OpenKh.Tools.ModManager.Services
                         uint[] _fetchFunction =
                         [
                             MIPS.ADDIU(MIPS.T4, MIPS.RA, 0),
-                                MIPS.JAL(_hookPtrSize),
-                                MIPS.ADDIU(MIPS.T5, MIPS.Zero, 0x02),
-                                MIPS.JAL(_subFileSizeFunc),
-                                MIPS.NOP(),
-                                MIPS.BEQ(MIPS.V0, MIPS.Zero, 2),
-                                MIPS.NOP(),
-                                MIPS.LW(MIPS.V0, MIPS.V0, 0x0C),
-                                MIPS.LD(MIPS.RA, MIPS.SP, 0x08),
-                                MIPS.JR(MIPS.RA),
-                                MIPS.ADDIU(MIPS.SP, MIPS.SP, 0x10),
-                            ];
+                            MIPS.JAL(_hookPtrSize),
+                            MIPS.ADDIU(MIPS.T5, MIPS.Zero, 0x02),
+                            MIPS.JAL(_subFileSizeFunc),
+                            MIPS.NOP(),
+                            MIPS.BEQ(MIPS.V0, MIPS.Zero, 2),
+                            MIPS.NOP(),
+                            MIPS.LW(MIPS.V0, MIPS.V0, 0x0C),
+                            MIPS.LD(MIPS.RA, MIPS.SP, 0x08),
+                            MIPS.JR(MIPS.RA),
+                            MIPS.ADDIU(MIPS.SP, MIPS.SP, 0x10),
+                        ];
 
                         byte[] _fetchFunctionArray = new byte[_fetchFunction.Length * sizeof(uint)];
                         Buffer.BlockCopy(_fetchFunction, 0, _fetchFunctionArray, 0, _fetchFunctionArray.Length);
@@ -332,7 +305,7 @@ namespace OpenKh.Tools.ModManager.Services
 
                             var _couldResolve = ResolvePath(_fetchName, out var _filePath);
 
-                            if (_couldResolve != 0x00 && _couldResolve != 0x03)
+                            if (_couldResolve == 0x01)
                             {
                                 var _fetchData = File.ReadAllBytes(_filePath);
                                 _fetchSize = _fetchData.Length;
@@ -360,10 +333,17 @@ namespace OpenKh.Tools.ModManager.Services
                             if (String.IsNullOrEmpty(_fetchName))
                                 goto LOOP_START;
 
-                            var _fetchFileSize = ResolveSize(_fetchName);
+                            var _fetchSize = 0x00;
+                            var _couldResolve = ResolvePath(_fetchName, out var _filePath);
+
+                            if (_couldResolve == 0x01)
+                            {
+                                var _fetchInfo = new FileInfo(_filePath);
+                                _fetchSize = (int)_fetchInfo.Length;
+                            }
 
                             _fetchStream.SetPosition(_fetchOpcodeAddr - 0x04);
-                            _fetchStream.Write(_fetchFileSize);
+                            _fetchStream.Write(_fetchSize);
 
                             _fetchStream.Flush();
                         }
