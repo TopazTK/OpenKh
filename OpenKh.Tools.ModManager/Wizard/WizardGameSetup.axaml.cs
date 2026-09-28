@@ -6,6 +6,7 @@ using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Win32;
+using OpenKh.Common;
 using OpenKh.Tools.ModManager.Classes;
 using OpenKh.Tools.ModManager.Services;
 using OpenKh.Tools.ModManager.ViewModels;
@@ -95,21 +96,91 @@ namespace OpenKh.Tools.ModManager.Wizard
             }
         }
 
-        private async void OnFolderClickEmuSecond(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        private async void OnFileClickKH1(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
+            var _fetchContext = DataContext as MainViewModel;
+            var _fetchConfig = _fetchContext.CurrentConfig;
+
             var _fetchTopLevel = TopLevel.GetTopLevel(this);
             var _storageProvider = _fetchTopLevel != null ? _fetchTopLevel.StorageProvider : null;
 
             if (_storageProvider != null)
             {
-                var _fetchFolder = await _storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+                var _fetchFile = await _storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                 {
-                    Title = "Select a Folder for the ISO Files...",
-                    AllowMultiple = false
+                    Title = "Select ISO File for Kingdom Hearts...",
+                    AllowMultiple = false,
+                    FileTypeFilter = [new FilePickerFileType("ISO Image") { Patterns = ["*.iso"] }]
                 });
 
-                if (_fetchFolder.Count >= 1)
-                    PathRoms.Text = _fetchFolder[0].Path.LocalPath;
+                if (_fetchFile.Count >= 1)
+                {
+                    using var _fetchStream = new FileStream(_fetchFile[0x00].Path.LocalPath, FileMode.Open);
+                    var _fetchIDX = IsoUtility.GetFileOffset(_fetchStream, "KINGDOM.IDX;1");
+
+                    if (_fetchIDX == -1)
+                    {
+                        _fetchConfig.Emulator.RomPath[0x00] = null;
+                        await DialogService.ShowMessage(_fetchTopLevel as Window, "Invalid ISO for Kingdom Hearts!", "This file does not seem to be an ISO for Kingdom Hearts. Please check the file and try again.", Dialogs.MessageType.ERROR);
+
+                        IconMissingKH1.IsVisible = true;
+                        IconFoundKH1.IsVisible = false;
+                    }
+
+                    else
+                    {
+                        _fetchConfig.Emulator.RomPath[0x00] = _fetchFile[0x00].Path.LocalPath;
+
+                        IconMissingKH1.IsVisible = false;
+                        IconFoundKH1.IsVisible = true;
+                    }
+
+                    OnPathChanged(null, null);
+                }
+            }
+        }
+
+        private async void OnFileClickKH2(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            var _fetchContext = DataContext as MainViewModel;
+            var _fetchConfig = _fetchContext.CurrentConfig;
+
+            var _fetchTopLevel = TopLevel.GetTopLevel(this);
+            var _storageProvider = _fetchTopLevel != null ? _fetchTopLevel.StorageProvider : null;
+
+            if (_storageProvider != null)
+            {
+                var _fetchFile = await _storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                {
+                    Title = "Select ISO File for Kingdom Hearts II...",
+                    AllowMultiple = false,
+                    FileTypeFilter = [ new FilePickerFileType("ISO Image") { Patterns = ["*.iso"] } ]
+                });
+
+                if (_fetchFile.Count >= 1)
+                {
+                    using var _fetchStream = new FileStream(_fetchFile[0x00].Path.LocalPath, FileMode.Open);
+                    var _fetchIDX = IsoUtility.GetFileOffset(_fetchStream, "KH2.IDX;1");
+
+                    if (_fetchIDX == -1)
+                    {
+                        _fetchConfig.Emulator.RomPath[0x01] = null;
+                        await DialogService.ShowMessage(_fetchTopLevel as Window, "Invalid ISO for Kingdom Hearts II!", "This file does not seem to be an ISO for Kingdom Hearts II. Please check the file and try again.", Dialogs.MessageType.ERROR);
+
+                        IconMissingKH2.IsVisible = true;
+                        IconFoundKH2.IsVisible = false;
+                    }
+
+                    else
+                    { 
+                        _fetchConfig.Emulator.RomPath[0x01] = _fetchFile[0x00].Path.LocalPath;
+
+                        IconMissingKH2.IsVisible = false;
+                        IconFoundKH2.IsVisible = true;
+                    }
+
+                    OnPathChanged(null, null);
+                }
             }
         }
 
@@ -253,19 +324,24 @@ namespace OpenKh.Tools.ModManager.Wizard
             }
         }
 
-        private void OnPathChanged(object? sender, TextChangedEventArgs e)
-        { 
-            if (PlatformBox.SelectedItem != null)
+        private void OnPathChanged(object? sender, TextChangedEventArgs? e)
+        {
+            var _fetchContext = DataContext as MainViewModel;
+            var _fetchConfig = _fetchContext != null ? _fetchContext.CurrentConfig : null;
+
+            if (PlatformBox.SelectedItem != null && _fetchConfig != null)
             {
                 if (PlatformBox.SelectedIndex == 0x00)
                 {
                     var _fetchPathEmulator = PathEmulator.Text;
-                    var _fetchPathRoms = PathRoms.Text;
+
+                    var _fetchPathKH1 = _fetchConfig.Emulator.RomPath[0x00];
+                    var _fetchPathKH2 = _fetchConfig.Emulator.RomPath[0x01];
 
                     var _isValidEmulator = !String.IsNullOrEmpty(_fetchPathEmulator) && File.Exists(_fetchPathEmulator);
-                    var _isValidRoms = !String.IsNullOrEmpty(_fetchPathRoms) && Directory.Exists(_fetchPathRoms);
+                    var _isValidIsoFile = (!String.IsNullOrEmpty(_fetchPathKH1) || !String.IsNullOrEmpty(_fetchPathKH2)) && (File.Exists(_fetchPathKH1) || File.Exists(_fetchPathKH2));
 
-                    if (!_isValidEmulator && !_isValidRoms)
+                    if (!_isValidEmulator || !_isValidIsoFile)
                         WeakReferenceMessenger.Default.Send(new BlockNextRequest());
 
                     else

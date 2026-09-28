@@ -1,13 +1,9 @@
-using Avalonia.Controls.Documents;
-using Avalonia.Threading;
-using OpenKh.Tools.ModManager.Views;
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
+using Avalonia.Threading;
+using Avalonia.Controls.Documents;
+
+using OpenKh.Tools.ModManager.Views;
 
 namespace OpenKh.Tools.ModManager.Services
 {
@@ -39,25 +35,10 @@ namespace OpenKh.Tools.ModManager.Services
             lock (_lockObj)
             {
                 var _stringFormat = "[{0}] - {1}\n";
+                var _fetchDate = DateTime.Now.ToString("HH:mm:ss");
 
-                var _fetchLog = "";
-                var _colorHex = "";
-
-                switch (type)
-                {
-                    case 0x00:
-                        _fetchLog = String.Format(_stringFormat, DateTime.Now, message);
-                        _colorHex = "#4CFCFC";
-                        break;
-                    case 0x01:
-                        _fetchLog = String.Format(_stringFormat, DateTime.Now, message);
-                        _colorHex = "#F0F040";
-                        break;
-                    case 0x02:
-                        _fetchLog = String.Format(_stringFormat, DateTime.Now, message);
-                        _colorHex = "#F04040";
-                        break;
-                }
+                var _fetchLog = String.Format(_stringFormat, _fetchDate, message);
+                var _colorHex = type == 0x00 ? "#4CCCCC" : (type == 0x01 ? "#CCCC4C" : "#CC4C4C");
 
                 Dispatcher.UIThread.Post(() =>
                 {

@@ -17,12 +17,6 @@ namespace OpenKh.Tools.ModManager.Services
 {
     public class InjectorService
     {
-        public static Dictionary<Game, string> ISO_NAMES = new Dictionary<Game, string>
-        {
-            { Game.KINGDOM_HEARTS, "KHFM.iso"},
-            { Game.KINGDOM_HEARTS_II, "KHIIFM.iso"},
-        };
-
         private static readonly HashSet<string> DENY_FILES = new HashSet<string>
         {
             "dkmovie.x",
@@ -105,7 +99,6 @@ namespace OpenKh.Tools.ModManager.Services
         public InjectorService(Config _targetConfig)
         {
             LogService.Show();
-
             LogService.Log("Welcome to the Dynamic Mod Loader - v0.01!", 0x00);
 
             TargetConfig = _targetConfig;
@@ -116,11 +109,13 @@ namespace OpenKh.Tools.ModManager.Services
             Stream? _fetchStream = null;
             var _fetchPathEmu = PathService.ResolveEmulator(TargetConfig);
 
+            var _fetchPathGame = _targetConfig.Frontend.TargetGame == Game.KINGDOM_HEARTS ? TargetConfig.Emulator.RomPath[0] : TargetConfig.Emulator.RomPath[1];
+
             _targetProcess = new Process
             {
                 StartInfo = new ProcessStartInfo(_fetchPathEmu)
                 {
-                    Arguments = Path.Combine(TargetConfig.Emulator.RomPath[0], ISO_NAMES[TargetConfig.Frontend.TargetGame]),
+                    Arguments = $"\"{_fetchPathGame}\"",
                     WorkingDirectory = Path.GetDirectoryName(_fetchPathEmu),
                     RedirectStandardInput = true,
                     RedirectStandardOutput = true,
@@ -320,8 +315,6 @@ namespace OpenKh.Tools.ModManager.Services
 
                             if (String.IsNullOrEmpty(_fetchName))
                                 goto LOOP_START;
-
-                            Debug.WriteLine(_fetchName);
 
                             var _couldResolve = ResolvePath(_fetchName, out var _filePath);
 
