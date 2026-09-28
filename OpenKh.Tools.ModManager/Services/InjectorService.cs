@@ -51,8 +51,6 @@ namespace OpenKh.Tools.ModManager.Services
         CancellationTokenSource _cancelSource;
         CancellationToken _cancelToken;
 
-        long _memoryOffset = 0x00;
-
         uint _loadFileFunc = 0x1682b8;
         uint _getFileSizeFunc = 0x1AE1B0;
         uint _subFileSizeFunc = 0x1AE460;
@@ -63,8 +61,6 @@ namespace OpenKh.Tools.ModManager.Services
 
         uint _hookPtrLoad = 0xFFF00;
         uint _hookPtrSize = 0xFFF00;
-
-        bool _functionsWritten = false;
 
         public Config TargetConfig { get; set; }
 
@@ -108,6 +104,10 @@ namespace OpenKh.Tools.ModManager.Services
 
         public InjectorService(Config _targetConfig)
         {
+            LogService.Show();
+
+            LogService.Log("Welcome to the Dynamic Mod Loader - v0.01!", 0x00);
+
             TargetConfig = _targetConfig;
 
             _cancelSource = new CancellationTokenSource();
@@ -174,7 +174,10 @@ namespace OpenKh.Tools.ModManager.Services
                 LOOP_START:
 
                     if (_cancelToken.IsCancellationRequested || _targetProcess.HasExited)
+                    {
+                        LogService.Dismiss();
                         return;
+                    }
 
                     _fetchStream.SetPosition(_hookPtrLoad);
 
@@ -221,6 +224,8 @@ namespace OpenKh.Tools.ModManager.Services
 
                     if (_fetchStream.ReadUInt32() == 0x00)
                     {
+                        LogService.Log("Injecting hooks for LoadFile and GetFileSize...", 0x00);
+
                         byte[] _fetchHookArray = new byte[_fetchHookLoad.Length * sizeof(uint) + _fetchHookSize.Length * sizeof(uint)];
 
                         Buffer.BlockCopy(_fetchHookLoad, 0, _fetchHookArray, 0, _fetchHookLoad.Length * sizeof(uint));
@@ -230,46 +235,58 @@ namespace OpenKh.Tools.ModManager.Services
                         _fetchStream.Write(_fetchHookArray);
 
                         _hookPtrSize = _hookPtrLoad + (uint)_fetchHookLoad.Length * sizeof(uint);
+
+                        LogService.Log("Hooks successfully connected!", 0x00);
                     }
 
                     if (_loadFileFunc > 0)
                     {
-                        uint[] _fetchFunction =
-                        [
-                            MIPS.ADDIU(MIPS.T4, MIPS.RA, 0),
-                            MIPS.JAL(_hookPtrLoad),
-                            MIPS.ADDIU(MIPS.T5, MIPS.Zero, 0x01)
-                        ];
+                        _fetchStream.SetPosition(_loadFileFunc + 0x04);
 
-                        byte[] _fetchFunctionArray = new byte[_fetchFunction.Length * sizeof(uint)];
-                        Buffer.BlockCopy(_fetchFunction, 0, _fetchFunctionArray, 0, _fetchFunctionArray.Length);
+                        if (_fetchStream.ReadUInt32() != MIPS.JAL(_hookPtrLoad))
+                        {
+                            uint[] _fetchFunction =
+                            [
+                                MIPS.ADDIU(MIPS.T4, MIPS.RA, 0),
+                                MIPS.JAL(_hookPtrLoad),
+                                MIPS.ADDIU(MIPS.T5, MIPS.Zero, 0x01)
+                            ];
 
-                        _fetchStream.SetPosition(_loadFileFunc);
-                        _fetchStream.Write(_fetchFunctionArray);
+                            byte[] _fetchFunctionArray = new byte[_fetchFunction.Length * sizeof(uint)];
+                            Buffer.BlockCopy(_fetchFunction, 0, _fetchFunctionArray, 0, _fetchFunctionArray.Length);
+
+                            _fetchStream.SetPosition(_loadFileFunc);
+                            _fetchStream.Write(_fetchFunctionArray);
+                        }
                     }
 
                     if (_getFileSizeFunc > 0)
                     {
-                        uint[] _fetchFunction =
-                        [
-                            MIPS.ADDIU(MIPS.T4, MIPS.RA, 0),
-                            MIPS.JAL(_hookPtrSize),
-                            MIPS.ADDIU(MIPS.T5, MIPS.Zero, 0x02),
-                            MIPS.JAL(_subFileSizeFunc),
-                            MIPS.NOP(),
-                            MIPS.BEQ(MIPS.V0, MIPS.Zero, 2),
-                            MIPS.NOP(),
-                            MIPS.LW(MIPS.V0, MIPS.V0, 0x0C),
-                            MIPS.LD(MIPS.RA, MIPS.SP, 0x08),
-                            MIPS.JR(MIPS.RA),
-                            MIPS.ADDIU(MIPS.SP, MIPS.SP, 0x10),
-                        ];
+                        _fetchStream.SetPosition(_getFileSizeFunc + 0x04);
 
-                        byte[] _fetchFunctionArray = new byte[_fetchFunction.Length * sizeof(uint)];
-                        Buffer.BlockCopy(_fetchFunction, 0, _fetchFunctionArray, 0, _fetchFunctionArray.Length);
+                        if (_fetchStream.ReadUInt32() != MIPS.JAL(_hookPtrLoad))
+                        {
+                            uint[] _fetchFunction =
+                            [
+                                MIPS.ADDIU(MIPS.T4, MIPS.RA, 0),
+                                MIPS.JAL(_hookPtrSize),
+                                MIPS.ADDIU(MIPS.T5, MIPS.Zero, 0x02),
+                                MIPS.JAL(_subFileSizeFunc),
+                                MIPS.NOP(),
+                                MIPS.BEQ(MIPS.V0, MIPS.Zero, 2),
+                                MIPS.NOP(),
+                                MIPS.LW(MIPS.V0, MIPS.V0, 0x0C),
+                                MIPS.LD(MIPS.RA, MIPS.SP, 0x08),
+                                MIPS.JR(MIPS.RA),
+                                MIPS.ADDIU(MIPS.SP, MIPS.SP, 0x10),
+                            ];
 
-                        _fetchStream.SetPosition(_getFileSizeFunc);
-                        _fetchStream.Write(_fetchFunctionArray);
+                            byte[] _fetchFunctionArray = new byte[_fetchFunction.Length * sizeof(uint)];
+                            Buffer.BlockCopy(_fetchFunction, 0, _fetchFunctionArray, 0, _fetchFunctionArray.Length);
+
+                            _fetchStream.SetPosition(_getFileSizeFunc);
+                            _fetchStream.Write(_fetchFunctionArray);
+                        }
                     }
 
                     _fetchStream.Flush();
@@ -281,8 +298,11 @@ namespace OpenKh.Tools.ModManager.Services
                     _fetchStream.SetPosition(_fetchOpcodeAddr);
                     var _fetchOpcode = _fetchStream.ReadInt32();
 
-                    if (_fetchStream.Position == _fetchOpcode || _targetProcess.HasExited)
+                    if (_fetchStream.Position == _fetchOpcode)
+                    {
+                        LogService.Dismiss();
                         return;
+                    }
 
                     switch (_fetchOpcode)
                     {
@@ -307,12 +327,17 @@ namespace OpenKh.Tools.ModManager.Services
 
                             if (_couldResolve == 0x01)
                             {
+                                LogService.Log($"Redirecting file \"{_fetchName}\" to the build path...", 0x00);
+
                                 var _fetchData = File.ReadAllBytes(_filePath);
                                 _fetchSize = _fetchData.Length;
 
                                 _fetchStream.SetPosition(_destinationPtr);
                                 _fetchStream.Write(_fetchData);
                             }
+
+                            else
+                                LogService.Log($"Loading file \"{_fetchName}\" from the ISO...", 0x00);
 
                             _fetchStream.SetPosition(_fetchOpcodeAddr - 0x04);
                             _fetchStream.Write(_fetchSize);
