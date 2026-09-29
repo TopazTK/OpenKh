@@ -184,6 +184,11 @@ namespace OpenKh.Tools.ModManager.Wizard
             }
         }
 
+        private async void OnFileClickCOM(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+
+        }
+
         private async void OnDetectClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             var _fetchContext = DataContext as MainViewModel;

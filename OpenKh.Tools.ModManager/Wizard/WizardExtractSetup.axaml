@@ -2,7 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="510"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="510"    
+             xmlns:convert="using:OpenKh.Tools.ModManager.Converters"
+             xmlns:class="using:OpenKh.Tools.ModManager.Classes"
              Width="500" Height="510"
              x:Class="OpenKh.Tools.ModManager.Wizard.WizardExtractSetup">
 
@@ -12,6 +14,8 @@
             7.78033C8.51836 7.92098 8.32759 8 8.12868 8H2ZM2 9.5V17.75C2 19.5449 3.45507 21 5.25
             21H18.75C20.5449 21 22 19.5449 22 17.75V8.75C22 6.95507 20.5449 5.5 18.75
             5.5H13.0607L9.71967 8.84099C9.29771 9.26295 8.72542 9.5 8.12868 9.5H2Z</StreamGeometry>
+            <convert:PropertyNotEqualConverter x:Key="CheckIfNotEqual" />
+            <convert:PropertyIsEqualConverter x:Key="CheckIfEqual" />
     </ContentPage.Resources>
 
     <StackPanel Margin="10">
@@ -38,15 +42,38 @@
             Please choose what games you want to extract from below:
         </TextBlock>
             <StackPanel Spacing="5" HorizontalAlignment="Center" IsHitTestVisible="{ReflectionBinding #ExtractStartButton.IsVisible}">
+                <StackPanel.IsVisible>
+                    <MultiBinding Converter="{StaticResource CheckIfNotEqual}">
+                        <ReflectionBinding Path="CurrentConfig.Frontend.TargetPlatform" />
+                        <ReflectionBinding Source="{x:Static class:Platform.PCSX2}" />
+                    </MultiBinding>
+                </StackPanel.IsVisible>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
-                    <ToggleButton Name="ExtractKH1" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts I [~23GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    <ToggleButton Name="ExtractKH2" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts II [~43GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <ToggleButton Name="ExtractPC1" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts I [~23GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <ToggleButton Name="ExtractPC2" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts II [~43GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
-                    <ToggleButton Name="ExtractCOM" Width="225" HorizontalContentAlignment="Center" Content="Re:Chain of Memories [~14GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    <ToggleButton Name="ExtractBBS" Width="225" HorizontalContentAlignment="Center" Content="Birth by Sleep [~19GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <ToggleButton Name="ExtractPC3" Width="225" HorizontalContentAlignment="Center" Content="Re:Chain of Memories [~14GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <ToggleButton Name="ExtractPC4" Width="225" HorizontalContentAlignment="Center" Content="Birth by Sleep [~19GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                 </StackPanel>
-                <ToggleButton Name="ExtractDDD" Width="225" HorizontalAlignment="Center" HorizontalContentAlignment="Center" Content="Dream Drop Distance [~19GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[1], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                <ToggleButton Name="ExtractPC5" Width="225" HorizontalAlignment="Center" HorizontalContentAlignment="Center" Content="Dream Drop Distance [~19GB]" IsEnabled="{ReflectionBinding CurrentConfig.Frontend.GamePath[1], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+            <StackPanel Spacing="5" HorizontalAlignment="Center" IsHitTestVisible="{ReflectionBinding #ExtractStartButton.IsVisible}">
+                <StackPanel.IsVisible>
+                    <MultiBinding Converter="{StaticResource CheckIfEqual}">
+                        <ReflectionBinding Path="CurrentConfig.Frontend.TargetPlatform" />
+                        <ReflectionBinding Source="{x:Static class:Platform.PCSX2}" />
+                    </MultiBinding>
+                </StackPanel.IsVisible>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
+                    <ToggleButton Name="ExtractPS1" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts I [~4GB]" IsEnabled="{ReflectionBinding CurrentConfig.Emulator.RomPath[0], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <ToggleButton Name="ExtractPS2" Width="225" HorizontalContentAlignment="Center" Content="Kingdom Hearts II [~4GB]" IsEnabled="{ReflectionBinding CurrentConfig.Emulator.RomPath[1], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
+                    <ToggleButton Name="ExtractPS3" Width="225" HorizontalContentAlignment="Center" Content="Re:Chain of Memories [~3GB]" IsEnabled="{ReflectionBinding CurrentConfig.Emulator.RomPath[2], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <ToggleButton Name="ExtractPS4" Width="225" HorizontalContentAlignment="Center" Content="Birth by Sleep [~2GB]" IsEnabled="{ReflectionBinding CurrentConfig.Emulator.RomPath[3], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+                <ToggleButton Name="ExtractPS5" Width="225" HorizontalAlignment="Center" HorizontalContentAlignment="Center" Content="Dream Drop Distance [~3GB]" IsEnabled="{ReflectionBinding CurrentConfig.Emulator.RomPath[4], Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             </StackPanel>
         <TextBlock TextWrapping="Wrap" Margin="0, 10, 0, 5">
             Please declare the path you want to extract to below, if you do not, it will default to the <Bold>"extract"</Bold> folder relative to the Mod Manager:

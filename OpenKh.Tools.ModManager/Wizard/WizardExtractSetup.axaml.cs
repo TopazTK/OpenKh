@@ -100,11 +100,11 @@ namespace OpenKh.Tools.ModManager.Wizard
 
                 var _fetchExtractList = new List<bool>()
                 {
-                    ExtractKH1.IsChecked ?? false,
-                    ExtractKH2.IsChecked ?? false,
-                    ExtractCOM.IsChecked ?? false,
-                    ExtractBBS.IsChecked ?? false,
-                    ExtractDDD.IsChecked ?? false
+                    (ExtractPC1.IsChecked ?? false) || (ExtractPS1.IsChecked ?? false),
+                    (ExtractPC2.IsChecked ?? false) || (ExtractPS2.IsChecked ?? false),
+                    (ExtractPC3.IsChecked ?? false) || (ExtractPS3.IsChecked ?? false),
+                    (ExtractPC4.IsChecked ?? false) || (ExtractPS4.IsChecked ?? false),
+                    (ExtractPC5.IsChecked ?? false) || (ExtractPS5.IsChecked ?? false)
                 };
 
                 WeakReferenceMessenger.Default.Send(new BlockAllRequest());

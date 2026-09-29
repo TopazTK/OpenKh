@@ -2,30 +2,30 @@
 #pragma warning disable CS4014  // Disabled because this class contains non-awaited tasks.
 
 using Avalonia.Controls;
-
-using OpenKh.Egs;
+using LibGit2Sharp;
+using LibGit2Sharp.Handlers;
 using OpenKh.Common;
+using OpenKh.Egs;
+using OpenKh.Kh1;
+using OpenKh.Kh2;
 using OpenKh.Patcher;
 using OpenKh.Tools.ModManager.Classes;
 using OpenKh.Tools.ModManager.Models;
-
-using LibGit2Sharp;
-using LibGit2Sharp.Handlers;
-
-using System;
-using System.IO;
-using System.Net;
-using System.Linq;
-using System.Text;
-using System.Net.Http;
-using System.Threading;
-using System.Diagnostics;
-using System.IO.Compression;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Security.Cryptography;
-using System.Collections.Concurrent;
 using SharpYaml;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Xe.IO;
 
 namespace OpenKh.Tools.ModManager.Services
 {
@@ -246,6 +246,80 @@ namespace OpenKh.Tools.ModManager.Services
 
                 if (CancelToken.IsCancellationRequested)
                     return 0x03;
+            }
+
+            else
+            {
+                for (int i = 0x00; i < 0x05; i++)
+                {
+                    if (!extractGames[i])
+                        continue;
+
+                    var _fetchPath = currentConfig.Emulator.RomPath[i];
+
+                    await Task.Run(async () =>
+                    {
+                        var _fetchDataPath = PathService.ResolveData(currentConfig, true);
+
+                        // If the data folder is null, resort to the default of /modmanager/extract.
+                        if (String.IsNullOrEmpty(_fetchDataPath))
+                        {
+                            currentConfig.Frontend.DataPath = Path.Combine(AppContext.BaseDirectory, "extract");
+                            _fetchDataPath = currentConfig.Frontend.DataPath;
+                        }
+
+                        using (var _fetchStreamISO = new FileStream(_fetchPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        {
+                            switch (i)
+                            {
+                                case 0x00:
+                                    break;
+                                case 0x01:
+                                {
+                                    var _fetchOffsetIDX = IsoUtility.GetFileOffset(_fetchStreamISO, "KH2.IDX;1");
+                                    var _fetchOffsetIMG = IsoUtility.GetFileOffset(_fetchStreamISO, "KH2.IMG;1");
+
+                                    var _fetchSubStrIDX = new SubStream(_fetchStreamISO, _fetchOffsetIDX * 0x800, _fetchStreamISO.Length - (_fetchOffsetIDX * 0x800));
+                                    var _fetchSubStrIMG = new SubStream(_fetchStreamISO, _fetchOffsetIMG * 0x800, _fetchStreamISO.Length - (_fetchOffsetIMG * 0x800));
+
+                                    var _fetchIDX = Idx.Read(_fetchSubStrIDX);
+                                    var _fetchIMG = new Img(_fetchSubStrIMG, _fetchIDX, true);
+
+                                    var _fetchCount = _fetchIMG.Entries.Count;
+                                    var _fetchProcessed = 0x00;
+
+                                    Parallel.ForEach(_fetchIMG.Entries.AsParallel(), (_fetchEntry, _fetchToken) =>
+                                    {
+                                        var _fetchTargetName = IdxName.Lookup(_fetchEntry) ?? $"@{_fetchEntry.Hash32:08X}_{_fetchEntry.Hash16:04X}";
+
+                                        using (var _fetchStreamFILE = _fetchIMG.FileOpen(_fetchEntry))
+                                        {
+                                            var _targetFilePath = Path.Combine(_fetchDataPath, "kh2", _fetchTargetName);
+                                            var _targetFileDirectory = Path.GetDirectoryName(_targetFilePath);
+
+                                            if (!Directory.Exists(_targetFileDirectory))
+                                                Directory.CreateDirectory(_targetFileDirectory);
+
+                                            var _fetchData = _fetchStreamFILE.ReadAllBytes();
+                                            File.WriteAllBytes(_targetFilePath, _fetchData);
+                                        }
+
+                                        _fetchProcessed++;
+
+                                        if (reportProgress != null)
+                                        {
+                                            var _fetchProgress = reportProgress(_fetchProcessed, _fetchCount);
+
+                                            if (!_fetchProgress || CancelToken.IsCancellationRequested)
+                                                _fetchToken.Stop();
+                                        }
+                                    });
+                                }
+                                break;
+                            }
+                        }
+                    }, CancelToken);
+                }
             }
 
             // If the function made it this far, it is a surefire success.
