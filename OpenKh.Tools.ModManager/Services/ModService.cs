@@ -837,6 +837,12 @@ namespace OpenKh.Tools.ModManager.Services
                             _fetchMetadata.Preferences = _fetchListMetadata;
                         }
 
+                        var _fetchTargetPlatform = (int)currentConfig.Frontend.TargetPlatform;
+                        var _fetchTargetGame = (int)currentConfig.Frontend.TargetGame;
+                        var _finalGamePath = _fetchTargetPlatform == 0x00 ? currentConfig.Emulator.RomPath[_fetchTargetGame] : _fetchGamePath;
+
+                        _fetchMetadata.Assets = _fetchMetadata.Assets.Where(x => x.Platform == (_fetchTargetPlatform == 0x00 ? "ps2" : "pc") || String.IsNullOrEmpty(x.Platform)).ToList();
+
                         // Await the patcher process for this mod.
                         await _fetchPatcher.Patch
                         (
@@ -844,9 +850,9 @@ namespace OpenKh.Tools.ModManager.Services
                             _fetchBuildPath,
                             _fetchMetadata,
                             _fetchMod.ModPath,
-                            _fetchGamePath,
-                            (int)currentConfig.Frontend.TargetPlatform,
-                            (int)currentConfig.Frontend.TargetGame,
+                            _finalGamePath,
+                            _fetchTargetPlatform,
+                            _fetchTargetGame,
                             _fetchJapanese,
                             CancelToken,
                             _fetchPackageMap,
