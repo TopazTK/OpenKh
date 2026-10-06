@@ -1,10 +1,8 @@
 using OpenKh.Bbs;
 
 using OpenKh.Common;
-using OpenKh.Common.Archives;
 using OpenKh.Egs;
 using OpenKh.Imaging;
-using OpenKh.Kh1;
 using OpenKh.Kh2;
 using OpenKh.Kh2.Bdx.Models;
 using OpenKh.Kh2.Bdx.Utils;
@@ -12,22 +10,16 @@ using OpenKh.Kh2.Messages;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net.Security;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 using Xe.IO;
 using YamlDotNet.Serialization;
-using static OpenKh.Kh2.Dpd;
-using static OpenKh.Patcher.PatcherProcessor;
-using static System.Net.Mime.MediaTypeNames;
+
+using Loggers = Serilog.Log;
 
 namespace OpenKh.Patcher
 {
@@ -127,14 +119,19 @@ namespace OpenKh.Patcher
             {
                 // A lot of this class relies on this existing. I am in no mood to rewrite that much code yet.
                 var _fetchContext = new Context(modMetadata, extractDataPath, modFilesPath, buildOutputPath);
-
                 // If the mod has a game declared and it doesn't match the current game, don't build it.
                 if (modMetadata.Game != null && modMetadata.Game.ToLower() != _fetchGameId)
+                {
+                    Loggers.ForContext<PatcherProcessor>().Error($"[{modMetadata.Title}] - This mod does not support the target game (How did this get installed?) - Aborting build...");
                     return;
+                }
 
                 // If the mod is part of a collection and the collection doesn't support the current game, don't build it.
                 if (modMetadata.IsCollection && !modMetadata.CollectionGames.Contains(_fetchGameId))
+                {
+                    Loggers.ForContext<PatcherProcessor>().Error($"[{modMetadata.Title}] - The collection this mod is in does not support the target game. Aborting build...");
                     return;
+                }
 
                 // If the mod does not have any assets, throw an error. This should not happen.
                 if (modMetadata.Assets == null)
@@ -180,7 +177,10 @@ namespace OpenKh.Patcher
 
                     // If the asset has a game declared and it doesn't match the current game, skip it.
                     if (_fetchAsset.Game != null && _fetchAsset.Game != _fetchGameId)
+                    {
+                        Loggers.ForContext<PatcherProcessor>().Warning($"[{modMetadata.Title}] - The file \"{_fetchAsset.Name}\" does not support the current game (Literally how?). Skipping...");
                         return;
+                    }
 
                     // I don't know what this does but it is here for compat.
                     if (_fetchAsset.CollectionOptional == true && (!_fetchCollectionMods.ContainsKey(_fetchAsset.Name) || !_fetchCollectionMods[_fetchAsset.Name]))
@@ -194,7 +194,10 @@ namespace OpenKh.Patcher
                         var _fetchConditionMain = modMetadata.Preferences.FirstOrDefault(x => x.Key == _fetchConditionKey);
 
                         if (_fetchConditionMain != null && !Object.Equals(_fetchConditionValue, _fetchConditionMain.Value))
+                        {
+                            Loggers.ForContext<PatcherProcessor>().Warning($"[{modMetadata.Title}] - The file \"{_fetchAsset.Name}\" does not satisfy the required condition. Skipping...");
                             return;
+                        }
                     }
 
                     // Fetch all the target names to be used.
@@ -248,10 +251,6 @@ namespace OpenKh.Patcher
                         // This is used in hard-patching and for package mapping.
                         var _fetchPackage = _fetchAsset.Package != null ? _fetchAsset.Package : $"{_fetchGameId}_first";
 
-                        // If the asset is declared REQUIRED, the game is extracted, yet the original file doesn't exist: Skip it.
-                        if (_fetchAsset.Required && !_isExtraction && !File.Exists(_fetchOriginalPath))
-                            continue;
-
                         // Fetch certain information about the file.
 
                         var _isFileRAW = _fetchFileParent == "raw";
@@ -268,17 +267,26 @@ namespace OpenKh.Patcher
                         {
                             // If the target platform is the PS2 and the file is PC-specific, skip it.
                             if (targetPlatform == 0x00 && _isFilePC && (_fetchFileParent == "dll" || _fetchAsset.Platform == "pc"))
+                            {
+                                Loggers.ForContext<PatcherProcessor>().Warning($"[{modMetadata.Title}] - The file \"{_fetchAsset.Name}\" is expecting PC and can't be built for PS2. Skipping...");
                                 continue;
+                            }
 
                             // If the target platform is not PS2:
                             else if (targetPlatform != 0x00)
                             {
                                 // But the asset is, skip it.
                                 if (_fetchAsset.Platform == "ps2" || _isAssetExclusivePS2)
+                                {
+                                    Loggers.ForContext<PatcherProcessor>().Warning($"[{modMetadata.Title}] - The file \"{_fetchAsset.Name}\" is expecting PS2 and can't be built for PC. Skipping...");
                                     continue;
+                                }
 
                                 if (!_doesRegionMatch && (_isAssetPatchable || _fetchAsset.Source[0].Type == "internal"))
+                                {
+                                    Loggers.ForContext<PatcherProcessor>().Warning($"[{modMetadata.Title}] - The file \"{_fetchAsset.Name}\" does not have a matching region for this game. Skipping...");
                                     continue;
+                                }
 
                                 // Otherwise, commit it to the package map.
                                 _fetchPackageMap = Path.Combine(_fetchPackage, _isFilePC ? "" : "original/", _fetchName);
@@ -327,6 +335,8 @@ namespace OpenKh.Patcher
                             // If after the above the target file STILL does not exists, try to fetch it from the game data.
                             if (!File.Exists(_fetchTargetPath))
                             {
+                                Loggers.ForContext<PatcherProcessor>().Verbose($"[{modMetadata.Title}] - Processing the file \"{_fetchAsset.Name}\" from game data...");
+
                                 if (targetPlatform != 0x00)
                                 {
                                     var _fetchTarget = _isAssetPatchable ? _fetchName : _fetchAsset.Source[0].Name;
@@ -370,6 +380,8 @@ namespace OpenKh.Patcher
                                                 var _fetchEntries = Hed.Read(_fetchHeaderStream);
                                                 var _fetchTargetEntry = _fetchEntries.FirstOrDefault(x => Convert.ToHexString(x.MD5) == _fetchNameHash);
 
+                                                Loggers.ForContext<PatcherProcessor>().Verbose($"[{modMetadata.Title}] - Found the file \"{_fetchAsset.Name}\" at \"{_fetchFilePack}.pkg\"! Processing...");
+
                                                 using (var _fetchPackageStream = File.OpenRead(_fetchPackageName))
                                                 {
                                                     var _fetchTargetAsset = new EgsHdAsset(_fetchPackageStream.SetPosition(_fetchTargetEntry.Offset));
@@ -382,6 +394,8 @@ namespace OpenKh.Patcher
 
                                                     if (_fetchAssetData != null)
                                                         await File.WriteAllBytesAsync(_fetchTargetPath, _fetchAssetData, CancellationToken.None);
+
+                                                    Loggers.ForContext<PatcherProcessor>().Verbose($"[{modMetadata.Title}] - Processed file \"{_fetchAsset.Name}\" successfully!");
                                                 }
                                             }
                                         }
@@ -415,10 +429,13 @@ namespace OpenKh.Patcher
                                                 {
                                                     using (var _fetchStreamTarget = _fetchIMG.FileOpen(_fetchEntry))
                                                         File.Create(_fetchTargetPath).Using(_tempStr => _fetchStreamTarget.CopyTo(_tempStr));
+
+                                                    Loggers.ForContext<PatcherProcessor>().Verbose($"[{modMetadata.Title}] - Processed file \"{_fetchAsset.Name}\" successfully from KH2.IDX!");
                                                 }
 
                                                 else
-                                                    Debug.WriteLine("Entry not found: " + _fetchTarget);
+                                                    Loggers.ForContext<PatcherProcessor>().Verbose($"[{modMetadata.Title}] - The file \"{_fetchAsset.Name}\" does not exist in the ISO! Was this file meant to be COPY? Skipping...");
+
                                             }
                                             break;
                                         }
@@ -428,8 +445,13 @@ namespace OpenKh.Patcher
 
                             // After all that, if the target file actually exists now: Patch it.
                             if (File.Exists(_fetchTargetPath))
+                            {
                                 using (var _fileStream = File.Open(_fetchTargetPath, FileMode.OpenOrCreate))
+                                {
+                                    Loggers.ForContext<PatcherProcessor>().Verbose($"[{modMetadata.Title}] - Patching file \"{_fetchAsset.Name}\"...");
                                     PatchFile(_fetchContext, _fetchAsset, _fileStream, _fetchAssetData);
+                                }
+                            }
                         }
                     }
 

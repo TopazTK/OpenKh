@@ -13,6 +13,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Loggers = Serilog.Log;
+
 namespace OpenKh.Tools.ModManager.Services
 {
     public class InjectorService
@@ -99,7 +101,8 @@ namespace OpenKh.Tools.ModManager.Services
         public InjectorService(Config _targetConfig)
         {
             LogService.Show();
-            LogService.Log("Welcome to the Dynamic Mod Loader - v0.01!", 0x00);
+
+            Loggers.ForContext<InjectorService>().Verbose("Welcome to the Dynamic Mod Loader - v0.01!");
 
             TargetConfig = _targetConfig;
 
@@ -219,7 +222,7 @@ namespace OpenKh.Tools.ModManager.Services
 
                     if (_fetchStream.ReadUInt32() == 0x00)
                     {
-                        LogService.Log("Injecting hooks for LoadFile and GetFileSize...", 0x00);
+                        Loggers.ForContext<InjectorService>().Verbose("Injecting hooks for LoadFile and GetFileSize...");
 
                         byte[] _fetchHookArray = new byte[_fetchHookLoad.Length * sizeof(uint) + _fetchHookSize.Length * sizeof(uint)];
 
@@ -231,7 +234,7 @@ namespace OpenKh.Tools.ModManager.Services
 
                         _hookPtrSize = _hookPtrLoad + (uint)_fetchHookLoad.Length * sizeof(uint);
 
-                        LogService.Log("Hooks successfully connected!", 0x00);
+                        Loggers.ForContext<InjectorService>().Verbose("Hooks successfully connected!");
                     }
 
                     if (_loadFileFunc > 0)
@@ -320,7 +323,7 @@ namespace OpenKh.Tools.ModManager.Services
 
                             if (_couldResolve == 0x01)
                             {
-                                LogService.Log($"Redirecting file \"{_fetchName}\" to the build path...", 0x00);
+                                Loggers.ForContext<InjectorService>().Verbose($"Redirecting file \"{_fetchName}\" to the build path...");
 
                                 var _fetchData = File.ReadAllBytes(_filePath);
                                 _fetchSize = _fetchData.Length;
@@ -330,7 +333,7 @@ namespace OpenKh.Tools.ModManager.Services
                             }
 
                             else
-                                LogService.Log($"Loading file \"{_fetchName}\" from the ISO...", 0x00);
+                                Loggers.ForContext<InjectorService>().Verbose($"Loading file \"{_fetchName}\" from the ISO...");
 
                             _fetchStream.SetPosition(_fetchOpcodeAddr - 0x04);
                             _fetchStream.Write(_fetchSize);

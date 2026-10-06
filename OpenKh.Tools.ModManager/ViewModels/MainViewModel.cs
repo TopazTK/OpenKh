@@ -283,7 +283,7 @@ public partial class MainViewModel : ViewModelBase
                     Emulator = new Emulator()
                     {
                         EmuPath = new string[1],
-                        RomPath = new string[3],
+                        RomPath = new string[5],
                     }
                 };
 

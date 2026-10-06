@@ -27,6 +27,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xe.IO;
 
+using Loggers = Serilog.Log;
+
 namespace OpenKh.Tools.ModManager.Services
 {
     public static class ModService
@@ -805,6 +807,8 @@ namespace OpenKh.Tools.ModManager.Services
             // Reset the cancel token if it was called prior.
             RenewCancelToken();
 
+            LogService.Show();
+
             // Create the patcher processor and the package map dictionary.
             var _fetchPatcher = new PatcherProcessor();
             var _fetchPackageMap = new ConcurrentDictionary<string, string>();
@@ -826,6 +830,8 @@ namespace OpenKh.Tools.ModManager.Services
             {
                 if (Directory.Exists(_fetchBuildPath))
                 {
+                    Loggers.ForContext(typeof(ModService)).Verbose("Cleaning up the build directory...");
+
                     Directory.Delete(_fetchBuildPath, true);
                     Directory.CreateDirectory(_fetchBuildPath);
                 }
@@ -857,7 +863,6 @@ namespace OpenKh.Tools.ModManager.Services
                 }, CancelToken);
             }
 
-
             // Run the actual patcher task:
             await Task.Run(async () =>
             {
@@ -885,12 +890,16 @@ namespace OpenKh.Tools.ModManager.Services
                         // Feed the title of the mod to the callback.
                         _currentModName = _fetchMod.ModTitle;
 
+                        Loggers.ForContext(typeof(ModService)).Verbose($"Staring build of: {_currentModName}...");
+
                         // Fetch the [mod.yml] file for the mod and read it as Metadata.
                         var _fetchYamlPath = Path.Combine(_fetchMod.ModPath, "mod.yml");
                         var _fetchMetadata = Metadata.Read(_fetchYamlPath);
 
                         if (_fetchMod.ModPreferences != null)
                         {
+                            Loggers.ForContext(typeof(ModService)).Verbose($"[{_currentModName}] - Recording mod preferences...");
+
                             var _fetchListMetadata = new List<Preference>();
 
                             foreach (var _fetchPref in _fetchMod.ModPreferences)
@@ -917,6 +926,8 @@ namespace OpenKh.Tools.ModManager.Services
 
                         _fetchMetadata.Assets = _fetchMetadata.Assets.Where(x => x.Platform == (_fetchTargetPlatform == 0x00 ? "ps2" : "pc") || String.IsNullOrEmpty(x.Platform)).ToList();
 
+                        Loggers.ForContext(typeof(ModService)).Verbose($"[{_currentModName}] - Processing files...");
+
                         // Await the patcher process for this mod.
                         await _fetchPatcher.Patch
                         (
@@ -941,6 +952,8 @@ namespace OpenKh.Tools.ModManager.Services
                 catch (TaskCanceledException) { }
 
             }, CancelToken);
+
+            LogService.Dismiss();
 
             // If cancellation is requested, cancel the process, but clean the build folder beforehand.
             if (CancelToken.IsCancellationRequested)
